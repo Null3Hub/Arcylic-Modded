@@ -3,7 +3,32 @@
 
     Default theme colors for the UI library.
     Supports dark mode with acrylic/glass aesthetics.
+    Provides a runtime-applicable theme system via SetTheme/ResetTheme.
 ]]
+
+local function deepCopy(t)
+    local copy = {}
+    for k, v in pairs(t) do
+        if type(v) == "table" then
+            copy[k] = deepCopy(v)
+        else
+            copy[k] = v
+        end
+    end
+    return copy
+end
+
+local function deepMerge(base, overrides)
+    local result = deepCopy(base)
+    for key, value in pairs(overrides) do
+        if type(value) == "table" and type(result[key]) == "table" then
+            result[key] = deepMerge(result[key], value)
+        else
+            result[key] = value
+        end
+    end
+    return result
+end
 
 local Colors = {
     -- Primary colors
@@ -32,32 +57,73 @@ local Colors = {
         Border = Color3.fromRGB(26, 26, 26),
         Timer = Color3.fromRGB(255, 255, 255),
     },
+
+    -- Window control colors
+    CloseHover = Color3.fromRGB(255, 100, 100),
+    ResizeHandle = Color3.fromRGB(110, 110, 110),
+    Scrollbar = Color3.fromRGB(60, 60, 60),
 }
 
+-- Frozen snapshot of factory defaults for ResetTheme
+Colors._defaults = deepCopy(Colors)
+
 --[[
-    Creates a custom theme by merging with default colors
+    Applies a partial theme override to the active Colors table.
+    Nested tables (Toggle, Notification) are deep-merged.
 
     @param overrides table - Partial color overrides
-    @return table - Complete theme colors
 ]]
-function Colors.CreateTheme(overrides: { [string]: any }?): typeof(Colors)
+function Colors:SetTheme(overrides: { [string]: any })
     if not overrides then
-        return Colors
+        return
     end
 
-    local theme = table.clone(Colors)
     for key, value in pairs(overrides) do
-        if type(value) == "table" and type(theme[key]) == "table" then
-            theme[key] = table.clone(theme[key])
-            for subKey, subValue in pairs(value) do
-                theme[key][subKey] = subValue
-            end
+        if key == "_defaults" then
+            continue
+        end
+        if type(value) == "table" and type(self[key]) == "table" then
+            self[key] = deepMerge(self[key], value)
         else
-            theme[key] = value
+            self[key] = value
         end
     end
+end
 
-    return theme
+--[[
+    Restores all colors to the factory defaults captured at load time.
+]]
+function Colors:ResetTheme()
+    for key, value in pairs(self._defaults) do
+        if key == "_defaults" then
+            continue
+        end
+        if type(value) == "table" then
+            self[key] = deepCopy(value)
+        else
+            self[key] = value
+        end
+    end
+end
+
+--[[
+    Returns a standalone copy of the current theme without the methods.
+
+    @return table - Snapshot of current color values
+]]
+function Colors:Snapshot(): { [string]: any }
+    local snapshot = {}
+    for key, value in pairs(self) do
+        if key == "_defaults" or type(value) == "function" then
+            continue
+        end
+        if type(value) == "table" then
+            snapshot[key] = deepCopy(value)
+        else
+            snapshot[key] = value
+        end
+    end
+    return snapshot
 end
 
 return Colors

@@ -4,7 +4,7 @@
     Animation helper functions using TweenService.
 ]]
 
-local TweenService = game:GetService("TweenService")
+local Services = require(script.Parent.Services)
 local Animation = require(script.Parent.Parent.Constants.Animation)
 
 local Tween = {}
@@ -43,7 +43,7 @@ function Tween.Create(
         easingDirection
     )
 
-    local tween = TweenService:Create(instance, tweenInfo, properties)
+    local tween = Services.TweenService:Create(instance, tweenInfo, properties)
     ActiveTweens[instance] = tween
 
     tween.Completed:Connect(function()

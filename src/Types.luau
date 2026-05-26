@@ -28,6 +28,9 @@ export type ThemeColors = {
         Border: Color3,
         Timer: Color3,
     },
+    CloseHover: Color3,
+    ResizeHandle: Color3,
+    Scrollbar: Color3,
 }
 
 export type WindowConfig = {

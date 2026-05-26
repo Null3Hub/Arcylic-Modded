@@ -4,7 +4,7 @@
     Makes UI elements draggable with mouse and touch support.
 ]]
 
-local UserInputService = game:GetService("UserInputService")
+local Services = require(script.Parent.Services)
 
 local Draggable = {}
 
@@ -70,7 +70,7 @@ function Draggable.Enable(frame: GuiObject, handle: GuiObject?): DraggableConnec
 
     table.insert(
         connections,
-        UserInputService.InputChanged:Connect(function(input)
+        Services.UserInputService.InputChanged:Connect(function(input)
             if input == dragInput and dragging then
                 local delta = input.Position - dragStart
                 frame.Position = UDim2.new(

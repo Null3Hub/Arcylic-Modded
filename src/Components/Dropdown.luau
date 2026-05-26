@@ -48,6 +48,7 @@ function Dropdown.new(parent: Instance, config: DropdownConfig, window): Dropdow
     self._expanded = false
     self._flag = config.Flag
     self._window = window
+    self._connections = {}
 
     -- Initialize selected value
     if self._multiSelect then
@@ -143,13 +144,16 @@ function Dropdown.new(parent: Instance, config: DropdownConfig, window): Dropdow
         Parent = self._display,
     })
 
-    toggleBtn.MouseButton1Click:Connect(function()
-        if self._expanded then
-            self:Close()
-        else
-            self:Open()
-        end
-    end)
+    table.insert(
+        self._connections,
+        toggleBtn.MouseButton1Click:Connect(function()
+            if self._expanded then
+                self:Close()
+            else
+                self:Open()
+            end
+        end)
+    )
 
     if self._flag and self._window and self._window.RegisterConfigElement then
         self._window:RegisterConfigElement(self._flag, "Dropdown", function()
@@ -202,7 +206,7 @@ function Dropdown:_CreateOptionsContainer()
         Size = UDim2.new(1, 0, 1, 0),
         CanvasSize = UDim2.new(0, 0, 0, #self._options * Sizes.Dropdown.OptionHeight),
         ScrollBarThickness = 3,
-        ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60),
+        ScrollBarImageColor3 = Colors.Scrollbar,
         ZIndex = 100,
         Parent = self._optionsContainer,
     })
@@ -225,7 +229,7 @@ function Dropdown:_PopulateOptions()
             FontFace = Fonts.Regular,
             TextColor3 = Colors.Text,
             Text = option,
-            BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+            BackgroundColor3 = Colors.Secondary,
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
             TextSize = Fonts.Size.Small,
@@ -309,6 +313,11 @@ function Dropdown:Refresh(options: { string })
 end
 
 function Dropdown:Destroy()
+    for _, connection in ipairs(self._connections) do
+        connection:Disconnect()
+    end
+    table.clear(self._connections)
+
     if self._flag and self._window and self._window.UnregisterConfigElement then
         self._window:UnregisterConfigElement(self._flag)
     end

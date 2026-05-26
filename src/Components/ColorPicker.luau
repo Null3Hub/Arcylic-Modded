@@ -23,6 +23,7 @@ function ColorPicker.new(parent: Instance, config, window)
     self._color = (config and config.Default) or PRESETS[1]
     self._flag = config and config.Flag
     self._window = window
+    self._connections = {}
 
     self._frame = Create.Instance("Frame", {
         Name = "ColorPicker_" .. name,
@@ -96,10 +97,13 @@ function ColorPicker.new(parent: Instance, config, window)
         })
         Create.Corner(swatch, Sizes.Corner.Small)
         Create.Stroke(swatch)
-        swatch.MouseButton1Click:Connect(function()
-            self:SetColor(col)
-            self._palette.Visible = false
-        end)
+        table.insert(
+            self._connections,
+            swatch.MouseButton1Click:Connect(function()
+                self:SetColor(col)
+                self._palette.Visible = false
+            end)
+        )
     end
 
     local function open()
@@ -108,12 +112,15 @@ function ColorPicker.new(parent: Instance, config, window)
         self._palette.Visible = true
     end
 
-    previewBtn.MouseButton1Click:Connect(function()
-        self._palette.Visible = not self._palette.Visible
-        if self._palette.Visible then
-            open()
-        end
-    end)
+    table.insert(
+        self._connections,
+        previewBtn.MouseButton1Click:Connect(function()
+            self._palette.Visible = not self._palette.Visible
+            if self._palette.Visible then
+                open()
+            end
+        end)
+    )
 
     if self._flag and self._window and self._window.RegisterConfigElement then
         self._window:RegisterConfigElement(self._flag, "ColorPicker", function()
@@ -137,6 +144,11 @@ function ColorPicker:GetColor(): Color3
 end
 
 function ColorPicker:Destroy()
+    for _, connection in ipairs(self._connections) do
+        connection:Disconnect()
+    end
+    table.clear(self._connections)
+
     if self._flag and self._window and self._window.UnregisterConfigElement then
         self._window:UnregisterConfigElement(self._flag)
     end

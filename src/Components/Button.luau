@@ -49,6 +49,8 @@ function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
     local icon = config.Icon or "rbxassetid://10734898355"
     local callback = config.Callback or function() end
 
+    self._connections = {}
+
     -- Main container
     self._frame = Create.Instance("Frame", {
         Name = "Button_" .. name,
@@ -103,22 +105,31 @@ function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
     self._callback = callback
 
     -- Event handlers
-    self._button.MouseButton1Click:Connect(function()
-        -- Click animation
-        Tween.Create(self._frame, { BackgroundTransparency = 0.2 }, "Fast")
-        task.wait(0.1)
-        Tween.Create(self._frame, { BackgroundTransparency = 0.4 }, "Fast")
+    table.insert(
+        self._connections,
+        self._button.MouseButton1Click:Connect(function()
+            -- Click animation
+            Tween.Create(self._frame, { BackgroundTransparency = 0.2 }, "Fast")
+            task.wait(0.1)
+            Tween.Create(self._frame, { BackgroundTransparency = 0.4 }, "Fast")
 
-        self._callback()
-    end)
+            self._callback()
+        end)
+    )
 
-    self._button.MouseEnter:Connect(function()
-        Tween.Create(self._frame, { BackgroundTransparency = 0.3 }, "Fast")
-    end)
+    table.insert(
+        self._connections,
+        self._button.MouseEnter:Connect(function()
+            Tween.Create(self._frame, { BackgroundTransparency = 0.3 }, "Fast")
+        end)
+    )
 
-    self._button.MouseLeave:Connect(function()
-        Tween.Create(self._frame, { BackgroundTransparency = 0.4 }, "Fast")
-    end)
+    table.insert(
+        self._connections,
+        self._button.MouseLeave:Connect(function()
+            Tween.Create(self._frame, { BackgroundTransparency = 0.4 }, "Fast")
+        end)
+    )
 
     return self
 end
@@ -136,6 +147,11 @@ function Button:SetCallback(callback: () -> ())
 end
 
 function Button:Destroy()
+    for _, connection in ipairs(self._connections) do
+        connection:Disconnect()
+    end
+    table.clear(self._connections)
+
     self._frame:Destroy()
 end
 

@@ -58,6 +58,8 @@ function Button.new(parent, config)
     local icon = config.Icon or "rbxassetid://10734898355"
     local callback = config.Callback or function() end
 
+    self._connections = {}
+
     -- Main container
     self._frame = Create.Instance("Frame", {
         Name = "Button_" .. name,
@@ -112,22 +114,31 @@ function Button.new(parent, config)
     self._callback = callback
 
     -- Event handlers
-    self._button.MouseButton1Click:Connect(function()
-        -- Click animation
-        Tween.Create(self._frame, { BackgroundTransparency = 0.2 }, "Fast")
-        task.wait(0.1)
-        Tween.Create(self._frame, { BackgroundTransparency = 0.4 }, "Fast")
+    table.insert(
+        self._connections,
+        self._button.MouseButton1Click:Connect(function()
+            -- Click animation
+            Tween.Create(self._frame, { BackgroundTransparency = 0.2 }, "Fast")
+            task.wait(0.1)
+            Tween.Create(self._frame, { BackgroundTransparency = 0.4 }, "Fast")
 
-        self._callback()
-    end)
+            self._callback()
+        end)
+    )
 
-    self._button.MouseEnter:Connect(function()
-        Tween.Create(self._frame, { BackgroundTransparency = 0.3 }, "Fast")
-    end)
+    table.insert(
+        self._connections,
+        self._button.MouseEnter:Connect(function()
+            Tween.Create(self._frame, { BackgroundTransparency = 0.3 }, "Fast")
+        end)
+    )
 
-    self._button.MouseLeave:Connect(function()
-        Tween.Create(self._frame, { BackgroundTransparency = 0.4 }, "Fast")
-    end)
+    table.insert(
+        self._connections,
+        self._button.MouseLeave:Connect(function()
+            Tween.Create(self._frame, { BackgroundTransparency = 0.4 }, "Fast")
+        end)
+    )
 
     return self
 end
@@ -145,6 +156,11 @@ function Button:SetCallback(callback)
 end
 
 function Button:Destroy()
+    for _, connection in ipairs(self._connections) do
+        connection:Disconnect()
+    end
+    table.clear(self._connections)
+
     self._frame:Destroy()
 end
 
@@ -177,6 +193,7 @@ function ColorPicker.new(parent, config, window)
     self._color = (config and config.Default) or PRESETS[1]
     self._flag = config and config.Flag
     self._window = window
+    self._connections = {}
 
     self._frame = Create.Instance("Frame", {
         Name = "ColorPicker_" .. name,
@@ -250,10 +267,13 @@ function ColorPicker.new(parent, config, window)
         })
         Create.Corner(swatch, Sizes.Corner.Small)
         Create.Stroke(swatch)
-        swatch.MouseButton1Click:Connect(function()
-            self:SetColor(col)
-            self._palette.Visible = false
-        end)
+        table.insert(
+            self._connections,
+            swatch.MouseButton1Click:Connect(function()
+                self:SetColor(col)
+                self._palette.Visible = false
+            end)
+        )
     end
 
     local function open()
@@ -262,12 +282,15 @@ function ColorPicker.new(parent, config, window)
         self._palette.Visible = true
     end
 
-    previewBtn.MouseButton1Click:Connect(function()
-        self._palette.Visible = not self._palette.Visible
-        if self._palette.Visible then
-            open()
-        end
-    end)
+    table.insert(
+        self._connections,
+        previewBtn.MouseButton1Click:Connect(function()
+            self._palette.Visible = not self._palette.Visible
+            if self._palette.Visible then
+                open()
+            end
+        end)
+    )
 
     if self._flag and self._window and self._window.RegisterConfigElement then
         self._window:RegisterConfigElement(self._flag, "ColorPicker", function()
@@ -291,6 +314,11 @@ function ColorPicker:GetColor()
 end
 
 function ColorPicker:Destroy()
+    for _, connection in ipairs(self._connections) do
+        connection:Disconnect()
+    end
+    table.clear(self._connections)
+
     if self._flag and self._window and self._window.UnregisterConfigElement then
         self._window:UnregisterConfigElement(self._flag)
     end
@@ -339,6 +367,7 @@ function Dropdown.new(parent, config, window)
     self._expanded = false
     self._flag = config.Flag
     self._window = window
+    self._connections = {}
 
     -- Initialize selected value
     if self._multiSelect then
@@ -434,13 +463,16 @@ function Dropdown.new(parent, config, window)
         Parent = self._display,
     })
 
-    toggleBtn.MouseButton1Click:Connect(function()
-        if self._expanded then
-            self:Close()
-        else
-            self:Open()
-        end
-    end)
+    table.insert(
+        self._connections,
+        toggleBtn.MouseButton1Click:Connect(function()
+            if self._expanded then
+                self:Close()
+            else
+                self:Open()
+            end
+        end)
+    )
 
     if self._flag and self._window and self._window.RegisterConfigElement then
         self._window:RegisterConfigElement(self._flag, "Dropdown", function()
@@ -493,7 +525,7 @@ function Dropdown:_CreateOptionsContainer()
         Size = UDim2.new(1, 0, 1, 0),
         CanvasSize = UDim2.new(0, 0, 0, #self._options * Sizes.Dropdown.OptionHeight),
         ScrollBarThickness = 3,
-        ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60),
+        ScrollBarImageColor3 = Colors.Scrollbar,
         ZIndex = 100,
         Parent = self._optionsContainer,
     })
@@ -516,7 +548,7 @@ function Dropdown:_PopulateOptions()
             FontFace = Fonts.Regular,
             TextColor3 = Colors.Text,
             Text = option,
-            BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+            BackgroundColor3 = Colors.Secondary,
             BackgroundTransparency = 1,
             BorderSizePixel = 0,
             TextSize = Fonts.Size.Small,
@@ -600,6 +632,11 @@ function Dropdown:Refresh(options)
 end
 
 function Dropdown:Destroy()
+    for _, connection in ipairs(self._connections) do
+        connection:Disconnect()
+    end
+    table.clear(self._connections)
+
     if self._flag and self._window and self._window.UnregisterConfigElement then
         self._window:UnregisterConfigElement(self._flag)
     end
@@ -611,7 +648,7 @@ return Dropdown
 end
 
 __modules["Components.Keybind"] = function()
-local UserInputService = game:GetService("UserInputService")
+local Services = __require("Utils.Services")
 
 local Create = __require("Utils.Create")
 local Colors = __require("Constants.Colors")
@@ -691,6 +728,7 @@ function Keybind.new(parent, config, window)
     self._listening = false
     self._flag = flag
     self._window = window
+    self._connections = {}
 
     self._id = name .. "_" .. tostring(math.floor(os.clock() * 1000))
     window:RegisterKeybind(self._id, self._currentKey, callback)
@@ -707,22 +745,28 @@ function Keybind.new(parent, config, window)
         end
     end
 
-    self._listenBtn.MouseButton1Click:Connect(function()
-        self._listening = true
-        refresh()
-    end)
-
-    self._inputConn = UserInputService.InputBegan:Connect(function(input, _gameProcessed)
-        if not self._listening then
-            return
-        end
-        if input.UserInputType == Enum.UserInputType.Keyboard then
-            self._currentKey = input.KeyCode
-            self._listening = false
-            window:UpdateKeybind(self._id, self._currentKey)
+    table.insert(
+        self._connections,
+        self._listenBtn.MouseButton1Click:Connect(function()
+            self._listening = true
             refresh()
-        end
-    end)
+        end)
+    )
+
+    table.insert(
+        self._connections,
+        Services.UserInputService.InputBegan:Connect(function(input, _gameProcessed)
+            if not self._listening then
+                return
+            end
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                self._currentKey = input.KeyCode
+                self._listening = false
+                window:UpdateKeybind(self._id, self._currentKey)
+                refresh()
+            end
+        end)
+    )
 
     self._refresh = refresh
 
@@ -749,9 +793,10 @@ function Keybind:GetKey()
 end
 
 function Keybind:Destroy()
-    if self._inputConn then
-        self._inputConn:Disconnect()
+    for _, connection in ipairs(self._connections) do
+        connection:Disconnect()
     end
+    table.clear(self._connections)
 
     if self._window then
         self._window:UnregisterKeybind(self._id)
@@ -850,6 +895,7 @@ function Section.new(window, name)
     self._window = window
     self._name = name
     self._tabs = {}
+    self._connections = {}
 
     -- Sidebar section frame
     self._frame = Create.Instance("Frame", {
@@ -929,8 +975,8 @@ function Section.new(window, name)
         self._tabsContainer.Visible = expanded
     end
 
-    headerBtn.MouseButton1Click:Connect(toggle)
-    arrow.MouseButton1Click:Connect(toggle)
+    table.insert(self._connections, headerBtn.MouseButton1Click:Connect(toggle))
+    table.insert(self._connections, arrow.MouseButton1Click:Connect(toggle))
 
     self._label = label
     self._arrow = arrow
@@ -946,6 +992,11 @@ function Section:CreateTab(name, icon)
 end
 
 function Section:Destroy()
+    for _, connection in ipairs(self._connections) do
+        connection:Disconnect()
+    end
+    table.clear(self._connections)
+
     for _, tab in ipairs(self._tabs) do
         if tab.Destroy then
             tab:Destroy()
@@ -968,7 +1019,7 @@ __modules["Components.Slider"] = function()
     A draggable slider for numeric value selection.
 ]]
 
-local UserInputService = game:GetService("UserInputService")
+local Services = __require("Utils.Services")
 
 local Create = __require("Utils.Create")
 local Tween = __require("Utils.Tween")
@@ -1000,6 +1051,7 @@ function Slider.new(parent, config, window)
     self._dragging = false
     self._flag = config.Flag
     self._window = window
+    self._connections = {}
 
     -- Main container
     self._frame = Create.Instance("Frame", {
@@ -1045,7 +1097,7 @@ function Slider.new(parent, config, window)
     -- Track background
     self._track = Create.Instance("Frame", {
         Name = "Track",
-        BackgroundColor3 = Color3.fromRGB(11, 11, 11),
+        BackgroundColor3 = Colors.Background,
         Position = UDim2.new(0, 10, 0, 29),
         BorderSizePixel = 0,
         Size = UDim2.new(1, -20, 0, Sizes.Slider.TrackHeight),
@@ -1068,36 +1120,45 @@ function Slider.new(parent, config, window)
     Create.Corner(self._fill, Sizes.Corner.Full)
 
     -- Input handling
-    self._track.InputBegan:Connect(function(input)
-        if
-            input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch
-        then
-            self._dragging = true
-            self:_UpdateFromInput(input)
-        end
-    end)
-
-    self._track.InputEnded:Connect(function(input)
-        if
-            input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch
-        then
-            self._dragging = false
-        end
-    end)
-
-    self._inputConnection = UserInputService.InputChanged:Connect(function(input)
-        if
-            self._dragging
-            and (
-                input.UserInputType == Enum.UserInputType.MouseMovement
+    table.insert(
+        self._connections,
+        self._track.InputBegan:Connect(function(input)
+            if
+                input.UserInputType == Enum.UserInputType.MouseButton1
                 or input.UserInputType == Enum.UserInputType.Touch
-            )
-        then
-            self:_UpdateFromInput(input)
-        end
-    end)
+            then
+                self._dragging = true
+                self:_UpdateFromInput(input)
+            end
+        end)
+    )
+
+    table.insert(
+        self._connections,
+        self._track.InputEnded:Connect(function(input)
+            if
+                input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch
+            then
+                self._dragging = false
+            end
+        end)
+    )
+
+    table.insert(
+        self._connections,
+        Services.UserInputService.InputChanged:Connect(function(input)
+            if
+                self._dragging
+                and (
+                    input.UserInputType == Enum.UserInputType.MouseMovement
+                    or input.UserInputType == Enum.UserInputType.Touch
+                )
+            then
+                self:_UpdateFromInput(input)
+            end
+        end)
+    )
 
     if self._flag and self._window and self._window.RegisterConfigElement then
         self._window:RegisterConfigElement(self._flag, "Slider", function()
@@ -1156,9 +1217,10 @@ function Slider:SetMax(max)
 end
 
 function Slider:Destroy()
-    if self._inputConnection then
-        self._inputConnection:Disconnect()
+    for _, connection in ipairs(self._connections) do
+        connection:Disconnect()
     end
+    table.clear(self._connections)
 
     if self._flag and self._window and self._window.UnregisterConfigElement then
         self._window:UnregisterConfigElement(self._flag)
@@ -1192,6 +1254,7 @@ function Tab.new(window, section, name, icon)
     self._section = section
     self._name = name
     self._elements = {}
+    self._connections = {}
 
     -- Button in sidebar
     self._button = Create.Instance("Frame", {
@@ -1252,21 +1315,30 @@ function Tab.new(window, section, name, icon)
 
     Create.ListLayout(self._content, 8)
 
-    click.MouseButton1Click:Connect(function()
-        window:SelectTab(self)
-    end)
+    table.insert(
+        self._connections,
+        click.MouseButton1Click:Connect(function()
+            window:SelectTab(self)
+        end)
+    )
 
-    click.MouseEnter:Connect(function()
-        if window._currentTab ~= self then
-            Tween.Create(self._button, { BackgroundTransparency = 0.7 }, "Fast")
-        end
-    end)
+    table.insert(
+        self._connections,
+        click.MouseEnter:Connect(function()
+            if window._currentTab ~= self then
+                Tween.Create(self._button, { BackgroundTransparency = 0.7 }, "Fast")
+            end
+        end)
+    )
 
-    click.MouseLeave:Connect(function()
-        if window._currentTab ~= self then
-            Tween.Create(self._button, { BackgroundTransparency = 1 }, "Fast")
-        end
-    end)
+    table.insert(
+        self._connections,
+        click.MouseLeave:Connect(function()
+            if window._currentTab ~= self then
+                Tween.Create(self._button, { BackgroundTransparency = 1 }, "Fast")
+            end
+        end)
+    )
 
     if not window._currentTab then
         window:SelectTab(self)
@@ -1305,7 +1377,7 @@ function Tab:CreateSection(title)
         Text = title,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        TextSize = 15,
+        TextSize = Fonts.Size.Section,
         Size = UDim2.new(1, 0, 0, 25),
         Parent = self._content,
     })
@@ -1439,6 +1511,11 @@ function Tab:CreateConfigSection()
 end
 
 function Tab:Destroy()
+    for _, connection in ipairs(self._connections) do
+        connection:Disconnect()
+    end
+    table.clear(self._connections)
+
     for _, element in ipairs(self._elements) do
         if element.Destroy then
             element:Destroy()
@@ -1672,6 +1749,7 @@ function Toggle.new(parent, config, window)
     self._callback = callback
     self._flag = config.Flag
     self._window = window
+    self._connections = {}
 
     -- Main container
     self._frame = Create.Instance("Frame", {
@@ -1734,9 +1812,12 @@ function Toggle.new(parent, config, window)
         Parent = self._frame,
     })
 
-    button.MouseButton1Click:Connect(function()
-        self:SetValue(not self._enabled)
-    end)
+    table.insert(
+        self._connections,
+        button.MouseButton1Click:Connect(function()
+            self:SetValue(not self._enabled)
+        end)
+    )
 
     if self._flag and self._window and self._window.RegisterConfigElement then
         self._window:RegisterConfigElement(self._flag, "Toggle", function()
@@ -1770,6 +1851,11 @@ function Toggle:GetValue()
 end
 
 function Toggle:Destroy()
+    for _, connection in ipairs(self._connections) do
+        connection:Disconnect()
+    end
+    table.clear(self._connections)
+
     if self._flag and self._window and self._window.UnregisterConfigElement then
         self._window:UnregisterConfigElement(self._flag)
     end
@@ -1778,59 +1864,6 @@ function Toggle:Destroy()
 end
 
 return Toggle
-end
-
-__modules["config.Theme"] = function()
---[[
-    Acrylic UI Library
-    Theme Configuration - Color schemes and styling
-
-    @author Acrylic Team
-    @version 2.0.0
-    @license MIT
-]]
-
-local Colors = __require("Constants.Colors")
-local Fonts = __require("Constants.Fonts")
-
-local Theme = {}
-
---- Compatibility wrapper. Constants.Colors is the canonical theme source.
-Theme.Colors = Colors
-
---- Font configurations
-Theme.Fonts = Fonts
-
---- Text size presets
-Theme.TextSize = Fonts.Size
-
---[=[
-    Updates the theme colors
-
-    @param newColors Partial<ThemeColors> -- Colors to override
-]=]
-function Theme:SetColors(newColors)
-    for key, value in pairs(newColors) do
-        if type(value) == "table" then
-            for subKey, subValue in pairs(value) do
-                self.Colors[key][subKey] = subValue
-            end
-        else
-            self.Colors[key] = value
-        end
-    end
-end
-
---[=[
-    Sets the accent color
-
-    @param color Color3 -- The new accent color
-]=]
-function Theme:SetAccent(color)
-    self.Colors.Accent = color
-end
-
-return Theme
 end
 
 __modules["Constants.Animation"] = function()
@@ -1896,7 +1929,32 @@ __modules["Constants.Colors"] = function()
 
     Default theme colors for the UI library.
     Supports dark mode with acrylic/glass aesthetics.
+    Provides a runtime-applicable theme system via SetTheme/ResetTheme.
 ]]
+
+local function deepCopy(t)
+    local copy = {}
+    for k, v in pairs(t) do
+        if type(v) == "table" then
+            copy[k] = deepCopy(v)
+        else
+            copy[k] = v
+        end
+    end
+    return copy
+end
+
+local function deepMerge(base, overrides)
+    local result = deepCopy(base)
+    for key, value in pairs(overrides) do
+        if type(value) == "table" and type(result[key]) == "table" then
+            result[key] = deepMerge(result[key], value)
+        else
+            result[key] = value
+        end
+    end
+    return result
+end
 
 local Colors = {
     -- Primary colors
@@ -1925,32 +1983,73 @@ local Colors = {
         Border = Color3.fromRGB(26, 26, 26),
         Timer = Color3.fromRGB(255, 255, 255),
     },
+
+    -- Window control colors
+    CloseHover = Color3.fromRGB(255, 100, 100),
+    ResizeHandle = Color3.fromRGB(110, 110, 110),
+    Scrollbar = Color3.fromRGB(60, 60, 60),
 }
 
+-- Frozen snapshot of factory defaults for ResetTheme
+Colors._defaults = deepCopy(Colors)
+
 --[[
-    Creates a custom theme by merging with default colors
+    Applies a partial theme override to the active Colors table.
+    Nested tables (Toggle, Notification) are deep-merged.
 
     @param overrides table - Partial color overrides
-    @return table - Complete theme colors
 ]]
-function Colors.CreateTheme(overrides)
+function Colors:SetTheme(overrides)
     if not overrides then
-        return Colors
+        return
     end
 
-    local theme = table.clone(Colors)
     for key, value in pairs(overrides) do
-        if type(value) == "table" and type(theme[key]) == "table" then
-            theme[key] = table.clone(theme[key])
-            for subKey, subValue in pairs(value) do
-                theme[key][subKey] = subValue
-            end
+        if key == "_defaults" then
+            continue
+        end
+        if type(value) == "table" and type(self[key]) == "table" then
+            self[key] = deepMerge(self[key], value)
         else
-            theme[key] = value
+            self[key] = value
         end
     end
+end
 
-    return theme
+--[[
+    Restores all colors to the factory defaults captured at load time.
+]]
+function Colors:ResetTheme()
+    for key, value in pairs(self._defaults) do
+        if key == "_defaults" then
+            continue
+        end
+        if type(value) == "table" then
+            self[key] = deepCopy(value)
+        else
+            self[key] = value
+        end
+    end
+end
+
+--[[
+    Returns a standalone copy of the current theme without the methods.
+
+    @return table - Snapshot of current color values
+]]
+function Colors:Snapshot()
+    local snapshot = {}
+    for key, value in pairs(self) do
+        if key == "_defaults" or type(value) == "function" then
+            continue
+        end
+        if type(value) == "table" then
+            snapshot[key] = deepCopy(value)
+        else
+            snapshot[key] = value
+        end
+    end
+    return snapshot
 end
 
 return Colors
@@ -1976,6 +2075,7 @@ local Fonts = {
         Title = 14,
         Normal = 14,
         Small = 13,
+        Section = 15,
         Tiny = 11,
     },
 }
@@ -2083,10 +2183,10 @@ __modules["Core.AcrylicBlur"] = function()
     AcrylicUI - Acrylic Blur Effect
 
     Creates a frosted glass blur effect behind UI elements.
+    Handles camera nil-check and reconnects on camera swap (respawn).
 ]]
 
-local Lighting = game:GetService("Lighting")
-local RunService = game:GetService("RunService")
+local Services = __require("Utils.Services")
 
 local Create = __require("Utils.Create")
 
@@ -2117,6 +2217,10 @@ function AcrylicBlur.new(targetFrame)
     self._dof = nil
     self._enabled = true
     self._connections = {}
+    self._cameraConnections = {}
+    self._renderUpdate = nil
+    self._onChange = nil
+    self._destroyed = false
 
     self:_Initialize()
 
@@ -2124,29 +2228,32 @@ function AcrylicBlur.new(targetFrame)
 end
 
 function AcrylicBlur:_CreateEffects()
-    -- Depth of field for blur effect
     self._dof = Create.Instance("DepthOfFieldEffect", {
         Name = self._dofName,
         FarIntensity = 0,
         FocusDistance = 0.01,
         InFocusRadius = 0.01,
         NearIntensity = 1,
-        Parent = Lighting,
+        Parent = Services.Lighting,
     })
 
-    -- Additional blur
     self._blur = Create.Instance("BlurEffect", {
         Name = self._blurName,
         Size = 6,
         Enabled = true,
-        Parent = Lighting,
+        Parent = Services.Lighting,
     })
 end
 
 function AcrylicBlur:_CreateMesh()
+    local camera = workspace.CurrentCamera
+    if not camera then
+        return
+    end
+
     self._folder = Create.Instance("Folder", {
         Name = self._folderName,
-        Parent = workspace.CurrentCamera,
+        Parent = camera,
     })
 
     self._root = Create.Instance("Part", {
@@ -2179,7 +2286,21 @@ function AcrylicBlur:_CreateTrackingFrame()
     })
 end
 
-function AcrylicBlur:_StartRendering()
+function AcrylicBlur:_DisconnectCamera()
+    for _, conn in ipairs(self._cameraConnections) do
+        conn:Disconnect()
+    end
+    table.clear(self._cameraConnections)
+end
+
+function AcrylicBlur:_ConnectCamera()
+    self:_DisconnectCamera()
+
+    local camera = workspace.CurrentCamera
+    if not camera then
+        return
+    end
+
     local distance = 0.0005
     local positions = {
         top_left = Vector2.new(),
@@ -2188,12 +2309,20 @@ function AcrylicBlur:_StartRendering()
     }
 
     local function ViewportToWorld(location, dist)
-        local ray = workspace.CurrentCamera:ScreenPointToRay(location.X, location.Y)
+        local cam = workspace.CurrentCamera
+        if not cam then
+            return Vector3.zero
+        end
+        local ray = cam:ScreenPointToRay(location.X, location.Y)
         return ray.Origin + ray.Direction * dist
     end
 
     local function GetOffset()
-        local viewY = workspace.CurrentCamera.ViewportSize.Y
+        local cam = workspace.CurrentCamera
+        if not cam then
+            return 28
+        end
+        local viewY = cam.ViewportSize.Y
         return (viewY / 2560) * 24 + 4
     end
 
@@ -2204,7 +2333,12 @@ function AcrylicBlur:_StartRendering()
     end
 
     local function Update()
-        if not self._root or not self._enabled then
+        if not self._root or not self._enabled or self._destroyed then
+            return
+        end
+
+        local cam = workspace.CurrentCamera
+        if not cam then
             return
         end
 
@@ -2217,14 +2351,17 @@ function AcrylicBlur:_StartRendering()
 
         self._root.CFrame = CFrame.fromMatrix(
             (tl + br) / 2,
-            workspace.CurrentCamera.CFrame.XVector,
-            workspace.CurrentCamera.CFrame.YVector,
-            workspace.CurrentCamera.CFrame.ZVector
+            cam.CFrame.XVector,
+            cam.CFrame.YVector,
+            cam.CFrame.ZVector
         )
         self._root.Mesh.Scale = Vector3.new(width, height, 0)
     end
 
     local function OnChange()
+        if self._destroyed then
+            return
+        end
         local offset = GetOffset()
         local size = self._frame.AbsoluteSize - Vector2.new(offset, offset)
         local position = self._frame.AbsolutePosition + Vector2.new(offset / 2, offset / 2)
@@ -2232,21 +2369,19 @@ function AcrylicBlur:_StartRendering()
         task.spawn(Update)
     end
 
-    -- Connect to camera changes
+    self._renderUpdate = Update
+    self._onChange = OnChange
+
+    table.insert(self._cameraConnections, camera:GetPropertyChangedSignal("CFrame"):Connect(Update))
     table.insert(
-        self._connections,
-        workspace.CurrentCamera:GetPropertyChangedSignal("CFrame"):Connect(Update)
+        self._cameraConnections,
+        camera:GetPropertyChangedSignal("ViewportSize"):Connect(Update)
     )
     table.insert(
-        self._connections,
-        workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(Update)
-    )
-    table.insert(
-        self._connections,
-        workspace.CurrentCamera:GetPropertyChangedSignal("FieldOfView"):Connect(Update)
+        self._cameraConnections,
+        camera:GetPropertyChangedSignal("FieldOfView"):Connect(Update)
     )
 
-    -- Connect to frame changes
     table.insert(
         self._connections,
         self._frame:GetPropertyChangedSignal("AbsolutePosition"):Connect(OnChange)
@@ -2256,11 +2391,32 @@ function AcrylicBlur:_StartRendering()
         self._frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(OnChange)
     )
 
-    -- Render step update
-    table.insert(self._connections, RunService.RenderStepped:Connect(Update))
+    table.insert(self._connections, Services.RunService.RenderStepped:Connect(Update))
 
-    -- Initial update
     task.spawn(OnChange)
+end
+
+function AcrylicBlur:_StartRendering()
+    self:_ConnectCamera()
+
+    table.insert(
+        self._connections,
+        workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+            if not self._destroyed then
+                self:_ReparentToCamera()
+                self:_ConnectCamera()
+            end
+        end)
+    )
+end
+
+function AcrylicBlur:_ReparentToCamera()
+    local camera = workspace.CurrentCamera
+    if not camera or not self._folder then
+        return
+    end
+
+    self._folder.Parent = camera
 end
 
 function AcrylicBlur:_Initialize()
@@ -2290,9 +2446,17 @@ end
     Destroys the blur effect and cleans up resources
 ]]
 function AcrylicBlur:Destroy()
+    if self._destroyed then
+        return
+    end
+    self._destroyed = true
+
+    self:_DisconnectCamera()
+
     for _, connection in ipairs(self._connections) do
         connection:Disconnect()
     end
+    table.clear(self._connections)
 
     if self._folder then
         self._folder:Destroy()
@@ -2506,10 +2670,7 @@ __modules["Core.Window"] = function()
     The main window container with dragging, resizing, and minimize support.
 ]]
 
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local HttpService = game:GetService("HttpService")
-
+local Services = __require("Utils.Services")
 local Create = __require("Utils.Create")
 local Tween = __require("Utils.Tween")
 local Draggable = __require("Utils.Draggable")
@@ -2524,14 +2685,21 @@ local Notification = __require("Core.Notification")
 local Window = {}
 Window.__index = Window
 
-local Environment = getfenv()
-local writeFile = Environment.writefile
-local readFile = Environment.readfile
-local isFile = Environment.isfile
-local makeFolder = Environment.makefolder
-local isFolder = Environment.isfolder
-local listFiles = Environment.listfiles
-local deleteFile = Environment.delfile
+local function safeGet(name)
+    local fn = _G[name]
+    if type(fn) == "function" then
+        return fn
+    end
+    return nil
+end
+
+local writeFile = safeGet("writefile")
+local readFile = safeGet("readfile")
+local isFile = safeGet("isfile")
+local makeFolder = safeGet("makefolder")
+local isFolder = safeGet("isfolder")
+local listFiles = safeGet("listfiles")
+local deleteFile = safeGet("delfile")
 
 
 local CONFIG_ROOT = "AcrylicConfigs"
@@ -2542,7 +2710,7 @@ local function SanitizeConfigName(configName)
     local sanitized = tostring(configName or "default")
     sanitized = sanitized:gsub("^%s+", ""):gsub("%s+$", "")
     sanitized = sanitized:gsub("%.%.", "_")
-    sanitized = sanitized:gsub('[/\\:%*%?"<>|]', "_")
+    sanitized = sanitized:gsub('[%/%\\%*%?"<>|:]', "_")
     sanitized = sanitized:gsub("^%.+", ""):gsub("%.+$", "")
 
     if sanitized == "" then
@@ -2669,6 +2837,11 @@ function Window.new(config)
     config = config or {}
     local self = setmetatable({}, Window)
 
+    -- Apply theme overrides before building UI
+    if config.Theme then
+        Colors:SetTheme(config.Theme)
+    end
+
     local resolvedSize, minSize, maxSize = ResolveWindowSizes(config.Size)
 
     self._title = config.Title or "AcrylicUI"
@@ -2701,7 +2874,7 @@ function Window.new(config)
 end
 
 function Window:_CreateGui()
-    local player = Players.LocalPlayer
+    local player = Services.Players.LocalPlayer
 
     -- Screen GUI
     self._screenGui = Create.Instance("ScreenGui", {
@@ -2740,8 +2913,9 @@ function Window:_CreateGui()
         Parent = self._container,
     })
 
-    self:_CreateWindowControls()
     self:_CreateContentArea()
+    -- Controls are created after content so resize stays above scroll layers.
+    self:_CreateWindowControls()
 
     -- Make draggable
     self._dragConnection = Draggable.Enable(self._container, self._titleLabel)
@@ -2803,7 +2977,7 @@ function Window:_CreateWindowControls()
     end)
 
     closeBtn.MouseEnter:Connect(function()
-        Tween.Create(closeBtn, { ImageColor3 = Color3.fromRGB(255, 100, 100) }, "Fast")
+        Tween.Create(closeBtn, { ImageColor3 = Colors.CloseHover }, "Fast")
     end)
 
     closeBtn.MouseLeave:Connect(function()
@@ -2813,13 +2987,15 @@ function Window:_CreateWindowControls()
     -- Resize handle
     self._resizeBtn = Create.Instance("ImageButton", {
         Name = "Resize",
-        ImageColor3 = Color3.fromRGB(110, 110, 110),
+        Active = true,
+        ImageColor3 = Colors.ResizeHandle,
         Image = "rbxassetid://120997033468887",
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.new(1, -5, 1, -5),
         Size = UDim2.new(0, 62, 0, 60),
         BorderSizePixel = 0,
+        ZIndex = 1000,
         Parent = self._container,
     })
 
@@ -2877,7 +3053,7 @@ function Window:_CreateContentArea()
     self._contentContainer = Create.Instance("ScrollingFrame", {
         Name = "Content",
         ScrollBarThickness = 3,
-        ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60),
+        ScrollBarImageColor3 = Colors.Scrollbar,
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 166, 0, 0),
         Size = UDim2.new(1, -166, 1, 0),
@@ -2895,46 +3071,52 @@ function Window:_SetupResize()
     local resizing = false
     local startSize, startInput
 
-    self._resizeBtn.MouseEnter:Connect(function()
-        Tween.Create(self._resizeBtn, { ImageColor3 = Colors.Text }, "Fast")
-    end)
-
-    self._resizeBtn.MouseLeave:Connect(function()
-        if not resizing then
-            Tween.Create(self._resizeBtn, { ImageColor3 = Color3.fromRGB(110, 110, 110) }, "Fast")
-        end
-    end)
-
-    self._resizeBtn.InputBegan:Connect(function(input)
-        if
-            input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch
-        then
-            resizing = true
-            startSize = self._container.AbsoluteSize
-            startInput = input.Position
-            self._originalHeight = startSize.Y
-
-            local connection
-            connection = input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    resizing = false
-                    Tween.Create(
-                        self._resizeBtn,
-                        { ImageColor3 = Color3.fromRGB(110, 110, 110) },
-                        "Fast"
-                    )
-                    if connection then
-                        connection:Disconnect()
-                    end
-                end
-            end)
-        end
-    end)
+    table.insert(
+        self._connections,
+        self._resizeBtn.MouseEnter:Connect(function()
+            Tween.Create(self._resizeBtn, { ImageColor3 = Colors.Text }, "Fast")
+        end)
+    )
 
     table.insert(
         self._connections,
-        UserInputService.InputChanged:Connect(function(input)
+        self._resizeBtn.MouseLeave:Connect(function()
+            if not resizing then
+                Tween.Create(self._resizeBtn, { ImageColor3 = Colors.ResizeHandle }, "Fast")
+            end
+        end)
+    )
+
+    table.insert(
+        self._connections,
+        self._resizeBtn.InputBegan:Connect(function(input)
+            if
+                input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch
+            then
+                resizing = true
+                startSize = self._container.AbsoluteSize
+                startInput = input.Position
+                self._originalHeight = startSize.Y
+
+                local connection
+                connection = input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        resizing = false
+                        Tween.Create(self._resizeBtn, { ImageColor3 = Colors.ResizeHandle }, "Fast")
+                        if connection then
+                            connection:Disconnect()
+                        end
+                    end
+                end)
+                table.insert(self._connections, connection)
+            end
+        end)
+    )
+
+    table.insert(
+        self._connections,
+        Services.UserInputService.InputChanged:Connect(function(input)
             if
                 resizing
                 and (
@@ -2978,7 +3160,7 @@ end
 function Window:_SetupKeybinds()
     table.insert(
         self._connections,
-        UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        Services.UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if gameProcessed then
                 return
             end
@@ -3051,7 +3233,7 @@ function Window:_SetupMobileToggle()
 
     table.insert(
         self._connections,
-        UserInputService.InputChanged:Connect(function(input)
+        Services.UserInputService.InputChanged:Connect(function(input)
             if
                 dragging
                 and dragStart
@@ -3203,7 +3385,7 @@ function Window:SaveConfig(configName)
     local success = pcall(function()
         writeFile(
             GetConfigPath(self._configFolder, sanitizedName),
-            HttpService:JSONEncode(configData)
+            Services.HttpService:JSONEncode(configData)
         )
     end)
 
@@ -3249,7 +3431,7 @@ function Window:LoadConfig(configName)
     end
 
     local success, data = pcall(function()
-        return HttpService:JSONDecode(readFile(path))
+        return Services.HttpService:JSONDecode(readFile(path))
     end)
 
     if not success or type(data) ~= "table" then
@@ -3497,19 +3679,30 @@ function AcrylicUI.new(title, configFolder)
 end
 
 --[[
-    Creates a custom theme
+    Applies a partial theme override to all UI components.
 
     @param overrides table - Color overrides
-    @return table - Complete theme colors
-
     @example
-    local customTheme = AcrylicUI.CreateTheme({
-        Accent = Color3.fromRGB(138, 43, 226),
-        Background = Color3.fromRGB(20, 20, 30)
-    })
+    AcrylicUI:SetTheme({ Accent = Color3.fromRGB(0, 170, 255) })
 ]]
-function AcrylicUI.CreateTheme(overrides)
-    return AcrylicUI.Colors.CreateTheme(overrides)
+function AcrylicUI.SetTheme(overrides)
+    AcrylicUI.Colors:SetTheme(overrides)
+end
+
+--[[
+    Restores all theme colors to the factory defaults.
+]]
+function AcrylicUI.ResetTheme()
+    AcrylicUI.Colors:ResetTheme()
+end
+
+--[[
+    Returns a standalone snapshot of the current theme.
+
+    @return table - Current color values
+]]
+function AcrylicUI.GetTheme()
+    return AcrylicUI.Colors:Snapshot()
 end
 
 --[[
@@ -3701,10 +3894,10 @@ __modules["Utils.Device"] = function()
     Detects device type and capabilities.
 ]]
 
-local UserInputService = game:GetService("UserInputService")
-local GuiService = game:GetService("GuiService")
+local Services = __require("Utils.Services")
 
 local Device = {}
+local DEFAULT_VIEWPORT = Vector2.new(1280, 720)
 
 --[[
     Checks if the current device is mobile (touch only)
@@ -3712,7 +3905,7 @@ local Device = {}
     @return boolean - True if mobile device
 ]]
 function Device.IsMobile()
-    return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+    return Services.UserInputService.TouchEnabled and not Services.UserInputService.KeyboardEnabled
 end
 
 --[[
@@ -3721,7 +3914,7 @@ end
     @return boolean - True if tablet device
 ]]
 function Device.IsTablet()
-    local viewport = workspace.CurrentCamera.ViewportSize
+    local viewport = Device.GetViewportSize()
     return Device.IsMobile() and math.min(viewport.X, viewport.Y) >= 600
 end
 
@@ -3731,9 +3924,9 @@ end
     @return boolean - True if console device
 ]]
 function Device.IsConsole()
-    return UserInputService.GamepadEnabled
-        and not UserInputService.KeyboardEnabled
-        and not UserInputService.TouchEnabled
+    return Services.UserInputService.GamepadEnabled
+        and not Services.UserInputService.KeyboardEnabled
+        and not Services.UserInputService.TouchEnabled
 end
 
 --[[
@@ -3742,7 +3935,7 @@ end
     @return boolean - True if desktop device
 ]]
 function Device.IsDesktop()
-    return UserInputService.KeyboardEnabled and UserInputService.MouseEnabled
+    return Services.UserInputService.KeyboardEnabled and Services.UserInputService.MouseEnabled
 end
 
 --[[
@@ -3751,7 +3944,7 @@ end
     @return { Top: number, Bottom: number, Left: number, Right: number }
 ]]
 function Device.GetSafeAreaInsets()
-    local insets = GuiService:GetGuiInset()
+    local insets = Services.GuiService:GetGuiInset()
     return {
         Top = insets.Y,
         Bottom = 0,
@@ -3766,7 +3959,12 @@ end
     @return Vector2 - Viewport dimensions
 ]]
 function Device.GetViewportSize()
-    return workspace.CurrentCamera.ViewportSize
+    local camera = workspace.CurrentCamera
+    if not camera then
+        return DEFAULT_VIEWPORT
+    end
+
+    return camera.ViewportSize
 end
 
 return Device
@@ -3779,7 +3977,7 @@ __modules["Utils.Draggable"] = function()
     Makes UI elements draggable with mouse and touch support.
 ]]
 
-local UserInputService = game:GetService("UserInputService")
+local Services = __require("Utils.Services")
 
 local Draggable = {}
 
@@ -3842,7 +4040,7 @@ function Draggable.Enable(frame, handle)
 
     table.insert(
         connections,
-        UserInputService.InputChanged:Connect(function(input)
+        Services.UserInputService.InputChanged:Connect(function(input)
             if input == dragInput and dragging then
                 local delta = input.Position - dragStart
                 frame.Position = UDim2.new(
@@ -3885,28 +4083,8 @@ local Services = {
     Lighting = game:GetService("Lighting"),
     RunService = game:GetService("RunService"),
     GuiService = game:GetService("GuiService"),
+    HttpService = game:GetService("HttpService"),
 }
-
---[=[
-    @return Player -- Returns the local player instance
-]=]
-function Services:GetPlayer()
-    return self.Players.LocalPlayer
-end
-
---[=[
-    @return Camera -- Returns the current camera
-]=]
-function Services:GetCamera()
-    return workspace.CurrentCamera
-end
-
---[=[
-    @return boolean -- Returns true if the device is mobile
-]=]
-function Services:IsMobile()
-    return self.UserInputService.TouchEnabled and not self.UserInputService.KeyboardEnabled
-end
 
 return Services
 end
@@ -3918,7 +4096,7 @@ __modules["Utils.Tween"] = function()
     Animation helper functions using TweenService.
 ]]
 
-local TweenService = game:GetService("TweenService")
+local Services = __require("Utils.Services")
 local Animation = __require("Constants.Animation")
 
 local Tween = {}
@@ -3957,7 +4135,7 @@ function Tween.Create(
         easingDirection
     )
 
-    local tween = TweenService:Create(instance, tweenInfo, properties)
+    local tween = Services.TweenService:Create(instance, tweenInfo, properties)
     ActiveTweens[instance] = tween
 
     tween.Completed:Connect(function()

@@ -11,6 +11,7 @@ function Section.new(window, name: string)
     self._window = window
     self._name = name
     self._tabs = {}
+    self._connections = {}
 
     -- Sidebar section frame
     self._frame = Create.Instance("Frame", {
@@ -90,8 +91,8 @@ function Section.new(window, name: string)
         self._tabsContainer.Visible = expanded
     end
 
-    headerBtn.MouseButton1Click:Connect(toggle)
-    arrow.MouseButton1Click:Connect(toggle)
+    table.insert(self._connections, headerBtn.MouseButton1Click:Connect(toggle))
+    table.insert(self._connections, arrow.MouseButton1Click:Connect(toggle))
 
     self._label = label
     self._arrow = arrow
@@ -107,6 +108,11 @@ function Section:CreateTab(name: string, icon: string?)
 end
 
 function Section:Destroy()
+    for _, connection in ipairs(self._connections) do
+        connection:Disconnect()
+    end
+    table.clear(self._connections)
+
     for _, tab in ipairs(self._tabs) do
         if tab.Destroy then
             tab:Destroy()

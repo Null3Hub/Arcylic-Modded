@@ -1,4 +1,4 @@
-local UserInputService = game:GetService("UserInputService")
+local Services = require(script.Parent.Parent.Utils.Services)
 
 local Create = require(script.Parent.Parent.Utils.Create)
 local Colors = require(script.Parent.Parent.Constants.Colors)
@@ -78,6 +78,7 @@ function Keybind.new(parent: Instance, config, window)
     self._listening = false
     self._flag = flag
     self._window = window
+    self._connections = {}
 
     self._id = name .. "_" .. tostring(math.floor(os.clock() * 1000))
     window:RegisterKeybind(self._id, self._currentKey, callback)
@@ -94,22 +95,28 @@ function Keybind.new(parent: Instance, config, window)
         end
     end
 
-    self._listenBtn.MouseButton1Click:Connect(function()
-        self._listening = true
-        refresh()
-    end)
-
-    self._inputConn = UserInputService.InputBegan:Connect(function(input, _gameProcessed)
-        if not self._listening then
-            return
-        end
-        if input.UserInputType == Enum.UserInputType.Keyboard then
-            self._currentKey = input.KeyCode
-            self._listening = false
-            window:UpdateKeybind(self._id, self._currentKey)
+    table.insert(
+        self._connections,
+        self._listenBtn.MouseButton1Click:Connect(function()
+            self._listening = true
             refresh()
-        end
-    end)
+        end)
+    )
+
+    table.insert(
+        self._connections,
+        Services.UserInputService.InputBegan:Connect(function(input, _gameProcessed)
+            if not self._listening then
+                return
+            end
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                self._currentKey = input.KeyCode
+                self._listening = false
+                window:UpdateKeybind(self._id, self._currentKey)
+                refresh()
+            end
+        end)
+    )
 
     self._refresh = refresh
 
@@ -136,9 +143,10 @@ function Keybind:GetKey(): Enum.KeyCode
 end
 
 function Keybind:Destroy()
-    if self._inputConn then
-        self._inputConn:Disconnect()
+    for _, connection in ipairs(self._connections) do
+        connection:Disconnect()
     end
+    table.clear(self._connections)
 
     if self._window then
         self._window:UnregisterKeybind(self._id)

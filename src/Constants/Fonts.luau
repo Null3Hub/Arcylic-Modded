@@ -17,6 +17,7 @@ local Fonts = {
         Title = 14,
         Normal = 14,
         Small = 13,
+        Section = 15,
         Tiny = 11,
     },
 }

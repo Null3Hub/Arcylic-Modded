@@ -4,10 +4,7 @@
     The main window container with dragging, resizing, and minimize support.
 ]]
 
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local HttpService = game:GetService("HttpService")
-
+local Services = require(script.Parent.Parent.Utils.Services)
 local Create = require(script.Parent.Parent.Utils.Create)
 local Tween = require(script.Parent.Parent.Utils.Tween)
 local Draggable = require(script.Parent.Parent.Utils.Draggable)
@@ -22,14 +19,21 @@ local Notification = require(script.Parent.Notification)
 local Window = {}
 Window.__index = Window
 
-local Environment = getfenv()
-local writeFile = Environment.writefile
-local readFile = Environment.readfile
-local isFile = Environment.isfile
-local makeFolder = Environment.makefolder
-local isFolder = Environment.isfolder
-local listFiles = Environment.listfiles
-local deleteFile = Environment.delfile
+local function safeGet(name: string): (...any) -> ...any?
+    local fn = _G[name]
+    if type(fn) == "function" then
+        return fn
+    end
+    return nil
+end
+
+local writeFile = safeGet("writefile")
+local readFile = safeGet("readfile")
+local isFile = safeGet("isfile")
+local makeFolder = safeGet("makefolder")
+local isFolder = safeGet("isfolder")
+local listFiles = safeGet("listfiles")
+local deleteFile = safeGet("delfile")
 
 export type WindowConfig = {
     Title: string?,
@@ -46,7 +50,7 @@ local function SanitizeConfigName(configName: string?): string
     local sanitized = tostring(configName or "default")
     sanitized = sanitized:gsub("^%s+", ""):gsub("%s+$", "")
     sanitized = sanitized:gsub("%.%.", "_")
-    sanitized = sanitized:gsub('[/\\:%*%?"<>|]', "_")
+    sanitized = sanitized:gsub('[%/%\\%*%?"<>|:]', "_")
     sanitized = sanitized:gsub("^%.+", ""):gsub("%.+$", "")
 
     if sanitized == "" then
@@ -173,6 +177,11 @@ function Window.new(config: WindowConfig?)
     config = config or {}
     local self = setmetatable({}, Window)
 
+    -- Apply theme overrides before building UI
+    if config.Theme then
+        Colors:SetTheme(config.Theme)
+    end
+
     local resolvedSize, minSize, maxSize = ResolveWindowSizes(config.Size)
 
     self._title = config.Title or "AcrylicUI"
@@ -205,7 +214,7 @@ function Window.new(config: WindowConfig?)
 end
 
 function Window:_CreateGui()
-    local player = Players.LocalPlayer
+    local player = Services.Players.LocalPlayer
 
     -- Screen GUI
     self._screenGui = Create.Instance("ScreenGui", {
@@ -244,8 +253,9 @@ function Window:_CreateGui()
         Parent = self._container,
     })
 
-    self:_CreateWindowControls()
     self:_CreateContentArea()
+    -- Controls are created after content so resize stays above scroll layers.
+    self:_CreateWindowControls()
 
     -- Make draggable
     self._dragConnection = Draggable.Enable(self._container, self._titleLabel)
@@ -307,7 +317,7 @@ function Window:_CreateWindowControls()
     end)
 
     closeBtn.MouseEnter:Connect(function()
-        Tween.Create(closeBtn, { ImageColor3 = Color3.fromRGB(255, 100, 100) }, "Fast")
+        Tween.Create(closeBtn, { ImageColor3 = Colors.CloseHover }, "Fast")
     end)
 
     closeBtn.MouseLeave:Connect(function()
@@ -317,13 +327,15 @@ function Window:_CreateWindowControls()
     -- Resize handle
     self._resizeBtn = Create.Instance("ImageButton", {
         Name = "Resize",
-        ImageColor3 = Color3.fromRGB(110, 110, 110),
+        Active = true,
+        ImageColor3 = Colors.ResizeHandle,
         Image = "rbxassetid://120997033468887",
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.new(1, -5, 1, -5),
         Size = UDim2.new(0, 62, 0, 60),
         BorderSizePixel = 0,
+        ZIndex = 1000,
         Parent = self._container,
     })
 
@@ -381,7 +393,7 @@ function Window:_CreateContentArea()
     self._contentContainer = Create.Instance("ScrollingFrame", {
         Name = "Content",
         ScrollBarThickness = 3,
-        ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60),
+        ScrollBarImageColor3 = Colors.Scrollbar,
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 166, 0, 0),
         Size = UDim2.new(1, -166, 1, 0),
@@ -399,46 +411,52 @@ function Window:_SetupResize()
     local resizing = false
     local startSize, startInput
 
-    self._resizeBtn.MouseEnter:Connect(function()
-        Tween.Create(self._resizeBtn, { ImageColor3 = Colors.Text }, "Fast")
-    end)
-
-    self._resizeBtn.MouseLeave:Connect(function()
-        if not resizing then
-            Tween.Create(self._resizeBtn, { ImageColor3 = Color3.fromRGB(110, 110, 110) }, "Fast")
-        end
-    end)
-
-    self._resizeBtn.InputBegan:Connect(function(input)
-        if
-            input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch
-        then
-            resizing = true
-            startSize = self._container.AbsoluteSize
-            startInput = input.Position
-            self._originalHeight = startSize.Y
-
-            local connection
-            connection = input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    resizing = false
-                    Tween.Create(
-                        self._resizeBtn,
-                        { ImageColor3 = Color3.fromRGB(110, 110, 110) },
-                        "Fast"
-                    )
-                    if connection then
-                        connection:Disconnect()
-                    end
-                end
-            end)
-        end
-    end)
+    table.insert(
+        self._connections,
+        self._resizeBtn.MouseEnter:Connect(function()
+            Tween.Create(self._resizeBtn, { ImageColor3 = Colors.Text }, "Fast")
+        end)
+    )
 
     table.insert(
         self._connections,
-        UserInputService.InputChanged:Connect(function(input)
+        self._resizeBtn.MouseLeave:Connect(function()
+            if not resizing then
+                Tween.Create(self._resizeBtn, { ImageColor3 = Colors.ResizeHandle }, "Fast")
+            end
+        end)
+    )
+
+    table.insert(
+        self._connections,
+        self._resizeBtn.InputBegan:Connect(function(input)
+            if
+                input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch
+            then
+                resizing = true
+                startSize = self._container.AbsoluteSize
+                startInput = input.Position
+                self._originalHeight = startSize.Y
+
+                local connection
+                connection = input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        resizing = false
+                        Tween.Create(self._resizeBtn, { ImageColor3 = Colors.ResizeHandle }, "Fast")
+                        if connection then
+                            connection:Disconnect()
+                        end
+                    end
+                end)
+                table.insert(self._connections, connection)
+            end
+        end)
+    )
+
+    table.insert(
+        self._connections,
+        Services.UserInputService.InputChanged:Connect(function(input)
             if
                 resizing
                 and (
@@ -482,7 +500,7 @@ end
 function Window:_SetupKeybinds()
     table.insert(
         self._connections,
-        UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        Services.UserInputService.InputBegan:Connect(function(input, gameProcessed)
             if gameProcessed then
                 return
             end
@@ -555,7 +573,7 @@ function Window:_SetupMobileToggle()
 
     table.insert(
         self._connections,
-        UserInputService.InputChanged:Connect(function(input)
+        Services.UserInputService.InputChanged:Connect(function(input)
             if
                 dragging
                 and dragStart
@@ -707,7 +725,7 @@ function Window:SaveConfig(configName: string?): boolean
     local success = pcall(function()
         writeFile(
             GetConfigPath(self._configFolder, sanitizedName),
-            HttpService:JSONEncode(configData)
+            Services.HttpService:JSONEncode(configData)
         )
     end)
 
@@ -753,7 +771,7 @@ function Window:LoadConfig(configName: string?): boolean
     end
 
     local success, data = pcall(function()
-        return HttpService:JSONDecode(readFile(path))
+        return Services.HttpService:JSONDecode(readFile(path))
     end)
 
     if not success or type(data) ~= "table" then

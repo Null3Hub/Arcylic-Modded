@@ -4,7 +4,7 @@
     A draggable slider for numeric value selection.
 ]]
 
-local UserInputService = game:GetService("UserInputService")
+local Services = require(script.Parent.Parent.Utils.Services)
 
 local Create = require(script.Parent.Parent.Utils.Create)
 local Tween = require(script.Parent.Parent.Utils.Tween)
@@ -52,6 +52,7 @@ function Slider.new(parent: Instance, config: SliderConfig, window): SliderObjec
     self._dragging = false
     self._flag = config.Flag
     self._window = window
+    self._connections = {}
 
     -- Main container
     self._frame = Create.Instance("Frame", {
@@ -97,7 +98,7 @@ function Slider.new(parent: Instance, config: SliderConfig, window): SliderObjec
     -- Track background
     self._track = Create.Instance("Frame", {
         Name = "Track",
-        BackgroundColor3 = Color3.fromRGB(11, 11, 11),
+        BackgroundColor3 = Colors.Background,
         Position = UDim2.new(0, 10, 0, 29),
         BorderSizePixel = 0,
         Size = UDim2.new(1, -20, 0, Sizes.Slider.TrackHeight),
@@ -120,36 +121,45 @@ function Slider.new(parent: Instance, config: SliderConfig, window): SliderObjec
     Create.Corner(self._fill, Sizes.Corner.Full)
 
     -- Input handling
-    self._track.InputBegan:Connect(function(input)
-        if
-            input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch
-        then
-            self._dragging = true
-            self:_UpdateFromInput(input)
-        end
-    end)
-
-    self._track.InputEnded:Connect(function(input)
-        if
-            input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch
-        then
-            self._dragging = false
-        end
-    end)
-
-    self._inputConnection = UserInputService.InputChanged:Connect(function(input)
-        if
-            self._dragging
-            and (
-                input.UserInputType == Enum.UserInputType.MouseMovement
+    table.insert(
+        self._connections,
+        self._track.InputBegan:Connect(function(input)
+            if
+                input.UserInputType == Enum.UserInputType.MouseButton1
                 or input.UserInputType == Enum.UserInputType.Touch
-            )
-        then
-            self:_UpdateFromInput(input)
-        end
-    end)
+            then
+                self._dragging = true
+                self:_UpdateFromInput(input)
+            end
+        end)
+    )
+
+    table.insert(
+        self._connections,
+        self._track.InputEnded:Connect(function(input)
+            if
+                input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch
+            then
+                self._dragging = false
+            end
+        end)
+    )
+
+    table.insert(
+        self._connections,
+        Services.UserInputService.InputChanged:Connect(function(input)
+            if
+                self._dragging
+                and (
+                    input.UserInputType == Enum.UserInputType.MouseMovement
+                    or input.UserInputType == Enum.UserInputType.Touch
+                )
+            then
+                self:_UpdateFromInput(input)
+            end
+        end)
+    )
 
     if self._flag and self._window and self._window.RegisterConfigElement then
         self._window:RegisterConfigElement(self._flag, "Slider", function()
@@ -208,9 +218,10 @@ function Slider:SetMax(max: number)
 end
 
 function Slider:Destroy()
-    if self._inputConnection then
-        self._inputConnection:Disconnect()
+    for _, connection in ipairs(self._connections) do
+        connection:Disconnect()
     end
+    table.clear(self._connections)
 
     if self._flag and self._window and self._window.UnregisterConfigElement then
         self._window:UnregisterConfigElement(self._flag)

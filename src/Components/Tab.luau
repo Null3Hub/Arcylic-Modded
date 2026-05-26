@@ -19,6 +19,7 @@ function Tab.new(window, section, name: string, icon: string?)
     self._section = section
     self._name = name
     self._elements = {}
+    self._connections = {}
 
     -- Button in sidebar
     self._button = Create.Instance("Frame", {
@@ -79,21 +80,30 @@ function Tab.new(window, section, name: string, icon: string?)
 
     Create.ListLayout(self._content, 8)
 
-    click.MouseButton1Click:Connect(function()
-        window:SelectTab(self)
-    end)
+    table.insert(
+        self._connections,
+        click.MouseButton1Click:Connect(function()
+            window:SelectTab(self)
+        end)
+    )
 
-    click.MouseEnter:Connect(function()
-        if window._currentTab ~= self then
-            Tween.Create(self._button, { BackgroundTransparency = 0.7 }, "Fast")
-        end
-    end)
+    table.insert(
+        self._connections,
+        click.MouseEnter:Connect(function()
+            if window._currentTab ~= self then
+                Tween.Create(self._button, { BackgroundTransparency = 0.7 }, "Fast")
+            end
+        end)
+    )
 
-    click.MouseLeave:Connect(function()
-        if window._currentTab ~= self then
-            Tween.Create(self._button, { BackgroundTransparency = 1 }, "Fast")
-        end
-    end)
+    table.insert(
+        self._connections,
+        click.MouseLeave:Connect(function()
+            if window._currentTab ~= self then
+                Tween.Create(self._button, { BackgroundTransparency = 1 }, "Fast")
+            end
+        end)
+    )
 
     if not window._currentTab then
         window:SelectTab(self)
@@ -132,7 +142,7 @@ function Tab:CreateSection(title: string)
         Text = title,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        TextSize = 15,
+        TextSize = Fonts.Size.Section,
         Size = UDim2.new(1, 0, 0, 25),
         Parent = self._content,
     })
@@ -266,6 +276,11 @@ function Tab:CreateConfigSection()
 end
 
 function Tab:Destroy()
+    for _, connection in ipairs(self._connections) do
+        connection:Disconnect()
+    end
+    table.clear(self._connections)
+
     for _, element in ipairs(self._elements) do
         if element.Destroy then
             element:Destroy()

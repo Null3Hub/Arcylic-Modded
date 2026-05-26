@@ -76,19 +76,30 @@ function AcrylicUI.new(title: string?, configFolder: string?)
 end
 
 --[[
-    Creates a custom theme
+    Applies a partial theme override to all UI components.
 
     @param overrides table - Color overrides
-    @return table - Complete theme colors
-
     @example
-    local customTheme = AcrylicUI.CreateTheme({
-        Accent = Color3.fromRGB(138, 43, 226),
-        Background = Color3.fromRGB(20, 20, 30)
-    })
+    AcrylicUI:SetTheme({ Accent = Color3.fromRGB(0, 170, 255) })
 ]]
-function AcrylicUI.CreateTheme(overrides: { [string]: any })
-    return AcrylicUI.Colors.CreateTheme(overrides)
+function AcrylicUI.SetTheme(overrides: { [string]: any })
+    AcrylicUI.Colors:SetTheme(overrides)
+end
+
+--[[
+    Restores all theme colors to the factory defaults.
+]]
+function AcrylicUI.ResetTheme()
+    AcrylicUI.Colors:ResetTheme()
+end
+
+--[[
+    Returns a standalone snapshot of the current theme.
+
+    @return table - Current color values
+]]
+function AcrylicUI.GetTheme(): { [string]: any }
+    return AcrylicUI.Colors:Snapshot()
 end
 
 --[[

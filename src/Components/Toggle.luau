@@ -44,6 +44,7 @@ function Toggle.new(parent: Instance, config: ToggleConfig, window): ToggleObjec
     self._callback = callback
     self._flag = config.Flag
     self._window = window
+    self._connections = {}
 
     -- Main container
     self._frame = Create.Instance("Frame", {
@@ -106,9 +107,12 @@ function Toggle.new(parent: Instance, config: ToggleConfig, window): ToggleObjec
         Parent = self._frame,
     })
 
-    button.MouseButton1Click:Connect(function()
-        self:SetValue(not self._enabled)
-    end)
+    table.insert(
+        self._connections,
+        button.MouseButton1Click:Connect(function()
+            self:SetValue(not self._enabled)
+        end)
+    )
 
     if self._flag and self._window and self._window.RegisterConfigElement then
         self._window:RegisterConfigElement(self._flag, "Toggle", function()
@@ -142,6 +146,11 @@ function Toggle:GetValue(): boolean
 end
 
 function Toggle:Destroy()
+    for _, connection in ipairs(self._connections) do
+        connection:Disconnect()
+    end
+    table.clear(self._connections)
+
     if self._flag and self._window and self._window.UnregisterConfigElement then
         self._window:UnregisterConfigElement(self._flag)
     end

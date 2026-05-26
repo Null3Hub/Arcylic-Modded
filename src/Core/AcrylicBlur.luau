@@ -2,10 +2,10 @@
     AcrylicUI - Acrylic Blur Effect
 
     Creates a frosted glass blur effect behind UI elements.
+    Handles camera nil-check and reconnects on camera swap (respawn).
 ]]
 
-local Lighting = game:GetService("Lighting")
-local RunService = game:GetService("RunService")
+local Services = require(script.Parent.Parent.Utils.Services)
 
 local Create = require(script.Parent.Parent.Utils.Create)
 
@@ -36,6 +36,10 @@ function AcrylicBlur.new(targetFrame: GuiObject)
     self._dof = nil
     self._enabled = true
     self._connections = {}
+    self._cameraConnections = {}
+    self._renderUpdate = nil
+    self._onChange = nil
+    self._destroyed = false
 
     self:_Initialize()
 
@@ -43,29 +47,32 @@ function AcrylicBlur.new(targetFrame: GuiObject)
 end
 
 function AcrylicBlur:_CreateEffects()
-    -- Depth of field for blur effect
     self._dof = Create.Instance("DepthOfFieldEffect", {
         Name = self._dofName,
         FarIntensity = 0,
         FocusDistance = 0.01,
         InFocusRadius = 0.01,
         NearIntensity = 1,
-        Parent = Lighting,
+        Parent = Services.Lighting,
     })
 
-    -- Additional blur
     self._blur = Create.Instance("BlurEffect", {
         Name = self._blurName,
         Size = 6,
         Enabled = true,
-        Parent = Lighting,
+        Parent = Services.Lighting,
     })
 end
 
 function AcrylicBlur:_CreateMesh()
+    local camera = workspace.CurrentCamera
+    if not camera then
+        return
+    end
+
     self._folder = Create.Instance("Folder", {
         Name = self._folderName,
-        Parent = workspace.CurrentCamera,
+        Parent = camera,
     })
 
     self._root = Create.Instance("Part", {
@@ -98,7 +105,21 @@ function AcrylicBlur:_CreateTrackingFrame()
     })
 end
 
-function AcrylicBlur:_StartRendering()
+function AcrylicBlur:_DisconnectCamera()
+    for _, conn in ipairs(self._cameraConnections) do
+        conn:Disconnect()
+    end
+    table.clear(self._cameraConnections)
+end
+
+function AcrylicBlur:_ConnectCamera()
+    self:_DisconnectCamera()
+
+    local camera = workspace.CurrentCamera
+    if not camera then
+        return
+    end
+
     local distance = 0.0005
     local positions = {
         top_left = Vector2.new(),
@@ -107,12 +128,20 @@ function AcrylicBlur:_StartRendering()
     }
 
     local function ViewportToWorld(location: Vector2, dist: number): Vector3
-        local ray = workspace.CurrentCamera:ScreenPointToRay(location.X, location.Y)
+        local cam = workspace.CurrentCamera
+        if not cam then
+            return Vector3.zero
+        end
+        local ray = cam:ScreenPointToRay(location.X, location.Y)
         return ray.Origin + ray.Direction * dist
     end
 
     local function GetOffset(): number
-        local viewY = workspace.CurrentCamera.ViewportSize.Y
+        local cam = workspace.CurrentCamera
+        if not cam then
+            return 28
+        end
+        local viewY = cam.ViewportSize.Y
         return (viewY / 2560) * 24 + 4
     end
 
@@ -123,7 +152,12 @@ function AcrylicBlur:_StartRendering()
     end
 
     local function Update()
-        if not self._root or not self._enabled then
+        if not self._root or not self._enabled or self._destroyed then
+            return
+        end
+
+        local cam = workspace.CurrentCamera
+        if not cam then
             return
         end
 
@@ -136,14 +170,17 @@ function AcrylicBlur:_StartRendering()
 
         self._root.CFrame = CFrame.fromMatrix(
             (tl + br) / 2,
-            workspace.CurrentCamera.CFrame.XVector,
-            workspace.CurrentCamera.CFrame.YVector,
-            workspace.CurrentCamera.CFrame.ZVector
+            cam.CFrame.XVector,
+            cam.CFrame.YVector,
+            cam.CFrame.ZVector
         )
         self._root.Mesh.Scale = Vector3.new(width, height, 0)
     end
 
     local function OnChange()
+        if self._destroyed then
+            return
+        end
         local offset = GetOffset()
         local size = self._frame.AbsoluteSize - Vector2.new(offset, offset)
         local position = self._frame.AbsolutePosition + Vector2.new(offset / 2, offset / 2)
@@ -151,21 +188,19 @@ function AcrylicBlur:_StartRendering()
         task.spawn(Update)
     end
 
-    -- Connect to camera changes
+    self._renderUpdate = Update
+    self._onChange = OnChange
+
+    table.insert(self._cameraConnections, camera:GetPropertyChangedSignal("CFrame"):Connect(Update))
     table.insert(
-        self._connections,
-        workspace.CurrentCamera:GetPropertyChangedSignal("CFrame"):Connect(Update)
+        self._cameraConnections,
+        camera:GetPropertyChangedSignal("ViewportSize"):Connect(Update)
     )
     table.insert(
-        self._connections,
-        workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(Update)
-    )
-    table.insert(
-        self._connections,
-        workspace.CurrentCamera:GetPropertyChangedSignal("FieldOfView"):Connect(Update)
+        self._cameraConnections,
+        camera:GetPropertyChangedSignal("FieldOfView"):Connect(Update)
     )
 
-    -- Connect to frame changes
     table.insert(
         self._connections,
         self._frame:GetPropertyChangedSignal("AbsolutePosition"):Connect(OnChange)
@@ -175,11 +210,32 @@ function AcrylicBlur:_StartRendering()
         self._frame:GetPropertyChangedSignal("AbsoluteSize"):Connect(OnChange)
     )
 
-    -- Render step update
-    table.insert(self._connections, RunService.RenderStepped:Connect(Update))
+    table.insert(self._connections, Services.RunService.RenderStepped:Connect(Update))
 
-    -- Initial update
     task.spawn(OnChange)
+end
+
+function AcrylicBlur:_StartRendering()
+    self:_ConnectCamera()
+
+    table.insert(
+        self._connections,
+        workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+            if not self._destroyed then
+                self:_ReparentToCamera()
+                self:_ConnectCamera()
+            end
+        end)
+    )
+end
+
+function AcrylicBlur:_ReparentToCamera()
+    local camera = workspace.CurrentCamera
+    if not camera or not self._folder then
+        return
+    end
+
+    self._folder.Parent = camera
 end
 
 function AcrylicBlur:_Initialize()
@@ -209,9 +265,17 @@ end
     Destroys the blur effect and cleans up resources
 ]]
 function AcrylicBlur:Destroy()
+    if self._destroyed then
+        return
+    end
+    self._destroyed = true
+
+    self:_DisconnectCamera()
+
     for _, connection in ipairs(self._connections) do
         connection:Disconnect()
     end
+    table.clear(self._connections)
 
     if self._folder then
         self._folder:Destroy()

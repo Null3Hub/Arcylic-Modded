@@ -23,10 +23,12 @@ $requireReplacements = [ordered]@{
     'require(script.Utils.Tween)' = '__require("Utils.Tween")'
     'require(script.Utils.Draggable)' = '__require("Utils.Draggable")'
     'require(script.Utils.Device)' = '__require("Utils.Device")'
+    'require(script.Utils.Services)' = '__require("Utils.Services")'
     'require(script.Parent.Parent.Utils.Create)' = '__require("Utils.Create")'
     'require(script.Parent.Parent.Utils.Tween)' = '__require("Utils.Tween")'
     'require(script.Parent.Parent.Utils.Draggable)' = '__require("Utils.Draggable")'
     'require(script.Parent.Parent.Utils.Device)' = '__require("Utils.Device")'
+    'require(script.Parent.Parent.Utils.Services)' = '__require("Utils.Services")'
     'require(script.Parent.Parent.Constants.Colors)' = '__require("Constants.Colors")'
     'require(script.Parent.Parent.Constants.Sizes)' = '__require("Constants.Sizes")'
     'require(script.Parent.Parent.Constants.Fonts)' = '__require("Constants.Fonts")'
@@ -43,6 +45,7 @@ $requireReplacements = [ordered]@{
     'require(script.Parent.Keybind)' = '__require("Components.Keybind")'
     'require(script.Parent.ColorPicker)' = '__require("Components.ColorPicker")'
     'require(script.Parent.Tab)' = '__require("Components.Tab")'
+    'require(script.Parent.Services)' = '__require("Utils.Services")'
 }
 
 function Get-ModuleName {

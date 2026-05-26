@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-format:
+    name: StyLua Format Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Aftman
+        uses: ok-nick/setup-aftman@v0
+
+      - name: Install StyLua
+        run: aftman install JohnnyMorganz/StyLua@0.20.0
+
+      - name: Check formatting
+        run: stylua --check src/ tests/
+
+  lint-static:
+    name: Selene Static Analysis
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Aftman
+        uses: ok-nick/setup-aftman@v0
+
+      - name: Install Selene
+        run: aftman install Kampfkarren/selene@0.31.0
+
+      - name: Run selene
+        run: selene src/ tests/
+
+  build-rojo:
+    name: Rojo Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Aftman
+        uses: ok-nick/setup-aftman@v0
+
+      - name: Install Rojo
+        run: aftman install rojo-rbx/rojo@7.4.4
+
+      - name: Build project
+        run: rojo build default.project.json --output build.rbxl
+
+  validate-bundle:
+    name: Bundle Validation
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build bundle
+        shell: powershell
+        run: powershell -ExecutionPolicy Bypass -File scripts/build-bundle.ps1
+
+      - name: Validate bundle
+        shell: powershell
+        run: powershell -ExecutionPolicy Bypass -File scripts/validate-bundle.ps1

@@ -14,27 +14,7 @@ local Services = {
     Lighting = game:GetService("Lighting"),
     RunService = game:GetService("RunService"),
     GuiService = game:GetService("GuiService"),
+    HttpService = game:GetService("HttpService"),
 }
-
---[=[
-    @return Player -- Returns the local player instance
-]=]
-function Services:GetPlayer()
-    return self.Players.LocalPlayer
-end
-
---[=[
-    @return Camera -- Returns the current camera
-]=]
-function Services:GetCamera()
-    return workspace.CurrentCamera
-end
-
---[=[
-    @return boolean -- Returns true if the device is mobile
-]=]
-function Services:IsMobile()
-    return self.UserInputService.TouchEnabled and not self.UserInputService.KeyboardEnabled
-end
 
 return Services
