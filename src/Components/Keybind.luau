@@ -14,6 +14,7 @@ function Keybind.new(parent: Instance, config, window)
     local name = (config and config.Name) or "Keybind"
     local default = (config and config.Default) or Enum.KeyCode.F
     local callback = (config and config.Callback) or function() end
+    local flag = config and config.Flag
 
     self._frame = Create.Instance("Frame", {
         Name = "Keybind_" .. name,
@@ -21,7 +22,7 @@ function Keybind.new(parent: Instance, config, window)
         BackgroundTransparency = 0.4,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, Sizes.Button.Height),
-        Parent = parent
+        Parent = parent,
     })
 
     Create.Corner(self._frame, Sizes.Corner.Medium)
@@ -37,7 +38,7 @@ function Keybind.new(parent: Instance, config, window)
         Position = UDim2.new(0, 10, 0.5, -10),
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(0, 200, 0, 20),
-        Parent = self._frame
+        Parent = self._frame,
     })
 
     self._box = Create.Instance("Frame", {
@@ -48,7 +49,7 @@ function Keybind.new(parent: Instance, config, window)
         Position = UDim2.new(1, -10, 0.5, 0),
         BorderSizePixel = 0,
         Size = UDim2.new(0, 30, 0, 26),
-        Parent = self._frame
+        Parent = self._frame,
     })
 
     Create.Corner(self._box, Sizes.Corner.Small)
@@ -62,7 +63,7 @@ function Keybind.new(parent: Instance, config, window)
         BackgroundTransparency = 1,
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(1, 0, 1, 0),
-        Parent = self._box
+        Parent = self._box,
     })
 
     self._listenBtn = Create.Instance("TextButton", {
@@ -70,14 +71,16 @@ function Keybind.new(parent: Instance, config, window)
         Text = "",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
-        Parent = self._box
+        Parent = self._box,
     })
 
     self._currentKey = default
     self._listening = false
+    self._flag = flag
+    self._window = window
 
-    local id = name .. "_" .. tostring(math.floor(os.clock() * 1000))
-    window:RegisterKeybind(id, self._currentKey, callback)
+    self._id = name .. "_" .. tostring(math.floor(os.clock() * 1000))
+    window:RegisterKeybind(self._id, self._currentKey, callback)
 
     local function refresh()
         if self._listening then
@@ -96,15 +99,27 @@ function Keybind.new(parent: Instance, config, window)
         refresh()
     end)
 
-    self._inputConn = UserInputService.InputBegan:Connect(function(input, gp)
-        if not self._listening then return end
+    self._inputConn = UserInputService.InputBegan:Connect(function(input, _gameProcessed)
+        if not self._listening then
+            return
+        end
         if input.UserInputType == Enum.UserInputType.Keyboard then
             self._currentKey = input.KeyCode
             self._listening = false
-            window:UpdateKeybind(id, self._currentKey)
+            window:UpdateKeybind(self._id, self._currentKey)
             refresh()
         end
     end)
+
+    self._refresh = refresh
+
+    if self._flag and self._window and self._window.RegisterConfigElement then
+        self._window:RegisterConfigElement(self._flag, "Keybind", function()
+            return self._currentKey
+        end, function(value)
+            self:SetKey(value)
+        end)
+    end
 
     refresh()
     return self
@@ -112,11 +127,27 @@ end
 
 function Keybind:SetKey(key: Enum.KeyCode)
     self._currentKey = key
-    self._label.Text = key.Name
+    self._window:UpdateKeybind(self._id, self._currentKey)
+    self._refresh()
+end
+
+function Keybind:GetKey(): Enum.KeyCode
+    return self._currentKey
 end
 
 function Keybind:Destroy()
-    if self._inputConn then self._inputConn:Disconnect() end
+    if self._inputConn then
+        self._inputConn:Disconnect()
+    end
+
+    if self._window then
+        self._window:UnregisterKeybind(self._id)
+    end
+
+    if self._flag and self._window and self._window.UnregisterConfigElement then
+        self._window:UnregisterConfigElement(self._flag)
+    end
+
     self._frame:Destroy()
 end
 

@@ -1,0 +1,8 @@
+std = "roblox"
+exclude = ["src.lua.txt"]
+
+[config]
+unused_variable = { ignore_pattern = "^_" }
+
+[lints]
+roblox_manual_fromscale_or_fromoffset = "allow"

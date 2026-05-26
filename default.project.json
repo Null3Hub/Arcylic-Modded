@@ -1,0 +1,11 @@
+{
+  "name": "Arcylic-Modded",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "AcrylicUI": {
+        "$path": "src"
+      }
+    }
+  }
+}

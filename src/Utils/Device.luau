@@ -1,6 +1,6 @@
 --[[
     AcrylicUI - Device Detection Utility
-    
+
     Detects device type and capabilities.
 ]]
 
@@ -11,7 +11,7 @@ local Device = {}
 
 --[[
     Checks if the current device is mobile (touch only)
-    
+
     @return boolean - True if mobile device
 ]]
 function Device.IsMobile(): boolean
@@ -20,7 +20,7 @@ end
 
 --[[
     Checks if the current device is a tablet
-    
+
     @return boolean - True if tablet device
 ]]
 function Device.IsTablet(): boolean
@@ -30,18 +30,18 @@ end
 
 --[[
     Checks if the current device is a console
-    
+
     @return boolean - True if console device
 ]]
 function Device.IsConsole(): boolean
-    return UserInputService.GamepadEnabled and 
-           not UserInputService.KeyboardEnabled and 
-           not UserInputService.TouchEnabled
+    return UserInputService.GamepadEnabled
+        and not UserInputService.KeyboardEnabled
+        and not UserInputService.TouchEnabled
 end
 
 --[[
     Checks if the current device is desktop
-    
+
     @return boolean - True if desktop device
 ]]
 function Device.IsDesktop(): boolean
@@ -50,7 +50,7 @@ end
 
 --[[
     Gets the safe area insets (for notched devices)
-    
+
     @return { Top: number, Bottom: number, Left: number, Right: number }
 ]]
 function Device.GetSafeAreaInsets(): { Top: number, Bottom: number, Left: number, Right: number }
@@ -59,13 +59,13 @@ function Device.GetSafeAreaInsets(): { Top: number, Bottom: number, Left: number
         Top = insets.Y,
         Bottom = 0,
         Left = 0,
-        Right = 0
+        Right = 0,
     }
 end
 
 --[[
     Gets the current viewport size
-    
+
     @return Vector2 - Viewport dimensions
 ]]
 function Device.GetViewportSize(): Vector2

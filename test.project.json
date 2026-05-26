@@ -1,0 +1,18 @@
+{
+  "name": "Arcylic-Modded-Test",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "AcrylicUI": {
+        "$path": "src"
+      }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "SmokeTest": {
+          "$path": "tests/smoke.client.luau"
+        }
+      }
+    }
+  }
+}

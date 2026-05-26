@@ -1,6 +1,6 @@
 --[[
     AcrylicUI - Notification System
-    
+
     Toast-style notifications with auto-dismiss.
 ]]
 
@@ -12,62 +12,79 @@ local Fonts = require(script.Parent.Parent.Constants.Fonts)
 
 local Notification = {}
 
-local Container: Frame? = nil
+local Containers: { [ScreenGui]: Frame } = {}
 
 export type NotificationConfig = {
     Title: string?,
     Description: string?,
     Duration: number?,
-    Icon: string?
+    Icon: string?,
 }
 
 --[[
     Creates the notification container
-    
+
     @param screenGui ScreenGui - Parent screen gui
     @return Frame - Container frame
 ]]
 function Notification.CreateContainer(screenGui: ScreenGui): Frame
-    if Container then return Container end
-    
-    Container = Create.Instance("Frame", {
+    local existing = Containers[screenGui]
+    if existing and existing.Parent == screenGui then
+        return existing
+    end
+    Containers[screenGui] = nil
+
+    local container = Create.Instance("Frame", {
         Name = "NotificationContainer",
         BackgroundTransparency = 1,
         Position = UDim2.new(1, -240, 0, 20),
         Size = UDim2.new(0, 220, 1, -40),
-        Parent = screenGui
+        Parent = screenGui,
     })
-    
-    Create.ListLayout(Container, 10)
-    
-    return Container
+
+    Create.ListLayout(container, 10)
+    Containers[screenGui] = container
+
+    return container
+end
+
+function Notification.DestroyContainer(screenGui: ScreenGui)
+    local container = Containers[screenGui]
+    if container then
+        if container.Parent then
+            container:Destroy()
+        end
+        Containers[screenGui] = nil
+    end
 end
 
 --[[
     Shows a notification
-    
+
     @param config NotificationConfig - Notification configuration
     @return Frame - Notification frame
-    
+
     @example
     Notification.Show({
         Title = "Success",
         Description = "Operation completed!",
         Duration = 3,
         Icon = "rbxassetid://10709775704"
-    })
+    }, screenGui)
 ]]
-function Notification.Show(config: NotificationConfig): Frame
-    if not Container then
+function Notification.Show(config: NotificationConfig, screenGui: ScreenGui?): Frame?
+    if not screenGui then
         warn("AcrylicUI: Notification container not initialized")
         return nil
     end
-    
+
+    local container = Notification.CreateContainer(screenGui)
+
     local title = config.Title or "Notification"
     local description = config.Description or ""
     local duration = config.Duration or 3
     local icon = config.Icon or "rbxassetid://10709775704"
-    
+
     -- Notification frame
     local notification = Create.Instance("Frame", {
         Name = "Notification",
@@ -75,18 +92,18 @@ function Notification.Show(config: NotificationConfig): Frame
         Position = UDim2.new(1, 20, 0, 0),
         Size = UDim2.new(1, 0, 0, Sizes.Notification.Height),
         ClipsDescendants = true,
-        Parent = Container
+        Parent = container,
     })
-    
+
     Create.Corner(notification, Sizes.Corner.Small)
-    
+
     Create.Instance("UIStroke", {
         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
         Color = Colors.Notification.Border,
         Thickness = 1.5,
-        Parent = notification
+        Parent = notification,
     })
-    
+
     -- Title
     Create.Instance("TextLabel", {
         Name = "Title",
@@ -98,9 +115,9 @@ function Notification.Show(config: NotificationConfig): Frame
         Position = UDim2.new(0, 14, 0, 16),
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(1, -60, 0, 19),
-        Parent = notification
+        Parent = notification,
     })
-    
+
     -- Description
     Create.Instance("TextLabel", {
         Name = "Description",
@@ -113,9 +130,9 @@ function Notification.Show(config: NotificationConfig): Frame
         Position = UDim2.new(0, 14, 0, 38),
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(1, -60, 0, 19),
-        Parent = notification
+        Parent = notification,
     })
-    
+
     -- Icon
     local iconImage = Create.Instance("ImageLabel", {
         Name = "Icon",
@@ -123,24 +140,24 @@ function Notification.Show(config: NotificationConfig): Frame
         Image = icon,
         Position = UDim2.new(1, -33, 0, 23),
         Size = UDim2.new(0, 19, 0, 19),
-        Parent = notification
+        Parent = notification,
     })
-    
+
     Create.Instance("UIAspectRatioConstraint", {
-        Parent = iconImage
+        Parent = iconImage,
     })
-    
+
     -- Timer bar
     local timerBar = Create.Instance("Frame", {
         Name = "Timer",
         BackgroundColor3 = Colors.Notification.Timer,
         Position = UDim2.new(0, 0, 1, -3),
         Size = UDim2.new(1, 0, 0, 3),
-        Parent = notification
+        Parent = notification,
     })
-    
+
     Create.Corner(timerBar, Sizes.Corner.Full)
-    
+
     -- Animate in
     Tween.Create(
         notification,
@@ -149,15 +166,10 @@ function Notification.Show(config: NotificationConfig): Frame
         Enum.EasingStyle.Back,
         Enum.EasingDirection.Out
     )
-    
+
     -- Timer animation
-    Tween.Create(
-        timerBar,
-        { Size = UDim2.new(0, 0, 0, 3) },
-        duration,
-        Enum.EasingStyle.Linear
-    )
-    
+    Tween.Create(timerBar, { Size = UDim2.new(0, 0, 0, 3) }, duration, Enum.EasingStyle.Linear)
+
     -- Auto dismiss
     task.delay(duration, function()
         Tween.CreateWithCallback(
@@ -169,7 +181,7 @@ function Notification.Show(config: NotificationConfig): Frame
             end
         )
     end)
-    
+
     return notification
 end
 

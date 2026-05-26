@@ -1,6 +1,6 @@
 --[[
     AcrylicUI - Dropdown Component
-    
+
     A dropdown menu with single/multi-select support.
 ]]
 
@@ -18,7 +18,8 @@ export type DropdownConfig = {
     Options: { string }?,
     Default: string | { string }?,
     MultiSelect: boolean?,
-    Callback: ((selected: string | { string }) -> ())?
+    Flag: string?,
+    Callback: ((selected: string | { string }) -> ())?,
 }
 
 export type DropdownObject = {
@@ -27,34 +28,34 @@ export type DropdownObject = {
     Refresh: (self: DropdownObject, options: { string }) -> (),
     Open: (self: DropdownObject) -> (),
     Close: (self: DropdownObject) -> (),
-    Destroy: (self: DropdownObject) -> ()
+    Destroy: (self: DropdownObject) -> (),
 }
 
 --[[
     Creates a new dropdown component
-    
+
     @param parent Instance - Parent container
     @param config DropdownConfig - Dropdown configuration
     @return DropdownObject - Dropdown control object
 ]]
-function Dropdown.new(parent: Instance, config: DropdownConfig): DropdownObject
+function Dropdown.new(parent: Instance, config: DropdownConfig, window): DropdownObject
     local self = setmetatable({}, Dropdown)
-    
+
     local name = config.Name or "Dropdown"
     self._options = config.Options or { "Option 1", "Option 2", "Option 3" }
     self._multiSelect = config.MultiSelect or false
     self._callback = config.Callback or function() end
     self._expanded = false
-    
+    self._flag = config.Flag
+    self._window = window
+
     -- Initialize selected value
     if self._multiSelect then
-        self._selected = if type(config.Default) == "table" 
-            then config.Default 
-            else {}
+        self._selected = if type(config.Default) == "table" then config.Default else {}
     else
         self._selected = config.Default or self._options[1]
     end
-    
+
     -- Main container
     self._frame = Create.Instance("Frame", {
         Name = "Dropdown_" .. name,
@@ -64,12 +65,12 @@ function Dropdown.new(parent: Instance, config: DropdownConfig): DropdownObject
         Size = UDim2.new(1, 0, 0, Sizes.Dropdown.Height),
         ClipsDescendants = false,
         ZIndex = 1,
-        Parent = parent
+        Parent = parent,
     })
-    
+
     Create.Corner(self._frame, Sizes.Corner.Medium)
     Create.Stroke(self._frame)
-    
+
     -- Label
     Create.Instance("TextLabel", {
         Name = "Label",
@@ -82,9 +83,9 @@ function Dropdown.new(parent: Instance, config: DropdownConfig): DropdownObject
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(0, 200, 0, 20),
         ZIndex = 1,
-        Parent = self._frame
+        Parent = self._frame,
     })
-    
+
     -- Selected display
     self._display = Create.Instance("Frame", {
         Name = "Display",
@@ -94,12 +95,12 @@ function Dropdown.new(parent: Instance, config: DropdownConfig): DropdownObject
         BorderSizePixel = 0,
         Size = UDim2.new(0, 135, 0, 26),
         ZIndex = 2,
-        Parent = self._frame
+        Parent = self._frame,
     })
-    
+
     Create.Corner(self._display, Sizes.Corner.Medium)
     Create.Stroke(self._display)
-    
+
     -- Selected label
     self._selectedLabel = Create.Instance("TextLabel", {
         Name = "SelectedLabel",
@@ -113,9 +114,9 @@ function Dropdown.new(parent: Instance, config: DropdownConfig): DropdownObject
         Position = UDim2.new(0, 10, 0, 0),
         TextXAlignment = Enum.TextXAlignment.Left,
         ZIndex = 2,
-        Parent = self._display
+        Parent = self._display,
     })
-    
+
     -- Arrow indicator
     self._arrow = Create.Instance("ImageLabel", {
         Name = "Arrow",
@@ -126,12 +127,12 @@ function Dropdown.new(parent: Instance, config: DropdownConfig): DropdownObject
         Size = UDim2.new(0, 10, 0, 10),
         Rotation = 0,
         ZIndex = 2,
-        Parent = self._display
+        Parent = self._display,
     })
-    
+
     -- Create options container
     self:_CreateOptionsContainer()
-    
+
     -- Toggle button
     local toggleBtn = Create.Instance("TextButton", {
         Name = "ToggleButton",
@@ -139,9 +140,9 @@ function Dropdown.new(parent: Instance, config: DropdownConfig): DropdownObject
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
         ZIndex = 3,
-        Parent = self._display
+        Parent = self._display,
     })
-    
+
     toggleBtn.MouseButton1Click:Connect(function()
         if self._expanded then
             self:Close()
@@ -149,7 +150,15 @@ function Dropdown.new(parent: Instance, config: DropdownConfig): DropdownObject
             self:Open()
         end
     end)
-    
+
+    if self._flag and self._window and self._window.RegisterConfigElement then
+        self._window:RegisterConfigElement(self._flag, "Dropdown", function()
+            return self._selected
+        end, function(value)
+            self:SetValue(value)
+        end)
+    end
+
     return self
 end
 
@@ -169,7 +178,7 @@ function Dropdown:_CreateOptionsContainer()
         #self._options * Sizes.Dropdown.OptionHeight,
         maxVisible * Sizes.Dropdown.OptionHeight
     )
-    
+
     self._optionsContainer = Create.Instance("Frame", {
         Name = "OptionsContainer",
         BackgroundColor3 = Colors.Secondary,
@@ -180,12 +189,12 @@ function Dropdown:_CreateOptionsContainer()
         Visible = false,
         ZIndex = 100,
         ClipsDescendants = true,
-        Parent = self._frame
+        Parent = self._frame,
     })
-    
+
     Create.Corner(self._optionsContainer, Sizes.Corner.Medium)
     Create.Stroke(self._optionsContainer)
-    
+
     self._optionsScroll = Create.Instance("ScrollingFrame", {
         Name = "Scroll",
         BackgroundTransparency = 1,
@@ -195,11 +204,11 @@ function Dropdown:_CreateOptionsContainer()
         ScrollBarThickness = 3,
         ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60),
         ZIndex = 100,
-        Parent = self._optionsContainer
+        Parent = self._optionsContainer,
     })
-    
+
     Create.ListLayout(self._optionsScroll, 0)
-    
+
     self:_PopulateOptions()
 end
 
@@ -209,7 +218,7 @@ function Dropdown:_PopulateOptions()
             child:Destroy()
         end
     end
-    
+
     for _, option in ipairs(self._options) do
         local optionBtn = Create.Instance("TextButton", {
             Name = option,
@@ -222,17 +231,17 @@ function Dropdown:_PopulateOptions()
             TextSize = Fonts.Size.Small,
             Size = UDim2.new(1, 0, 0, Sizes.Dropdown.OptionHeight),
             ZIndex = 100,
-            Parent = self._optionsScroll
+            Parent = self._optionsScroll,
         })
-        
+
         optionBtn.MouseEnter:Connect(function()
             Tween.Create(optionBtn, { BackgroundTransparency = 0.5 }, "Fast")
         end)
-        
+
         optionBtn.MouseLeave:Connect(function()
             Tween.Create(optionBtn, { BackgroundTransparency = 1 }, "Fast")
         end)
-        
+
         optionBtn.MouseButton1Click:Connect(function()
             if self._multiSelect then
                 local index = table.find(self._selected, option)
@@ -272,9 +281,11 @@ function Dropdown:Close()
 end
 
 function Dropdown:SetValue(value: string | { string })
-    if self._multiSelect and type(value) == "table" then
-        self._selected = value
-    elseif not self._multiSelect then
+    if self._multiSelect then
+        if type(value) == "table" then
+            self._selected = value
+        end
+    else
         self._selected = value
     end
     self:_UpdateDisplay()
@@ -287,22 +298,21 @@ end
 
 function Dropdown:Refresh(options: { string })
     self._options = options
-    self._optionsScroll.CanvasSize = UDim2.new(
-        0, 0, 0, 
-        #options * Sizes.Dropdown.OptionHeight
-    )
-    
+    self._optionsScroll.CanvasSize = UDim2.new(0, 0, 0, #options * Sizes.Dropdown.OptionHeight)
+
     local maxVisible = Sizes.Dropdown.MaxVisibleOptions
-    local totalHeight = math.min(
-        #options * Sizes.Dropdown.OptionHeight,
-        maxVisible * Sizes.Dropdown.OptionHeight
-    )
+    local totalHeight =
+        math.min(#options * Sizes.Dropdown.OptionHeight, maxVisible * Sizes.Dropdown.OptionHeight)
     self._optionsContainer.Size = UDim2.new(0, 135, 0, totalHeight)
-    
+
     self:_PopulateOptions()
 end
 
 function Dropdown:Destroy()
+    if self._flag and self._window and self._window.UnregisterConfigElement then
+        self._window:UnregisterConfigElement(self._flag)
+    end
+
     self._frame:Destroy()
 end
 

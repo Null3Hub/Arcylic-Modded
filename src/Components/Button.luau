@@ -1,6 +1,6 @@
 --[[
     AcrylicUI - Button Component
-    
+
     A clickable button with hover effects and icon support.
 ]]
 
@@ -16,23 +16,23 @@ Button.__index = Button
 export type ButtonConfig = {
     Name: string?,
     Icon: string?,
-    Callback: (() -> ())?
+    Callback: (() -> ())?,
 }
 
 export type ButtonObject = {
     SetText: (self: ButtonObject, text: string) -> (),
     SetIcon: (self: ButtonObject, icon: string) -> (),
     SetCallback: (self: ButtonObject, callback: () -> ()) -> (),
-    Destroy: (self: ButtonObject) -> ()
+    Destroy: (self: ButtonObject) -> (),
 }
 
 --[[
     Creates a new button component
-    
+
     @param parent Instance - Parent container
     @param config ButtonConfig - Button configuration
     @return ButtonObject - Button control object
-    
+
     @example
     local button = Button.new(container, {
         Name = "Execute",
@@ -44,11 +44,11 @@ export type ButtonObject = {
 ]]
 function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
     local self = setmetatable({}, Button)
-    
+
     local name = config.Name or "Button"
     local icon = config.Icon or "rbxassetid://10734898355"
     local callback = config.Callback or function() end
-    
+
     -- Main container
     self._frame = Create.Instance("Frame", {
         Name = "Button_" .. name,
@@ -56,12 +56,12 @@ function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
         BackgroundTransparency = 0.4,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, Sizes.Button.Height),
-        Parent = parent
+        Parent = parent,
     })
-    
+
     Create.Corner(self._frame, Sizes.Corner.Medium)
     Create.Stroke(self._frame)
-    
+
     -- Button label
     self._label = Create.Instance("TextLabel", {
         Name = "Label",
@@ -73,9 +73,9 @@ function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
         Position = UDim2.new(0, 10, 0.5, -10),
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(1, -50, 0, 20),
-        Parent = self._frame
+        Parent = self._frame,
     })
-    
+
     -- Icon
     self._icon = Create.Instance("ImageLabel", {
         Name = "Icon",
@@ -84,42 +84,42 @@ function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
         ImageColor3 = Colors.Text,
         Position = UDim2.new(1, -30, 0.5, -10),
         Size = UDim2.new(0, 20, 0, 20),
-        Parent = self._frame
+        Parent = self._frame,
     })
-    
+
     Create.Instance("UIAspectRatioConstraint", {
-        Parent = self._icon
+        Parent = self._icon,
     })
-    
+
     -- Click button
     self._button = Create.Instance("TextButton", {
         Name = "ClickArea",
         Text = "",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
-        Parent = self._frame
+        Parent = self._frame,
     })
-    
+
     self._callback = callback
-    
+
     -- Event handlers
     self._button.MouseButton1Click:Connect(function()
         -- Click animation
         Tween.Create(self._frame, { BackgroundTransparency = 0.2 }, "Fast")
         task.wait(0.1)
         Tween.Create(self._frame, { BackgroundTransparency = 0.4 }, "Fast")
-        
+
         self._callback()
     end)
-    
+
     self._button.MouseEnter:Connect(function()
         Tween.Create(self._frame, { BackgroundTransparency = 0.3 }, "Fast")
     end)
-    
+
     self._button.MouseLeave:Connect(function()
         Tween.Create(self._frame, { BackgroundTransparency = 0.4 }, "Fast")
     end)
-    
+
     return self
 end
 

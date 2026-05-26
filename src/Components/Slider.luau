@@ -1,6 +1,6 @@
 --[[
     AcrylicUI - Slider Component
-    
+
     A draggable slider for numeric value selection.
 ]]
 
@@ -21,7 +21,8 @@ export type SliderConfig = {
     Max: number?,
     Default: number?,
     Increment: number?,
-    Callback: ((value: number) -> ())?
+    Flag: string?,
+    Callback: ((value: number) -> ())?,
 }
 
 export type SliderObject = {
@@ -29,19 +30,19 @@ export type SliderObject = {
     GetValue: (self: SliderObject) -> number,
     SetMin: (self: SliderObject, min: number) -> (),
     SetMax: (self: SliderObject, max: number) -> (),
-    Destroy: (self: SliderObject) -> ()
+    Destroy: (self: SliderObject) -> (),
 }
 
 --[[
     Creates a new slider component
-    
+
     @param parent Instance - Parent container
     @param config SliderConfig - Slider configuration
     @return SliderObject - Slider control object
 ]]
-function Slider.new(parent: Instance, config: SliderConfig): SliderObject
+function Slider.new(parent: Instance, config: SliderConfig, window): SliderObject
     local self = setmetatable({}, Slider)
-    
+
     local name = config.Name or "Slider"
     self._min = config.Min or 0
     self._max = config.Max or 100
@@ -49,7 +50,9 @@ function Slider.new(parent: Instance, config: SliderConfig): SliderObject
     self._increment = config.Increment or 1
     self._callback = config.Callback or function() end
     self._dragging = false
-    
+    self._flag = config.Flag
+    self._window = window
+
     -- Main container
     self._frame = Create.Instance("Frame", {
         Name = "Slider_" .. name,
@@ -57,12 +60,12 @@ function Slider.new(parent: Instance, config: SliderConfig): SliderObject
         BackgroundTransparency = 0.4,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, Sizes.Slider.Height),
-        Parent = parent
+        Parent = parent,
     })
-    
+
     Create.Corner(self._frame, Sizes.Corner.Medium)
     Create.Stroke(self._frame)
-    
+
     -- Label
     Create.Instance("TextLabel", {
         Name = "Label",
@@ -74,9 +77,9 @@ function Slider.new(parent: Instance, config: SliderConfig): SliderObject
         Position = UDim2.new(0, 10, 0, 5),
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(0, 200, 0, 20),
-        Parent = self._frame
+        Parent = self._frame,
     })
-    
+
     -- Value display
     self._valueLabel = Create.Instance("TextLabel", {
         Name = "Value",
@@ -88,9 +91,9 @@ function Slider.new(parent: Instance, config: SliderConfig): SliderObject
         Position = UDim2.new(1, -60, 0, 5),
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(0, 50, 0, 20),
-        Parent = self._frame
+        Parent = self._frame,
     })
-    
+
     -- Track background
     self._track = Create.Instance("Frame", {
         Name = "Track",
@@ -98,47 +101,64 @@ function Slider.new(parent: Instance, config: SliderConfig): SliderObject
         Position = UDim2.new(0, 10, 0, 29),
         BorderSizePixel = 0,
         Size = UDim2.new(1, -20, 0, Sizes.Slider.TrackHeight),
-        Parent = self._frame
+        Parent = self._frame,
     })
-    
+
     Create.Corner(self._track, Sizes.Corner.Full)
-    
+
     -- Fill bar
-    local initialFill = (self._value - self._min) / (self._max - self._min)
+    local range = math.max(self._max - self._min, 1)
+    local initialFill = (self._value - self._min) / range
     self._fill = Create.Instance("Frame", {
         Name = "Fill",
         BackgroundColor3 = Colors.Accent,
         BorderSizePixel = 0,
         Size = UDim2.new(initialFill, 0, 1, 0),
-        Parent = self._track
+        Parent = self._track,
     })
-    
+
     Create.Corner(self._fill, Sizes.Corner.Full)
-    
+
     -- Input handling
     self._track.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or
-           input.UserInputType == Enum.UserInputType.Touch then
+        if
+            input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch
+        then
             self._dragging = true
             self:_UpdateFromInput(input)
         end
     end)
-    
+
     self._track.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or
-           input.UserInputType == Enum.UserInputType.Touch then
+        if
+            input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch
+        then
             self._dragging = false
         end
     end)
-    
+
     self._inputConnection = UserInputService.InputChanged:Connect(function(input)
-        if self._dragging and 
-           (input.UserInputType == Enum.UserInputType.MouseMovement or
-            input.UserInputType == Enum.UserInputType.Touch) then
+        if
+            self._dragging
+            and (
+                input.UserInputType == Enum.UserInputType.MouseMovement
+                or input.UserInputType == Enum.UserInputType.Touch
+            )
+        then
             self:_UpdateFromInput(input)
         end
     end)
-    
+
+    if self._flag and self._window and self._window.RegisterConfigElement then
+        self._window:RegisterConfigElement(self._flag, "Slider", function()
+            return self._value
+        end, function(value)
+            self:SetValue(value)
+        end)
+    end
+
     return self
 end
 
@@ -146,20 +166,21 @@ function Slider:_UpdateFromInput(input: InputObject)
     local pos = input.Position
     local trackPos = self._track.AbsolutePosition
     local trackSize = self._track.AbsoluteSize
-    
+
     local relativeX = math.clamp((pos.X - trackPos.X) / trackSize.X, 0, 1)
     local rawValue = self._min + (self._max - self._min) * relativeX
-    
+
     -- Apply increment
     self._value = math.floor(rawValue / self._increment + 0.5) * self._increment
     self._value = math.clamp(self._value, self._min, self._max)
-    
+
     self:_UpdateVisual()
     self._callback(self._value)
 end
 
 function Slider:_UpdateVisual()
-    local fillRatio = (self._value - self._min) / (self._max - self._min)
+    local range = math.max(self._max - self._min, 1)
+    local fillRatio = (self._value - self._min) / range
     Tween.Create(self._fill, { Size = UDim2.new(fillRatio, 0, 1, 0) }, "Instant")
     self._valueLabel.Text = tostring(self._value)
 end
@@ -190,6 +211,11 @@ function Slider:Destroy()
     if self._inputConnection then
         self._inputConnection:Disconnect()
     end
+
+    if self._flag and self._window and self._window.UnregisterConfigElement then
+        self._window:UnregisterConfigElement(self._flag)
+    end
+
     self._frame:Destroy()
 end
 

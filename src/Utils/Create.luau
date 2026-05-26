@@ -1,23 +1,23 @@
 --[[
     AcrylicUI - Instance Creation Utilities
-    
+
     Helper functions for creating and configuring UI instances.
 ]]
 
 local Constants = {
     Colors = require(script.Parent.Parent.Constants.Colors),
-    Sizes = require(script.Parent.Parent.Constants.Sizes)
+    Sizes = require(script.Parent.Parent.Constants.Sizes),
 }
 
 local Create = {}
 
 --[[
     Creates a new instance with properties
-    
+
     @param className string - The class name of the instance
     @param properties table - Properties to apply
     @return Instance - The created instance
-    
+
     @example
     local frame = Create.Instance("Frame", {
         Name = "Container",
@@ -28,24 +28,24 @@ local Create = {}
 ]]
 function Create.Instance(className: string, properties: { [string]: any }): Instance
     local instance = Instance.new(className)
-    
+
     for property, value in pairs(properties) do
         if property ~= "Parent" then
             instance[property] = value
         end
     end
-    
+
     -- Set parent last to avoid unnecessary property updates
     if properties.Parent then
         instance.Parent = properties.Parent
     end
-    
+
     return instance
 end
 
 --[[
     Creates a UICorner with specified radius
-    
+
     @param parent Instance - Parent to attach corner to
     @param radius number? - Corner radius in pixels (default: 5)
     @return UICorner
@@ -53,13 +53,13 @@ end
 function Create.Corner(parent: Instance, radius: number?): UICorner
     return Create.Instance("UICorner", {
         CornerRadius = UDim.new(0, radius or Constants.Sizes.Corner.Medium),
-        Parent = parent
+        Parent = parent,
     }) :: UICorner
 end
 
 --[[
     Creates a UIStroke border
-    
+
     @param parent Instance - Parent to attach stroke to
     @param color Color3? - Stroke color (default: Border color)
     @param transparency number? - Stroke transparency (default: 0)
@@ -77,13 +77,13 @@ function Create.Stroke(
         Color = color or Constants.Colors.Border,
         Transparency = transparency or 0,
         Thickness = thickness or 1,
-        Parent = parent
+        Parent = parent,
     }) :: UIStroke
 end
 
 --[[
     Creates a UIPadding
-    
+
     @param parent Instance - Parent to attach padding to
     @param top number? - Top padding
     @param bottom number? - Bottom padding
@@ -103,13 +103,13 @@ function Create.Padding(
         PaddingBottom = UDim.new(0, bottom or 0),
         PaddingLeft = UDim.new(0, left or 0),
         PaddingRight = UDim.new(0, right or 0),
-        Parent = parent
+        Parent = parent,
     }) :: UIPadding
 end
 
 --[[
     Creates a UIListLayout
-    
+
     @param parent Instance - Parent to attach layout to
     @param padding number? - Padding between elements
     @param sortOrder Enum.SortOrder? - Sort order
@@ -126,28 +126,24 @@ function Create.ListLayout(
         Padding = UDim.new(0, padding or 0),
         SortOrder = sortOrder or Enum.SortOrder.LayoutOrder,
         FillDirection = direction or Enum.FillDirection.Vertical,
-        Parent = parent
+        Parent = parent,
     }) :: UIListLayout
 end
 
 --[[
     Creates a UIGridLayout
-    
+
     @param parent Instance - Parent to attach layout to
     @param cellSize UDim2 - Size of each cell
     @param cellPadding UDim2? - Padding between cells
     @return UIGridLayout
 ]]
-function Create.GridLayout(
-    parent: Instance,
-    cellSize: UDim2,
-    cellPadding: UDim2?
-): UIGridLayout
+function Create.GridLayout(parent: Instance, cellSize: UDim2, cellPadding: UDim2?): UIGridLayout
     return Create.Instance("UIGridLayout", {
         CellSize = cellSize,
         CellPadding = cellPadding or UDim2.new(0, 5, 0, 5),
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Parent = parent
+        Parent = parent,
     }) :: UIGridLayout
 end
 

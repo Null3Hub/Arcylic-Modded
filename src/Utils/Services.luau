@@ -1,7 +1,7 @@
 --[[
     Acrylic UI Library
     Services Module - Centralized service management
-    
+
     @author Acrylic Team
     @version 2.0.0
     @license MIT

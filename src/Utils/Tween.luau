@@ -1,6 +1,6 @@
 --[[
     AcrylicUI - Tween Utilities
-    
+
     Animation helper functions using TweenService.
 ]]
 
@@ -14,14 +14,14 @@ local ActiveTweens: { [Instance]: Tween } = {}
 
 --[[
     Creates and plays a tween animation
-    
+
     @param instance Instance - The instance to animate
     @param properties table - Properties to animate
     @param duration number | string? - Duration or preset name
     @param easingStyle Enum.EasingStyle? - Easing style
     @param easingDirection Enum.EasingDirection? - Easing direction
     @return Tween - The created tween
-    
+
     @example
     Tween.Create(button, { BackgroundTransparency = 0.5 }, "Fast")
 ]]
@@ -36,29 +36,29 @@ function Tween.Create(
     if ActiveTweens[instance] then
         ActiveTweens[instance]:Cancel()
     end
-    
+
     local tweenInfo = Animation.CreateTweenInfo(
         duration or Animation.Duration.Normal,
         easingStyle,
         easingDirection
     )
-    
+
     local tween = TweenService:Create(instance, tweenInfo, properties)
     ActiveTweens[instance] = tween
-    
+
     tween.Completed:Connect(function()
         if ActiveTweens[instance] == tween then
             ActiveTweens[instance] = nil
         end
     end)
-    
+
     tween:Play()
     return tween
 end
 
 --[[
     Creates a tween with callback on completion
-    
+
     @param instance Instance - The instance to animate
     @param properties table - Properties to animate
     @param duration number | string? - Duration or preset name
@@ -88,7 +88,7 @@ end
 
 --[[
     Cancels tween for specific instance
-    
+
     @param instance Instance - The instance to cancel tween for
 ]]
 function Tween.Cancel(instance: Instance)

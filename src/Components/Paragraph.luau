@@ -18,7 +18,7 @@ function Paragraph.new(parent: Instance, config)
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
-        Parent = parent
+        Parent = parent,
     })
 
     Create.Corner(self._frame, Sizes.Corner.Medium)
@@ -34,7 +34,7 @@ function Paragraph.new(parent: Instance, config)
         BackgroundTransparency = 1,
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(1, 0, 0, 20),
-        Parent = self._frame
+        Parent = self._frame,
     })
 
     self._content = Create.Instance("TextLabel", {
@@ -49,7 +49,7 @@ function Paragraph.new(parent: Instance, config)
         Position = UDim2.new(0, 0, 0, 22),
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
-        Parent = self._frame
+        Parent = self._frame,
     })
 
     return self

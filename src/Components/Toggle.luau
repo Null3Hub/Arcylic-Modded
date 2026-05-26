@@ -1,6 +1,6 @@
 --[[
     AcrylicUI - Toggle Component
-    
+
     A toggle switch with smooth animations.
 ]]
 
@@ -16,32 +16,35 @@ Toggle.__index = Toggle
 export type ToggleConfig = {
     Name: string?,
     Default: boolean?,
-    Callback: ((enabled: boolean) -> ())?
+    Flag: string?,
+    Callback: ((enabled: boolean) -> ())?,
 }
 
 export type ToggleObject = {
     SetValue: (self: ToggleObject, value: boolean) -> (),
     GetValue: (self: ToggleObject) -> boolean,
-    Destroy: (self: ToggleObject) -> ()
+    Destroy: (self: ToggleObject) -> (),
 }
 
 --[[
     Creates a new toggle component
-    
+
     @param parent Instance - Parent container
     @param config ToggleConfig - Toggle configuration
     @return ToggleObject - Toggle control object
 ]]
-function Toggle.new(parent: Instance, config: ToggleConfig): ToggleObject
+function Toggle.new(parent: Instance, config: ToggleConfig, window): ToggleObject
     local self = setmetatable({}, Toggle)
-    
+
     local name = config.Name or "Toggle"
     local default = config.Default or false
     local callback = config.Callback or function() end
-    
+
     self._enabled = default
     self._callback = callback
-    
+    self._flag = config.Flag
+    self._window = window
+
     -- Main container
     self._frame = Create.Instance("Frame", {
         Name = "Toggle_" .. name,
@@ -49,12 +52,12 @@ function Toggle.new(parent: Instance, config: ToggleConfig): ToggleObject
         BackgroundTransparency = 0.4,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, Sizes.Button.Height),
-        Parent = parent
+        Parent = parent,
     })
-    
+
     Create.Corner(self._frame, Sizes.Corner.Medium)
     Create.Stroke(self._frame)
-    
+
     -- Label
     self._label = Create.Instance("TextLabel", {
         Name = "Label",
@@ -66,9 +69,9 @@ function Toggle.new(parent: Instance, config: ToggleConfig): ToggleObject
         Position = UDim2.new(0, 10, 0.5, -10),
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(1, -60, 0, 20),
-        Parent = self._frame
+        Parent = self._frame,
     })
-    
+
     -- Switch background
     self._switchBg = Create.Instance("Frame", {
         Name = "SwitchBackground",
@@ -76,39 +79,45 @@ function Toggle.new(parent: Instance, config: ToggleConfig): ToggleObject
         Position = UDim2.new(1, -48, 0.5, -10),
         BorderSizePixel = 0,
         Size = UDim2.new(0, Sizes.Toggle.Width, 0, Sizes.Toggle.Height),
-        Parent = self._frame
+        Parent = self._frame,
     })
-    
+
     Create.Corner(self._switchBg, Sizes.Corner.Full)
-    
+
     -- Switch circle
     self._circle = Create.Instance("Frame", {
         Name = "Circle",
         BackgroundColor3 = Colors.Toggle.Circle,
         AnchorPoint = Vector2.new(0, 0.5),
-        Position = self._enabled 
-            and UDim2.new(0, 21, 0.5, 0) 
-            or UDim2.new(0, 4, 0.5, 0),
+        Position = self._enabled and UDim2.new(0, 21, 0.5, 0) or UDim2.new(0, 4, 0.5, 0),
         BorderSizePixel = 0,
         Size = UDim2.new(0, Sizes.Toggle.Circle, 0, Sizes.Toggle.Circle),
-        Parent = self._switchBg
+        Parent = self._switchBg,
     })
-    
+
     Create.Corner(self._circle, Sizes.Corner.Full)
-    
+
     -- Click area
     local button = Create.Instance("TextButton", {
         Name = "ClickArea",
         Text = "",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
-        Parent = self._frame
+        Parent = self._frame,
     })
-    
+
     button.MouseButton1Click:Connect(function()
         self:SetValue(not self._enabled)
     end)
-    
+
+    if self._flag and self._window and self._window.RegisterConfigElement then
+        self._window:RegisterConfigElement(self._flag, "Toggle", function()
+            return self._enabled
+        end, function(value)
+            self:SetValue(value)
+        end)
+    end
+
     return self
 end
 
@@ -133,6 +142,10 @@ function Toggle:GetValue(): boolean
 end
 
 function Toggle:Destroy()
+    if self._flag and self._window and self._window.UnregisterConfigElement then
+        self._window:UnregisterConfigElement(self._flag)
+    end
+
     self._frame:Destroy()
 end
 

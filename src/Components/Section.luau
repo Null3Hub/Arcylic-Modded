@@ -1,7 +1,6 @@
 local Create = require(script.Parent.Parent.Utils.Create)
 local Tween = require(script.Parent.Parent.Utils.Tween)
 local Colors = require(script.Parent.Parent.Constants.Colors)
-local Sizes = require(script.Parent.Parent.Constants.Sizes)
 local Fonts = require(script.Parent.Parent.Constants.Fonts)
 
 local Section = {}
@@ -19,7 +18,7 @@ function Section.new(window, name: string)
         BackgroundTransparency = 1,
         Size = UDim2.new(1, -10, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
-        Parent = window:GetSectionsContainer()
+        Parent = window:GetSectionsContainer(),
     })
 
     Create.ListLayout(self._frame, 2)
@@ -30,7 +29,7 @@ function Section.new(window, name: string)
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 0, 25),
         LayoutOrder = 0,
-        Parent = self._frame
+        Parent = self._frame,
     })
 
     -- Click area
@@ -41,7 +40,7 @@ function Section.new(window, name: string)
         Text = "",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
-        Parent = header
+        Parent = header,
     })
 
     -- Label
@@ -55,7 +54,7 @@ function Section.new(window, name: string)
         Position = UDim2.new(0, 5, 0, 0),
         TextSize = Fonts.Size.Small,
         Size = UDim2.new(1, -25, 1, 0),
-        Parent = header
+        Parent = header,
     })
 
     -- Arrow
@@ -67,7 +66,7 @@ function Section.new(window, name: string)
         Position = UDim2.new(1, -20, 0.5, -7),
         Size = UDim2.new(0, 15, 0, 15),
         Rotation = 0,
-        Parent = header
+        Parent = header,
     })
 
     -- Tabs container
@@ -78,7 +77,7 @@ function Section.new(window, name: string)
         AutomaticSize = Enum.AutomaticSize.Y,
         ClipsDescendants = true,
         LayoutOrder = 1,
-        Parent = self._frame
+        Parent = self._frame,
     })
 
     Create.ListLayout(self._tabsContainer, 2)
@@ -105,6 +104,19 @@ function Section:CreateTab(name: string, icon: string?)
     local tab = Tab.new(self._window, self, name, icon)
     table.insert(self._tabs, tab)
     return tab
+end
+
+function Section:Destroy()
+    for _, tab in ipairs(self._tabs) do
+        if tab.Destroy then
+            tab:Destroy()
+        end
+    end
+    table.clear(self._tabs)
+
+    if self._frame then
+        self._frame:Destroy()
+    end
 end
 
 return Section

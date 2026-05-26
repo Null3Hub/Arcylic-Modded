@@ -1,5 +1,5 @@
-# AcrylicUI
-A modern, feature-rich Roblox UI library with acrylic blur effects, smooth animations, and comprehensive functionality.
+# Arcylic-Modded
+A stabilized, toolchain-backed modded build of AcrylicUI for Roblox, with acrylic blur effects, smooth animations, config support, and generated loadstring output.
 
 ## Highlights
 -  **Modern Design** - Acrylic blur backdrop with smooth animations
@@ -16,7 +16,7 @@ A modern, feature-rich Roblox UI library with acrylic blur effects, smooth anima
 
 ### Method 1: Loadstring (Recommended)
 ```lua
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/noowtf31-ui/Arcylic/refs/heads/main/src.lua.txt"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/noowtf31-ui/Arcylic-Modded/refs/heads/main/src.lua.txt"))()
 ```
 
 ### Method 2: Local Module
@@ -25,11 +25,22 @@ Drop the library file into your Roblox project (e.g. ReplicatedStorage) and requ
 local Library = require(game.ReplicatedStorage.AcrylicUI)
 ```
 
+## Source & Build
+
+`src/` is the source of truth. The loadstring file `src.lua.txt` is generated from the modular source and should not be edited manually.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/build-bundle.ps1
+powershell -ExecutionPolicy Bypass -File scripts/validate-bundle.ps1
+```
+
+Project tooling is included for Rojo, Aftman, Wally, StyLua, and Selene.
+
 ## Quick Start
 
 ```lua
 -- Load the library
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/noowtf31-ui/Arcylic/refs/heads/main/src.lua.txt"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/noowtf31-ui/Arcylic-Modded/refs/heads/main/src.lua.txt"))()
 
 -- Create the main window
 local window = Library.new("My Hub", "MyHubConfigs")
@@ -515,7 +526,7 @@ This creates:
 
 ```lua
 -- Load library
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/noowtf31-ui/Arcylic/refs/heads/main/src.lua.txt"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/noowtf31-ui/Arcylic-Modded/refs/heads/main/src.lua.txt"))()
 
 -- Create window with config folder
 local window = Library.new("Example Hub", "ExampleHubConfigs")
@@ -707,7 +718,7 @@ The library includes a full configuration system that allows users to:
 - **Auto-save** - Automatically save every 30 seconds
 - **Multiple profiles** - Create and manage multiple configuration profiles
 
-Config files are stored in `AcrylicConfigs/` folder.
+Config files are stored in `AcrylicConfigs/<configFolder>/`, where `configFolder` is the second argument passed to `Library.new(title, configFolder)`.
 
 #### Using the Config System
 

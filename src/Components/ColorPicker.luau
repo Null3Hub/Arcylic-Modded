@@ -16,11 +16,13 @@ local PRESETS = {
     Color3.fromRGB(255, 0, 255),
 }
 
-function ColorPicker.new(parent: Instance, config)
+function ColorPicker.new(parent: Instance, config, window)
     local self = setmetatable({}, ColorPicker)
     local name = (config and config.Name) or "Color Picker"
     self._callback = (config and config.Callback) or function() end
     self._color = (config and config.Default) or PRESETS[1]
+    self._flag = config and config.Flag
+    self._window = window
 
     self._frame = Create.Instance("Frame", {
         Name = "ColorPicker_" .. name,
@@ -28,7 +30,7 @@ function ColorPicker.new(parent: Instance, config)
         BackgroundTransparency = 0.4,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, Sizes.Button.Height),
-        Parent = parent
+        Parent = parent,
     })
 
     Create.Corner(self._frame, Sizes.Corner.Medium)
@@ -44,7 +46,7 @@ function ColorPicker.new(parent: Instance, config)
         Position = UDim2.new(0, 10, 0, 0),
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(1, -50, 1, 0),
-        Parent = self._frame
+        Parent = self._frame,
     })
 
     self._preview = Create.Instance("Frame", {
@@ -52,7 +54,7 @@ function ColorPicker.new(parent: Instance, config)
         BackgroundColor3 = self._color,
         Position = UDim2.new(1, -45, 0.5, -8),
         Size = UDim2.new(0, 35, 0, 16),
-        Parent = self._frame
+        Parent = self._frame,
     })
     Create.Corner(self._preview, Sizes.Corner.Small)
     Create.Stroke(self._preview)
@@ -61,7 +63,7 @@ function ColorPicker.new(parent: Instance, config)
         Text = "",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
-        Parent = self._preview
+        Parent = self._preview,
     })
 
     -- Palette popup
@@ -73,16 +75,16 @@ function ColorPicker.new(parent: Instance, config)
         Size = UDim2.new(0, 160, 0, 52),
         Visible = false,
         ZIndex = 2000,
-        Parent = parent
+        Parent = parent,
     })
     Create.Corner(self._palette, Sizes.Corner.Medium)
     Create.Stroke(self._palette)
     Create.Padding(self._palette, 8, 8, 8, 8)
 
-    local grid = Create.Instance("UIGridLayout", {
+    Create.Instance("UIGridLayout", {
         CellPadding = UDim2.new(0, 8, 0, 8),
         CellSize = UDim2.new(0, 24, 0, 24),
-        Parent = self._palette
+        Parent = self._palette,
     })
 
     for _, col in ipairs(PRESETS) do
@@ -90,7 +92,7 @@ function ColorPicker.new(parent: Instance, config)
             BackgroundColor3 = col,
             Text = "",
             Size = UDim2.new(0, 24, 0, 24),
-            Parent = self._palette
+            Parent = self._palette,
         })
         Create.Corner(swatch, Sizes.Corner.Small)
         Create.Stroke(swatch)
@@ -108,8 +110,18 @@ function ColorPicker.new(parent: Instance, config)
 
     previewBtn.MouseButton1Click:Connect(function()
         self._palette.Visible = not self._palette.Visible
-        if self._palette.Visible then open() end
+        if self._palette.Visible then
+            open()
+        end
     end)
+
+    if self._flag and self._window and self._window.RegisterConfigElement then
+        self._window:RegisterConfigElement(self._flag, "ColorPicker", function()
+            return self._color
+        end, function(value)
+            self:SetColor(value)
+        end)
+    end
 
     return self
 end
@@ -125,7 +137,13 @@ function ColorPicker:GetColor(): Color3
 end
 
 function ColorPicker:Destroy()
-    if self._palette then self._palette:Destroy() end
+    if self._flag and self._window and self._window.UnregisterConfigElement then
+        self._window:UnregisterConfigElement(self._flag)
+    end
+
+    if self._palette then
+        self._palette:Destroy()
+    end
     self._frame:Destroy()
 end
 

@@ -8,6 +8,7 @@ local Button = require(script.Parent.Button)
 local Toggle = require(script.Parent.Toggle)
 local Slider = require(script.Parent.Slider)
 local Dropdown = require(script.Parent.Dropdown)
+local TextBox = require(script.Parent.TextBox)
 
 local Tab = {}
 Tab.__index = Tab
@@ -17,6 +18,7 @@ function Tab.new(window, section, name: string, icon: string?)
     self._window = window
     self._section = section
     self._name = name
+    self._elements = {}
 
     -- Button in sidebar
     self._button = Create.Instance("Frame", {
@@ -25,7 +27,7 @@ function Tab.new(window, section, name: string, icon: string?)
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         Size = UDim2.new(0, Sizes.Tab.Width, 0, Sizes.Tab.Height),
-        Parent = section._tabsContainer
+        Parent = section._tabsContainer,
     })
 
     Create.Corner(self._button, Sizes.Corner.Medium)
@@ -39,7 +41,7 @@ function Tab.new(window, section, name: string, icon: string?)
         AnchorPoint = Vector2.new(0, 0.5),
         Position = UDim2.new(0, 11, 0.5, 0),
         Size = UDim2.new(0, 15, 0, 15),
-        Parent = self._button
+        Parent = self._button,
     })
 
     self._text = Create.Instance("TextLabel", {
@@ -52,7 +54,7 @@ function Tab.new(window, section, name: string, icon: string?)
         Position = UDim2.new(0, 33, 0, 0),
         Size = UDim2.new(1, -42, 1, 0),
         TextSize = Fonts.Size.Small,
-        Parent = self._button
+        Parent = self._button,
     })
 
     Create.Instance("UIPadding", { PaddingRight = UDim.new(0, 9), Parent = self._text })
@@ -62,7 +64,7 @@ function Tab.new(window, section, name: string, icon: string?)
         Text = "",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
-        Parent = self._button
+        Parent = self._button,
     })
 
     -- Content frame
@@ -72,7 +74,7 @@ function Tab.new(window, section, name: string, icon: string?)
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         Visible = false,
-        Parent = window:GetContentContainer()
+        Parent = window:GetContentContainer(),
     })
 
     Create.ListLayout(self._content, 8)
@@ -93,7 +95,16 @@ function Tab.new(window, section, name: string, icon: string?)
         end
     end)
 
+    if not window._currentTab then
+        window:SelectTab(self)
+    end
+
     return self
+end
+
+function Tab:_AddElement(element)
+    table.insert(self._elements, element)
+    return element
 end
 
 function Tab:Select()
@@ -123,40 +134,152 @@ function Tab:CreateSection(title: string)
         BackgroundTransparency = 1,
         TextSize = 15,
         Size = UDim2.new(1, 0, 0, 25),
-        Parent = self._content
+        Parent = self._content,
     })
     return label
 end
 
 function Tab:CreateParagraph(config)
     local Paragraph = require(script.Parent.Paragraph)
-    return Paragraph.new(self._content, config)
+    return self:_AddElement(Paragraph.new(self._content, config))
 end
 
 function Tab:CreateButton(config)
-    return Button.new(self._content, config)
+    return self:_AddElement(Button.new(self._content, config, self._window))
 end
 
 function Tab:CreateToggle(config)
-    return Toggle.new(self._content, config)
+    return self:_AddElement(Toggle.new(self._content, config, self._window))
 end
 
 function Tab:CreateSlider(config)
-    return Slider.new(self._content, config)
+    return self:_AddElement(Slider.new(self._content, config, self._window))
 end
 
 function Tab:CreateDropdown(config)
-    return Dropdown.new(self._content, config)
+    return self:_AddElement(Dropdown.new(self._content, config, self._window))
 end
 
 function Tab:CreateKeybind(config)
     local Keybind = require(script.Parent.Keybind)
-    return Keybind.new(self._content, config, self._window)
+    return self:_AddElement(Keybind.new(self._content, config, self._window))
 end
 
 function Tab:CreateColorPicker(config)
     local ColorPicker = require(script.Parent.ColorPicker)
-    return ColorPicker.new(self._content, config)
+    return self:_AddElement(ColorPicker.new(self._content, config, self._window))
+end
+
+function Tab:CreateTextBox(config)
+    return self:_AddElement(TextBox.new(self._content, config, self._window))
+end
+
+function Tab:CreateConfigSection()
+    self:CreateSection("Configuration")
+
+    local function getConfigOptions()
+        local configs = self._window:GetConfigs()
+        if #configs == 0 then
+            return { "default" }
+        end
+        return configs
+    end
+
+    local configNameBox = self:CreateTextBox({
+        Name = "Config Name",
+        Default = "default",
+        Placeholder = "Enter config name...",
+        Callback = function(text)
+            self._window._currentConfig = text
+        end,
+    })
+
+    local configDropdown
+    configDropdown = self:CreateDropdown({
+        Name = "Select Config",
+        Options = getConfigOptions(),
+        Default = "default",
+        Callback = function(selected)
+            if type(selected) == "string" then
+                configNameBox:SetText(selected)
+                self._window._currentConfig = selected
+            end
+        end,
+    })
+
+    self:CreateButton({
+        Name = "Save Config",
+        Callback = function()
+            local configName = configNameBox:GetText()
+            if configName ~= "" and self._window:SaveConfig(configName) then
+                configDropdown:Refresh(getConfigOptions())
+            end
+        end,
+    })
+
+    self:CreateButton({
+        Name = "Load Config",
+        Callback = function()
+            local configName = configNameBox:GetText()
+            if configName ~= "" then
+                self._window:LoadConfig(configName)
+            end
+        end,
+    })
+
+    self:CreateButton({
+        Name = "Delete Config",
+        Callback = function()
+            local configName = configNameBox:GetText()
+            if configName ~= "" and self._window:DeleteConfig(configName) then
+                configDropdown:Refresh(getConfigOptions())
+            end
+        end,
+    })
+
+    self:CreateButton({
+        Name = "Refresh Configs",
+        Callback = function()
+            configDropdown:Refresh(getConfigOptions())
+            self._window:Notify({
+                Title = "Configs Refreshed",
+                Description = "Config list updated",
+                Duration = 2,
+                Icon = "rbxassetid://10723356507",
+            })
+        end,
+    })
+
+    self:CreateToggle({
+        Name = "Auto Save",
+        Default = false,
+        Callback = function(enabled)
+            self._window:SetAutoSave(enabled)
+        end,
+    })
+
+    return {
+        RefreshConfigs = function()
+            configDropdown:Refresh(getConfigOptions())
+        end,
+    }
+end
+
+function Tab:Destroy()
+    for _, element in ipairs(self._elements) do
+        if element.Destroy then
+            element:Destroy()
+        end
+    end
+    table.clear(self._elements)
+
+    if self._content then
+        self._content:Destroy()
+    end
+
+    if self._button then
+        self._button:Destroy()
+    end
 end
 
 return Tab

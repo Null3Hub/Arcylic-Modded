@@ -1,23 +1,23 @@
 --[[
-     Version: 2.0.0                                              
-     License: MIT                                                
-    
-    
+     Version: 2.0.0
+     License: MIT
+
+
     @module AcrylicUI
     @author AcrylicUI Team
     @version 2.0.0
-    
+
     @example
     local AcrylicUI = require(path.to.AcrylicUI)
-    
+
     local window = AcrylicUI.CreateWindow({
         Title = "My Hub",
         ToggleKey = Enum.KeyCode.RightControl
     })
-    
+
     local section = window:CreateSection("Combat")
     local tab = section:CreateTab("Aimbot", "rbxassetid://10723407389")
-    
+
     tab:CreateToggle({
         Name = "Enable Aimbot",
         Default = false,
@@ -32,7 +32,7 @@ AcrylicUI.__index = AcrylicUI
 
 -- Version info
 AcrylicUI.Version = "2.0.0"
-AcrylicUI.Author = "Acrylic"
+AcrylicUI.Author = "Arcylic-Modded"
 
 -- Core modules
 local Window = require(script.Core.Window)
@@ -48,15 +48,15 @@ AcrylicUI.Utils = {
     Create = require(script.Utils.Create),
     Tween = require(script.Utils.Tween),
     Draggable = require(script.Utils.Draggable),
-    Device = require(script.Utils.Device)
+    Device = require(script.Utils.Device),
 }
 
 --[[
     Creates a new window
-    
+
     @param config WindowConfig - Configuration options
     @return Window - The created window instance
-    
+
     @example
     local window = AcrylicUI.CreateWindow({
         Title = "My Hub",
@@ -68,12 +68,19 @@ function AcrylicUI.CreateWindow(config: Window.WindowConfig)
     return Window.new(config)
 end
 
+function AcrylicUI.new(title: string?, configFolder: string?)
+    return Window.new({
+        Title = title,
+        ConfigFolder = configFolder,
+    })
+end
+
 --[[
     Creates a custom theme
-    
+
     @param overrides table - Color overrides
     @return table - Complete theme colors
-    
+
     @example
     local customTheme = AcrylicUI.CreateTheme({
         Accent = Color3.fromRGB(138, 43, 226),
@@ -86,7 +93,7 @@ end
 
 --[[
     Gets library information
-    
+
     @return table - Library info
 ]]
 function AcrylicUI.GetInfo()
@@ -94,11 +101,19 @@ function AcrylicUI.GetInfo()
         Version = AcrylicUI.Version,
         Author = AcrylicUI.Author,
         Components = {
-            "Window", "Section", "Tab",
-            "Button", "Toggle", "Slider",
-            "Dropdown", "Keybind", "ColorPicker",
-            "Paragraph", "Notification"
-        }
+            "Window",
+            "Section",
+            "Tab",
+            "Button",
+            "Toggle",
+            "Slider",
+            "Dropdown",
+            "Keybind",
+            "ColorPicker",
+            "TextBox",
+            "Paragraph",
+            "Notification",
+        },
     }
 end
 
