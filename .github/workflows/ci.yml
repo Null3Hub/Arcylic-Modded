@@ -16,8 +16,8 @@ jobs:
       - name: Install Aftman
         uses: ok-nick/setup-aftman@v0.4.2
 
-      - name: Install StyLua
-        run: aftman install JohnnyMorganz/StyLua@0.20.0
+      - name: Install tools
+        run: aftman install
 
       - name: Check formatting
         run: stylua --check src/ tests/
@@ -31,8 +31,8 @@ jobs:
       - name: Install Aftman
         uses: ok-nick/setup-aftman@v0.4.2
 
-      - name: Install Selene
-        run: aftman install Kampfkarren/selene@0.31.0
+      - name: Install tools
+        run: aftman install
 
       - name: Run selene
         run: selene src/ tests/
@@ -46,8 +46,8 @@ jobs:
       - name: Install Aftman
         uses: ok-nick/setup-aftman@v0.4.2
 
-      - name: Install Rojo
-        run: aftman install rojo-rbx/rojo@7.4.4
+      - name: Install tools
+        run: aftman install
 
       - name: Build project
         run: rojo build default.project.json --output build.rbxl
