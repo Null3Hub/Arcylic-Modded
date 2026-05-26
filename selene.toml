@@ -6,3 +6,4 @@ unused_variable = { ignore_pattern = "^_" }
 
 [lints]
 roblox_manual_fromscale_or_fromoffset = "allow"
+global_usage = "allow"
