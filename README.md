@@ -16,7 +16,7 @@ A stabilized, toolchain-backed modded build of AcrylicUI for Roblox, with acryli
 
 ### Method 1: Loadstring (Recommended)
 ```lua
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/noowtf31-ui/Arcylic-Modded/refs/heads/main/src.lua.txt"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Null3Hub/Arcylic-Modded/refs/heads/main/src.lua.txt"))()
 ```
 
 ### Method 2: Local Module
@@ -40,7 +40,7 @@ Project tooling is included for Rojo, Aftman, Wally, StyLua, and Selene.
 
 ```lua
 -- Load the library
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/noowtf31-ui/Arcylic-Modded/refs/heads/main/src.lua.txt"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Null3Hub/Arcylic-Modded/refs/heads/main/src.lua.txt"))()
 
 -- Create the main window
 local window = Library.new("My Hub", "MyHubConfigs")
@@ -526,7 +526,7 @@ This creates:
 
 ```lua
 -- Load library
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/noowtf31-ui/Arcylic-Modded/refs/heads/main/src.lua.txt"))()
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Null3Hub/Arcylic-Modded/refs/heads/main/src.lua.txt"))()
 
 -- Create window with config folder
 local window = Library.new("Example Hub", "ExampleHubConfigs")
