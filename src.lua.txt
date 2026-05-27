@@ -2786,11 +2786,19 @@ local function DeserializeValue(value)
     return value
 end
 
-local function ResolveWindowSizes(requestedSize)
-    local viewport = Device.GetViewportSize()
-    local margin = Device.IsMobile() and 24 or 40
-    local maxWidth = math.max(MIN_MOBILE_WIDTH, viewport.X - margin)
-    local maxHeight = math.max(MIN_MOBILE_HEIGHT, viewport.Y - margin)
+local function ResolveWindowSizes(
+    requestedSize: { Width: number, Height,
+    clampToViewport
+)
+    local maxWidth = Sizes.MaxWindow.Width
+    local maxHeight = Sizes.MaxWindow.Height
+
+    if clampToViewport then
+        local viewport = Device.GetViewportSize()
+        local margin = Device.IsMobile() and 24 or 40
+        maxWidth = math.max(MIN_MOBILE_WIDTH, viewport.X - margin)
+        maxHeight = math.max(MIN_MOBILE_HEIGHT, viewport.Y - margin)
+    end
 
     local defaultWidth = requestedSize and requestedSize.Width or Sizes.Window.Width
     local defaultHeight = requestedSize and requestedSize.Height or Sizes.Window.Height
@@ -2842,7 +2850,8 @@ function Window.new(config)
         Colors:SetTheme(config.Theme)
     end
 
-    local resolvedSize, minSize, maxSize = ResolveWindowSizes(config.Size)
+    local clampToViewport = if config.ClampToViewport == nil then true else config.ClampToViewport
+    local resolvedSize, minSize, maxSize = ResolveWindowSizes(config.Size, clampToViewport)
 
     self._title = config.Title or "AcrylicUI"
     self._size = resolvedSize
@@ -3069,7 +3078,7 @@ end
 
 function Window:_SetupResize()
     local resizing = false
-    local startSize, startInput
+    local startSize, startInput, lastPos
 
     table.insert(
         self._connections,
@@ -3096,42 +3105,46 @@ function Window:_SetupResize()
             then
                 resizing = true
                 startSize = self._container.AbsoluteSize
-                startInput = input.Position
+                startInput = Services.UserInputService:GetMouseLocation()
+                lastPos = startInput
                 self._originalHeight = startSize.Y
 
-                local connection
-                connection = input.Changed:Connect(function()
-                    if input.UserInputState == Enum.UserInputState.End then
+                local renderConn
+                renderConn = Services.RunService.RenderStepped:Connect(function()
+                    if not resizing then
+                        return
+                    end
+                    local currentPos = Services.UserInputService:GetMouseLocation()
+                    if currentPos == lastPos then
+                        return
+                    end
+                    lastPos = currentPos
+
+                    local delta = currentPos - startInput
+                    local newWidth =
+                        math.clamp(startSize.X + delta.X, self._minSize.Width, self._maxSize.Width)
+                    local newHeight = math.clamp(
+                        startSize.Y + delta.Y,
+                        self._minSize.Height,
+                        self._maxSize.Height
+                    )
+
+                    self._container.Size = UDim2.new(0, newWidth, 0, newHeight)
+                    self._originalHeight = newHeight
+                end)
+                table.insert(self._connections, renderConn)
+
+                local resizeInput = input
+                local endConn
+                endConn = Services.UserInputService.InputEnded:Connect(function(endInput)
+                    if endInput == resizeInput then
                         resizing = false
+                        renderConn:Disconnect()
                         Tween.Create(self._resizeBtn, { ImageColor3 = Colors.ResizeHandle }, "Fast")
-                        if connection then
-                            connection:Disconnect()
-                        end
+                        endConn:Disconnect()
                     end
                 end)
-                table.insert(self._connections, connection)
-            end
-        end)
-    )
-
-    table.insert(
-        self._connections,
-        Services.UserInputService.InputChanged:Connect(function(input)
-            if
-                resizing
-                and (
-                    input.UserInputType == Enum.UserInputType.MouseMovement
-                    or input.UserInputType == Enum.UserInputType.Touch
-                )
-            then
-                local delta = input.Position - startInput
-                local newWidth =
-                    math.clamp(startSize.X + delta.X, self._minSize.Width, self._maxSize.Width)
-                local newHeight =
-                    math.clamp(startSize.Y + delta.Y, self._minSize.Height, self._maxSize.Height)
-
-                self._container.Size = UDim2.new(0, newWidth, 0, newHeight)
-                self._originalHeight = newHeight
+                table.insert(self._connections, endConn)
             end
         end)
     )
@@ -4012,13 +4025,12 @@ function Draggable.Enable(frame, handle)
             dragStart = input.Position
             startPos = frame.Position
 
+            local dragInputRef = input
             local inputConnection
-            inputConnection = input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
+            inputConnection = Services.UserInputService.InputEnded:Connect(function(endInput)
+                if endInput == dragInputRef then
                     dragging = false
-                    if inputConnection then
-                        inputConnection:Disconnect()
-                    end
+                    inputConnection:Disconnect()
                 end
             end)
 

@@ -20,7 +20,7 @@ jobs:
         run: aftman install
 
       - name: Check formatting
-        run: stylua --check src/ tests/
+        run: stylua --check src/ tests/ studio/
 
   lint-static:
     name: Selene Static Analysis
@@ -35,7 +35,7 @@ jobs:
         run: aftman install
 
       - name: Run selene
-        run: selene src/ tests/
+        run: selene src/ tests/ studio/
 
   build-rojo:
     name: Rojo Build
