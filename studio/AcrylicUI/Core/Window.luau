@@ -127,10 +127,7 @@ local function DeserializeValue(value: any): any
     return value
 end
 
-local function ResolveWindowSizes(
-    requestedSize: { Width: number, Height: number }?,
-    clampToViewport: boolean
-)
+local function ResolveWindowSizes(requestedSize, clampToViewport)
     local maxWidth = Sizes.MaxWindow.Width
     local maxHeight = Sizes.MaxWindow.Height
 

@@ -34,6 +34,19 @@ if ($content -match '(?m)^\s*local\s+[A-Za-z_][A-Za-z0-9_]*\s*:\s+') {
     $errors.Add("Bundle still contains local variable type annotations")
 }
 
+$multilineTypePattern = '(?m)^\s+(?!\s*--)[a-z_][a-zA-Z0-9_]*\s*:\s*[A-Z{][^(]*$'
+$typeMatches = [regex]::Matches($content, $multilineTypePattern)
+foreach ($match in $typeMatches) {
+    $before = $content.Substring(0, $match.Index)
+    $openComments = ([regex]::Matches($before, '--\[\[')).Count
+    $closeComments = ([regex]::Matches($before, '\]\]')).Count
+    if ($openComments -gt $closeComments) {
+        continue
+    }
+    $errors.Add("Bundle still contains multiline parameter type annotations")
+    break
+}
+
 $modules = [regex]::Matches($content, '__modules\["([^"]+)"\]') |
     ForEach-Object { $_.Groups[1].Value } |
     Sort-Object -Unique
