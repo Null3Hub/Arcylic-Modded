@@ -14,16 +14,31 @@ A stabilized, toolchain-backed modded build of AcrylicUI for Roblox, with acryli
 
 ## Installation
 
-### Method 1: Loadstring (Recommended)
+### Method 1: Executor / Loadstring
+> Requires an executor with `loadstring` and `game:HttpGet` support (e.g. Synapse, Fluxus, etc.)
+
 ```lua
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Null3Hub/Arcylic-Modded/refs/heads/main/src.lua.txt"))()
 ```
 
-### Method 2: Local Module
-Drop the library file into your Roblox project (e.g. ReplicatedStorage) and require it:
+### Method 2: Roblox Studio / Rojo (ModuleScript)
+> For Studio, Rojo sync, or published games without an executor.
+
+**Option A:** Drop the library folder into your project as a ModuleScript (e.g. under `ReplicatedStorage`) and require it:
 ```lua
-local Library = require(game.ReplicatedStorage.AcrylicUI)
+local Library = require(game.ReplicatedStorage:WaitForChild("AcrylicUI"))
 ```
+
+**Option B:** Use Rojo with the included project files:
+```bash
+rojo serve default.project.json   # syncs src/ into ReplicatedStorage.AcrylicUI
+```
+Then require from a LocalScript:
+```lua
+local Library = require(game.ReplicatedStorage:WaitForChild("AcrylicUI"))
+```
+
+> **Note:** `loadstring` is only available in executor environments. In Studio or published games, always use `require`.
 
 ## Source & Build
 
@@ -38,70 +53,33 @@ Project tooling is included for Rojo, Aftman, Wally, StyLua, and Selene.
 
 ## Quick Start
 
+### Executor / Loadstring
 ```lua
--- Load the library
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Null3Hub/Arcylic-Modded/refs/heads/main/src.lua.txt"))()
 
--- Create the main window
 local window = Library.new("My Hub", "MyHubConfigs")
-
--- Set toggle key (optional, default is RightControl)
 window:SetToggleKey(Enum.KeyCode.RightControl)
 
--- Show welcome notification
 window:Notify({
     Title = "Welcome!",
     Description = "Hub loaded successfully",
     Duration = 3,
     Icon = "rbxassetid://10709775704"
 })
+```
 
--- Create sections
-local CombatSection = window:CreateSection("Combat")
-local PlayerSection = window:CreateSection("Player")
+### Studio / Rojo (require)
+```lua
+local Library = require(game.ReplicatedStorage:WaitForChild("AcrylicUI"))
 
--- Create tabs within sections
-local AimbotTab = CombatSection:CreateTab("Aimbot", "rbxassetid://10723407389")
-local MovementTab = PlayerSection:CreateTab("Movement", "rbxassetid://10734898355")
+local window = Library.new("My Hub", "MyHubConfigs")
+window:SetToggleKey(Enum.KeyCode.RightControl)
 
--- Add section headers
-AimbotTab:CreateSection("Aimbot Settings")
-
--- Add components with config flags
-local aimbotEnabled = false
-AimbotTab:CreateToggle({
-    Name = "Enable Aimbot",
-    Default = false,
-    Flag = "AimbotEnabled", -- Used for config saving
-    Callback = function(enabled)
-        aimbotEnabled = enabled
-        window:Notify({
-            Title = enabled and "Aimbot Enabled" or "Aimbot Disabled",
-            Description = enabled and "Auto-aim active" or "Auto-aim deactivated",
-            Duration = 2
-        })
-    end
-})
-
-AimbotTab:CreateSlider({
-    Name = "Aim Speed",
-    Min = 1,
-    Max = 100,
-    Default = 50,
-    Flag = "AimSpeed",
-    Callback = function(value)
-        print("Aim speed:", value)
-    end
-})
-
-AimbotTab:CreateDropdown({
-    Name = "Target Priority",
-    Options = {"Closest", "Lowest HP", "Highest Threat", "Random"},
-    Default = "Closest",
-    Flag = "TargetPriority",
-    Callback = function(selected)
-        print("Target priority:", selected)
-    end
+window:Notify({
+    Title = "Welcome!",
+    Description = "Hub loaded successfully",
+    Duration = 3,
+    Icon = "rbxassetid://10709775704"
 })
 ```
 
@@ -525,8 +503,13 @@ This creates:
 ## Complete Example
 
 ```lua
--- Load library
+-- Choose ONE of these load methods:
+
+-- Option A: Executor / Loadstring
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Null3Hub/Arcylic-Modded/refs/heads/main/src.lua.txt"))()
+
+-- Option B: Studio / Rojo (require)
+-- local Library = require(game.ReplicatedStorage:WaitForChild("AcrylicUI"))
 
 -- Create window with config folder
 local window = Library.new("Example Hub", "ExampleHubConfigs")
