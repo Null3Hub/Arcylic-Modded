@@ -72,6 +72,7 @@ export type WindowConfig = {
 }
 
 local CONFIG_ROOT = "AcrylicConfigs"
+local AUTOLOAD_CONFIG_NAME = "_autoload"
 local MIN_MOBILE_WIDTH = 320
 local MIN_MOBILE_HEIGHT = 240
 
@@ -243,6 +244,7 @@ function Window.new(config: WindowConfig?)
     self._destroyed = false
     self._autoLoad = false
     self._autoLoadConfigName = "default"
+    self._pendingConfigData = nil
     self:_LoadAutoLoadState()
 
     self:_CreateGui()
@@ -250,6 +252,10 @@ function Window.new(config: WindowConfig?)
 
     if Device.IsMobile() then
         self:_SetupMobileToggle()
+    end
+
+    if self._autoLoad then
+        self:ApplyAutoLoad()
     end
 
     return self
@@ -744,6 +750,13 @@ function Window:RegisterConfigElement(
         getValue = getValue,
         setValue = setValue,
     }
+
+    if self._pendingConfigData and self._pendingConfigData[sanitizedFlag] ~= nil then
+        pcall(function()
+            setValue(DeserializeValue(self._pendingConfigData[sanitizedFlag]))
+        end)
+        self._pendingConfigData[sanitizedFlag] = nil
+    end
 end
 
 function Window:UnregisterConfigElement(flag: string)
@@ -761,6 +774,16 @@ function Window:SaveConfig(configName: string?): boolean
     end
 
     local sanitizedName = SanitizeConfigName(configName or self._currentConfig)
+
+    if sanitizedName == AUTOLOAD_CONFIG_NAME then
+        self:Notify({
+            Title = "Error",
+            Description = "Name reserved for internal use",
+            Duration = 3,
+        })
+        return false
+    end
+
     EnsureConfigFolder(self._configFolder)
 
     local configData = {}
@@ -809,6 +832,16 @@ function Window:LoadConfig(configName: string?): boolean
     end
 
     local sanitizedName = SanitizeConfigName(configName or self._currentConfig)
+
+    if sanitizedName == AUTOLOAD_CONFIG_NAME then
+        self:Notify({
+            Title = "Error",
+            Description = "Name reserved for internal use",
+            Duration = 3,
+        })
+        return false
+    end
+
     local path = GetConfigPath(self._configFolder, sanitizedName)
 
     if not isFile(path) then
@@ -839,6 +872,11 @@ function Window:LoadConfig(configName: string?): boolean
             pcall(function()
                 element.setValue(DeserializeValue(value))
             end)
+        else
+            if not self._pendingConfigData then
+                self._pendingConfigData = {}
+            end
+            self._pendingConfigData[flag] = value
         end
     end
 
@@ -862,6 +900,11 @@ function Window:DeleteConfig(configName: string?): boolean
     end
 
     local sanitizedName = SanitizeConfigName(configName or self._currentConfig)
+
+    if sanitizedName == AUTOLOAD_CONFIG_NAME then
+        return false
+    end
+
     local path = GetConfigPath(self._configFolder, sanitizedName)
 
     if not isFile(path) then
@@ -893,7 +936,7 @@ function Window:GetConfigs(): { string }
     for _, file in ipairs(listFiles(folder)) do
         local fileName = file:match("[^/\\]+$") or file
         local configName = fileName:match("(.+)%.json$")
-        if configName then
+        if configName and configName ~= AUTOLOAD_CONFIG_NAME then
             table.insert(configs, configName)
         end
     end
@@ -932,12 +975,27 @@ end
     @param enabled boolean - Whether to auto-load on startup
 ]]
 function Window:SetAutoLoad(enabled: boolean)
+    if enabled then
+        local sanitizedName = SanitizeConfigName(self._currentConfig)
+        if sanitizedName == AUTOLOAD_CONFIG_NAME then
+            sanitizedName = "default"
+        end
+
+        local path = GetConfigPath(self._configFolder, sanitizedName)
+        if readFile and isFile and not isFile(path) then
+            self:Notify({
+                Title = "Error",
+                Description = "Save or load a config before enabling Auto Load",
+                Duration = 3,
+            })
+            return
+        end
+
+        self._autoLoadConfigName = sanitizedName
+    end
+
     self._autoLoad = enabled
     self:_SaveAutoLoadState()
-
-    if enabled then
-        self:ApplyAutoLoad()
-    end
 end
 
 --[[

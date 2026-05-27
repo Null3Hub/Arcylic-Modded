@@ -197,7 +197,7 @@ function Tab:CreateConfigSection()
 
     local configNameBox = self:CreateTextBox({
         Name = "Config Name",
-        Default = "default",
+        Default = self._window._currentConfig,
         Placeholder = "Enter config name...",
         Callback = function(text)
             self._window._currentConfig = text
@@ -208,7 +208,7 @@ function Tab:CreateConfigSection()
     configDropdown = self:CreateDropdown({
         Name = "Select Config",
         Options = getConfigOptions(),
-        Default = "default",
+        Default = self._window._currentConfig,
         Callback = function(selected)
             if type(selected) == "string" then
                 configNameBox:SetText(selected)

@@ -72,6 +72,7 @@ export type WindowConfig = {
 }
 
 local CONFIG_ROOT = "AcrylicConfigs"
+local AUTOLOAD_CONFIG_NAME = "_autoload"
 local MIN_MOBILE_WIDTH = 320
 local MIN_MOBILE_HEIGHT = 240
 
@@ -237,12 +238,17 @@ function Window.new(config: WindowConfig?)
     self._autoSaveThreadRunning = false
     self._currentConfig = "default"
     self._destroyed = false
+    self._pendingConfigData = nil
 
     self:_CreateGui()
     self:_SetupKeybinds()
 
     if Device.IsMobile() then
         self:_SetupMobileToggle()
+    end
+
+    if self._autoLoad then
+        self:ApplyAutoLoad()
     end
 
     return self
@@ -737,6 +743,13 @@ function Window:RegisterConfigElement(
         getValue = getValue,
         setValue = setValue,
     }
+
+    if self._pendingConfigData and self._pendingConfigData[sanitizedFlag] ~= nil then
+        pcall(function()
+            setValue(DeserializeValue(self._pendingConfigData[sanitizedFlag]))
+        end)
+        self._pendingConfigData[sanitizedFlag] = nil
+    end
 end
 
 function Window:UnregisterConfigElement(flag: string)
@@ -754,6 +767,16 @@ function Window:SaveConfig(configName: string?): boolean
     end
 
     local sanitizedName = SanitizeConfigName(configName or self._currentConfig)
+
+    if sanitizedName == AUTOLOAD_CONFIG_NAME then
+        self:Notify({
+            Title = "Error",
+            Description = "Name reserved for internal use",
+            Duration = 3,
+        })
+        return false
+    end
+
     EnsureConfigFolder(self._configFolder)
 
     local configData = {}
@@ -798,6 +821,16 @@ function Window:LoadConfig(configName: string?): boolean
     end
 
     local sanitizedName = SanitizeConfigName(configName or self._currentConfig)
+
+    if sanitizedName == AUTOLOAD_CONFIG_NAME then
+        self:Notify({
+            Title = "Error",
+            Description = "Name reserved for internal use",
+            Duration = 3,
+        })
+        return false
+    end
+
     local path = GetConfigPath(self._configFolder, sanitizedName)
 
     if not isFile(path) then
@@ -828,6 +861,11 @@ function Window:LoadConfig(configName: string?): boolean
             pcall(function()
                 element.setValue(DeserializeValue(value))
             end)
+        else
+            if not self._pendingConfigData then
+                self._pendingConfigData = {}
+            end
+            self._pendingConfigData[flag] = value
         end
     end
 
@@ -847,6 +885,11 @@ function Window:DeleteConfig(configName: string?): boolean
     end
 
     local sanitizedName = SanitizeConfigName(configName or self._currentConfig)
+
+    if sanitizedName == AUTOLOAD_CONFIG_NAME then
+        return false
+    end
+
     local path = GetConfigPath(self._configFolder, sanitizedName)
 
     if not isFile(path) then
@@ -878,7 +921,7 @@ function Window:GetConfigs(): { string }
     for _, file in ipairs(listFiles(folder)) do
         local fileName = file:match("[^/\\]+$") or file
         local configName = fileName:match("(.+)%.json$")
-        if configName then
+        if configName and configName ~= AUTOLOAD_CONFIG_NAME then
             table.insert(configs, configName)
         end
     end
@@ -911,6 +954,30 @@ function Window:SetAutoSave(enabled: boolean)
     end)
 end
 
+function Window:SetAutoLoad(enabled: boolean)
+    if enabled then
+        local sanitizedName = SanitizeConfigName(self._currentConfig)
+        if sanitizedName == AUTOLOAD_CONFIG_NAME then
+            sanitizedName = "default"
+        end
+
+        local path = GetConfigPath(self._configFolder, sanitizedName)
+        if readFile and isFile and not isFile(path) then
+            self:Notify({
+                Title = "Error",
+                Description = "Save or load a config before enabling Auto Load",
+                Duration = 3,
+            })
+            return
+        end
+
+        self._autoLoadConfigName = sanitizedName
+    end
+
+    self._autoLoad = enabled
+    self:_SaveAutoLoadState()
+end
+
 --[[
     Gets the content container for tabs
 
@@ -927,6 +994,81 @@ end
 ]]
 function Window:GetSectionsContainer(): ScrollingFrame
     return self._sectionsContainer
+end
+
+function Window:_LoadAutoLoadState()
+    if not readFile or not isFile then
+        return
+    end
+
+    local path = GetConfigPath(self._configFolder, AUTOLOAD_CONFIG_NAME)
+    if not isFile(path) then
+        return
+    end
+
+    local success, data = pcall(function()
+        return Services.HttpService:JSONDecode(readFile(path))
+    end)
+
+    if success and type(data) == "table" then
+        self._autoLoad = data.enabled == true
+        self._autoLoadConfigName = data.configName or "default"
+    end
+end
+
+function Window:_SaveAutoLoadState()
+    if not writeFile then
+        return
+    end
+
+    EnsureConfigFolder(self._configFolder)
+
+    local data = {
+        enabled = self._autoLoad,
+        configName = self._autoLoadConfigName,
+    }
+
+    pcall(function()
+        writeFile(
+            GetConfigPath(self._configFolder, AUTOLOAD_CONFIG_NAME),
+            Services.HttpService:JSONEncode(data)
+        )
+    end)
+end
+
+function Window:ApplyAutoLoad()
+    if not self._autoLoad or not self._autoLoadConfigName then
+        return
+    end
+
+    local path = GetConfigPath(self._configFolder, self._autoLoadConfigName)
+    if not readFile or not isFile or not isFile(path) then
+        return
+    end
+
+    local success, data = pcall(function()
+        return Services.HttpService:JSONDecode(readFile(path))
+    end)
+
+    if not success or type(data) ~= "table" then
+        return
+    end
+
+    for flag, value in pairs(data) do
+        local element = self._configElements[flag]
+        if element then
+            pcall(function()
+                element.setValue(DeserializeValue(value))
+            end)
+        else
+            if not self._pendingConfigData then
+                self._pendingConfigData = {}
+            end
+            self._pendingConfigData[flag] = value
+        end
+    end
+
+    self._currentConfig = self._autoLoadConfigName
 end
 
 --[[
