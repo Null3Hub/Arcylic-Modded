@@ -20,10 +20,38 @@ local Window = {}
 Window.__index = Window
 
 local function safeGet(name: string): (...any) -> ...any?
-    local fn = _G[name]
-    if type(fn) == "function" then
-        return fn
+    local sources = {}
+
+    local ok, env = pcall(function()
+        local genv = rawget(_G, "getgenv")
+        if type(genv) == "function" then
+            return genv()
+        end
+        return nil
+    end)
+    if ok and type(env) == "table" then
+        table.insert(sources, env)
     end
+
+    ok, env = pcall(function()
+        if type(getfenv) == "function" then
+            return getfenv()
+        end
+        return nil
+    end)
+    if ok and type(env) == "table" then
+        table.insert(sources, env)
+    end
+
+    table.insert(sources, _G)
+
+    for _, src in ipairs(sources) do
+        local fn = src[name]
+        if type(fn) == "function" then
+            return fn
+        end
+    end
+
     return nil
 end
 
