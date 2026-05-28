@@ -2974,6 +2974,7 @@ function Window:_CreateGui()
 
     -- Make draggable
     self._dragConnection = Draggable.Enable(self._container, self._titleLabel)
+    self._bottomDragConnection = Draggable.Enable(self._container, self._bottomDragArea)
 
     -- Acrylic blur effect
     self._acrylicBlur = AcrylicBlur.new(self._container)
@@ -3054,7 +3055,35 @@ function Window:_CreateWindowControls()
         Parent = self._container,
     })
 
+    -- Bottom drag handle
+    self._bottomDragArea = Create.Instance("TextButton", {
+        Name = "BottomDragArea",
+        Active = true,
+        Text = "",
+        BackgroundTransparency = 1,
+        AnchorPoint = Vector2.new(0.5, 0),
+        Position = UDim2.new(0.5, 0, 1, 0),
+        Size = UDim2.new(0, 140, 0, 18),
+        BorderSizePixel = 0,
+        ZIndex = 1000,
+        Parent = self._container,
+    })
+
+    self._bottomDragBar = Create.Instance("Frame", {
+        Name = "BottomDragBar",
+        BackgroundColor3 = Colors.ResizeHandle,
+        AnchorPoint = Vector2.new(0.5, 0),
+        Position = UDim2.new(0.5, 0, 0, 4.5),
+        Size = UDim2.new(0, 90, 0, 4),
+        BorderSizePixel = 0,
+        ZIndex = 1001,
+        Parent = self._bottomDragArea,
+    })
+
+    Create.Corner(self._bottomDragBar, Sizes.Corner.Full)
+
     self:_SetupResize()
+    self:_SetupBottomDragHandle()
 end
 
 function Window:_CreateContentArea()
@@ -3196,6 +3225,62 @@ function Window:_SetupResize()
     )
 end
 
+function Window:_SetupBottomDragHandle()
+    local hovering = false
+    local holding = false
+
+    local function update()
+        local color = (hovering or holding) and Colors.Text or Colors.ResizeHandle
+        local height = holding and 5.5 or 4
+
+        Tween.Create(self._bottomDragBar, {
+            BackgroundColor3 = color,
+            Size = UDim2.new(0, 90, 0, height),
+        }, "Fast")
+    end
+
+    table.insert(
+        self._connections,
+        self._bottomDragArea.MouseEnter:Connect(function()
+            hovering = true
+            update()
+        end)
+    )
+
+    table.insert(
+        self._connections,
+        self._bottomDragArea.MouseLeave:Connect(function()
+            hovering = false
+            update()
+        end)
+    )
+
+    table.insert(
+        self._connections,
+        self._bottomDragArea.InputBegan:Connect(function(input)
+            if
+                input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch
+            then
+                holding = true
+                update()
+
+                local holdInput = input
+                local connection
+                connection = Services.UserInputService.InputEnded:Connect(function(endInput)
+                    if endInput == holdInput then
+                        holding = false
+                        update()
+                        connection:Disconnect()
+                    end
+                end)
+
+                table.insert(self._connections, connection)
+            end
+        end)
+    )
+end
+
 function Window:_ToggleMinimize()
     self._minimized = not self._minimized
 
@@ -3205,6 +3290,7 @@ function Window:_ToggleMinimize()
             Size = UDim2.new(0, self._container.AbsoluteSize.X, 0, 45),
         }, "Slow")
         self._resizeBtn.Visible = false
+        self._bottomDragArea.Visible = false
     else
         Tween.Create(self._container, {
             Size = UDim2.new(0, self._container.AbsoluteSize.X, 0, self._originalHeight),
@@ -3213,6 +3299,7 @@ function Window:_ToggleMinimize()
             Tween.Create(self._mainContent, { Size = UDim2.new(1, 0, 1, -46) }, "Normal")
         end)
         self._resizeBtn.Visible = true
+        self._bottomDragArea.Visible = true
     end
 end
 
@@ -3779,6 +3866,10 @@ function Window:Destroy()
 
     if self._dragConnection then
         self._dragConnection.Disconnect()
+    end
+
+    if self._bottomDragConnection then
+        self._bottomDragConnection.Disconnect()
     end
 
     if self._acrylicBlur then
