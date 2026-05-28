@@ -16,21 +16,26 @@ local Slider = {}
 Slider.__index = Slider
 
 export type SliderConfig = {
-	Name: string?,
-	Min: number?,
-	Max: number?,
-	Default: number?,
-	Increment: number?,
-	Flag: string?,
-	Callback: ((value: number) -> ())?,
+    Name: string?,
+    Description: string?,
+    Desc: string?,
+    Min: number?,
+    Max: number?,
+    Default: number?,
+    Increment: number?,
+    Flag: string?,
+    Callback: ((value: number) -> ())?,
 }
 
 export type SliderObject = {
-	SetValue: (self: SliderObject, value: number) -> (),
-	GetValue: (self: SliderObject) -> number,
-	SetMin: (self: SliderObject, min: number) -> (),
-	SetMax: (self: SliderObject, max: number) -> (),
-	Destroy: (self: SliderObject) -> (),
+    SetValue: (self: SliderObject, value: number) -> (),
+    GetValue: (self: SliderObject) -> number,
+    SetMin: (self: SliderObject, min: number) -> (),
+    SetMax: (self: SliderObject, max: number) -> (),
+    Block: (self: SliderObject, text: string?) -> (),
+    Unblock: (self: SliderObject) -> (),
+    IsBlocked: (self: SliderObject) -> boolean,
+    Destroy: (self: SliderObject) -> (),
 }
 
 --[[
@@ -41,199 +46,212 @@ export type SliderObject = {
     @return SliderObject - Slider control object
 ]]
 function Slider.new(parent: Instance, config: SliderConfig, window): SliderObject
-	local self = setmetatable({}, Slider)
+    local self = setmetatable({}, Slider)
 
-	local name = config.Name or "Slider"
-	self._min = config.Min or 0
-	self._max = config.Max or 100
-	self._value = config.Default or 50
-	self._increment = config.Increment or 1
-	self._callback = config.Callback or function() end
-	self._dragging = false
-	self._flag = config.Flag
-	self._window = window
-	self._connections = {}
+    local name = config.Name or "Slider"
+    self._min = config.Min or 0
+    self._max = config.Max or 100
+    self._value = config.Default or 50
+    self._increment = config.Increment or 1
+    self._callback = config.Callback or function() end
+    self._dragging = false
+    self._flag = config.Flag
+    self._window = window
+    self._connections = {}
+    local description = Create.GetDescription(config)
+    local hasDescription = description ~= nil
+    local height = hasDescription and 56 or Sizes.Slider.Height
 
-	local description = Create.GetDescription(config)
-	local hasDescription = description ~= nil
-	local height = hasDescription and 56 or Sizes.Slider.Height
+    -- Main container
+    self._frame = Create.Instance("Frame", {
+        Name = "Slider_" .. name,
+        BackgroundColor3 = Colors.Secondary,
+        BackgroundTransparency = 0.4,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, height),
+        Parent = parent,
+    })
 
-	-- Main container
-	self._frame = Create.Instance("Frame", {
-		Name = "Slider_" .. name,
-		BackgroundColor3 = Colors.Secondary,
-		BackgroundTransparency = 0.4,
-		BorderSizePixel = 0,
-		Size = UDim2.new(1, 0, 0, height),
-		Parent = parent,
-	})
+    Create.Corner(self._frame, Sizes.Corner.Medium)
+    Create.Stroke(self._frame)
 
-	Create.Corner(self._frame, Sizes.Corner.Medium)
-	Create.Stroke(self._frame)
+    -- Label
+    Create.Instance("TextLabel", {
+        Name = "Label",
+        FontFace = Fonts.Regular,
+        TextColor3 = Colors.Text,
+        Text = name,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 10, 0, hasDescription and 4 or 5),
+        TextSize = Fonts.Size.Normal,
+        Size = UDim2.new(0, 200, 0, 20),
+        Parent = self._frame,
+    })
 
-	-- Label
-	Create.Instance("TextLabel", {
-		Name = "Label",
-		FontFace = Fonts.Regular,
-		TextColor3 = Colors.Text,
-		Text = name,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		BackgroundTransparency = 1,
-		Position = UDim2.new(0, 10, 0, hasDescription and 4 or 5),
-		TextSize = Fonts.Size.Normal,
-		Size = UDim2.new(0, 200, 0, 20),
-		Parent = self._frame,
-	})
+    -- Description
+    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 22), UDim2.new(1, -80, 0, 14))
 
-	Create.Description(self._frame, description, UDim2.new(0, 10, 0, 22), UDim2.new(1, -80, 0, 14))
+    -- Value display
+    self._valueLabel = Create.Instance("TextLabel", {
+        Name = "Value",
+        FontFace = Fonts.Regular,
+        TextColor3 = Colors.Text,
+        Text = tostring(self._value),
+        TextXAlignment = Enum.TextXAlignment.Right,
+        BackgroundTransparency = 1,
+        Position = UDim2.new(1, -60, 0, hasDescription and 4 or 5),
+        TextSize = Fonts.Size.Normal,
+        Size = UDim2.new(0, 50, 0, 20),
+        Parent = self._frame,
+    })
 
-	-- Value display
-	self._valueLabel = Create.Instance("TextLabel", {
-		Name = "Value",
-		FontFace = Fonts.Regular,
-		TextColor3 = Colors.Text,
-		Text = tostring(self._value),
-		TextXAlignment = Enum.TextXAlignment.Right,
-		BackgroundTransparency = 1,
-		Position = UDim2.new(1, -60, 0, hasDescription and 4 or 5),
-		TextSize = Fonts.Size.Normal,
-		Size = UDim2.new(0, 50, 0, 20),
-		Parent = self._frame,
-	})
+    -- Track background
+    self._track = Create.Instance("Frame", {
+        Name = "Track",
+        BackgroundColor3 = Colors.Background,
+        Position = UDim2.new(0, 10, 0, hasDescription and 39 or 29),
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, -20, 0, Sizes.Slider.TrackHeight),
+        Parent = self._frame,
+    })
 
-	-- Track background
-	self._track = Create.Instance("Frame", {
-		Name = "Track",
-		BackgroundColor3 = Colors.Background,
-		Position = UDim2.new(0, 10, 0, hasDescription and 39 or 29),
-		BorderSizePixel = 0,
-		Size = UDim2.new(1, -20, 0, Sizes.Slider.TrackHeight),
-		Parent = self._frame,
-	})
+    Create.Corner(self._track, Sizes.Corner.Full)
 
-	Create.Corner(self._track, Sizes.Corner.Full)
+    -- Fill bar
+    local range = math.max(self._max - self._min, 1)
+    local initialFill = (self._value - self._min) / range
+    self._fill = Create.Instance("Frame", {
+        Name = "Fill",
+        BackgroundColor3 = Colors.Accent,
+        BorderSizePixel = 0,
+        Size = UDim2.new(initialFill, 0, 1, 0),
+        Parent = self._track,
+    })
 
-	-- Fill bar
-	local range = math.max(self._max - self._min, 1)
-	local initialFill = (self._value - self._min) / range
-	self._fill = Create.Instance("Frame", {
-		Name = "Fill",
-		BackgroundColor3 = Colors.Accent,
-		BorderSizePixel = 0,
-		Size = UDim2.new(initialFill, 0, 1, 0),
-		Parent = self._track,
-	})
+    Create.Corner(self._fill, Sizes.Corner.Full)
 
-	Create.Corner(self._fill, Sizes.Corner.Full)
+    -- Input handling
+    table.insert(
+        self._connections,
+        self._track.InputBegan:Connect(function(input)
+            if self._blocked then
+                return
+            end
 
-	-- Input handling
-	table.insert(
-		self._connections,
-		self._track.InputBegan:Connect(function(input)
-			if
-				input.UserInputType == Enum.UserInputType.MouseButton1
-				or input.UserInputType == Enum.UserInputType.Touch
-			then
-				self._dragging = true
-				self:_UpdateFromInput(input)
-			end
-		end)
-	)
+            if
+                input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch
+            then
+                self._dragging = true
+                self:_UpdateFromInput(input)
+            end
+        end)
+    )
 
-	table.insert(
-		self._connections,
-		self._track.InputEnded:Connect(function(input)
-			if
-				input.UserInputType == Enum.UserInputType.MouseButton1
-				or input.UserInputType == Enum.UserInputType.Touch
-			then
-				self._dragging = false
-			end
-		end)
-	)
+    table.insert(
+        self._connections,
+        self._track.InputEnded:Connect(function(input)
+            if
+                input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch
+            then
+                self._dragging = false
+            end
+        end)
+    )
 
-	table.insert(
-		self._connections,
-		Services.UserInputService.InputChanged:Connect(function(input)
-			if
-				self._dragging
-				and (
-					input.UserInputType == Enum.UserInputType.MouseMovement
-					or input.UserInputType == Enum.UserInputType.Touch
-				)
-			then
-				self:_UpdateFromInput(input)
-			end
-		end)
-	)
+    table.insert(
+        self._connections,
+        Services.UserInputService.InputChanged:Connect(function(input)
+            if
+                self._dragging
+                and not self._blocked
+                and (
+                    input.UserInputType == Enum.UserInputType.MouseMovement
+                    or input.UserInputType == Enum.UserInputType.Touch
+                )
+            then
+                self:_UpdateFromInput(input)
+            end
+        end)
+    )
 
-	if self._flag and self._window and self._window.RegisterConfigElement then
-		self._window:RegisterConfigElement(self._flag, "Slider", function()
-			return self._value
-		end, function(value)
-			self:SetValue(value)
-		end)
-	end
+    Create.Blockable(self, self._frame)
 
-	return self
+    local baseBlock = self.Block
+    self.Block = function(component, text: string?)
+        component._dragging = false
+        baseBlock(component, text)
+    end
+
+    if self._flag and self._window and self._window.RegisterConfigElement then
+        self._window:RegisterConfigElement(self._flag, "Slider", function()
+            return self._value
+        end, function(value)
+            self:SetValue(value)
+        end)
+    end
+
+    return self
 end
 
 function Slider:_UpdateFromInput(input: InputObject)
-	local pos = input.Position
-	local trackPos = self._track.AbsolutePosition
-	local trackSize = self._track.AbsoluteSize
+    local pos = input.Position
+    local trackPos = self._track.AbsolutePosition
+    local trackSize = self._track.AbsoluteSize
 
-	local relativeX = math.clamp((pos.X - trackPos.X) / trackSize.X, 0, 1)
-	local rawValue = self._min + (self._max - self._min) * relativeX
+    local relativeX = math.clamp((pos.X - trackPos.X) / trackSize.X, 0, 1)
+    local rawValue = self._min + (self._max - self._min) * relativeX
 
-	-- Apply increment
-	self._value = math.floor(rawValue / self._increment + 0.5) * self._increment
-	self._value = math.clamp(self._value, self._min, self._max)
+    -- Apply increment
+    self._value = math.floor(rawValue / self._increment + 0.5) * self._increment
+    self._value = math.clamp(self._value, self._min, self._max)
 
-	self:_UpdateVisual()
-	self._callback(self._value)
+    self:_UpdateVisual()
+    self._callback(self._value)
 end
 
 function Slider:_UpdateVisual()
-	local range = math.max(self._max - self._min, 1)
-	local fillRatio = (self._value - self._min) / range
-	Tween.Create(self._fill, { Size = UDim2.new(fillRatio, 0, 1, 0) }, "Instant")
-	self._valueLabel.Text = tostring(self._value)
+    local range = math.max(self._max - self._min, 1)
+    local fillRatio = (self._value - self._min) / range
+    Tween.Create(self._fill, { Size = UDim2.new(fillRatio, 0, 1, 0) }, "Instant")
+    self._valueLabel.Text = tostring(self._value)
 end
 
 function Slider:SetValue(value: number)
-	self._value = math.clamp(value, self._min, self._max)
-	self:_UpdateVisual()
-	self._callback(self._value)
+    self._value = math.clamp(value, self._min, self._max)
+    self:_UpdateVisual()
+    self._callback(self._value)
 end
 
 function Slider:GetValue(): number
-	return self._value
+    return self._value
 end
 
 function Slider:SetMin(min: number)
-	self._min = min
-	self._value = math.clamp(self._value, self._min, self._max)
-	self:_UpdateVisual()
+    self._min = min
+    self._value = math.clamp(self._value, self._min, self._max)
+    self:_UpdateVisual()
 end
 
 function Slider:SetMax(max: number)
-	self._max = max
-	self._value = math.clamp(self._value, self._min, self._max)
-	self:_UpdateVisual()
+    self._max = max
+    self._value = math.clamp(self._value, self._min, self._max)
+    self:_UpdateVisual()
 end
 
 function Slider:Destroy()
-	for _, connection in ipairs(self._connections) do
-		connection:Disconnect()
-	end
-	table.clear(self._connections)
+    for _, connection in ipairs(self._connections) do
+        connection:Disconnect()
+    end
+    table.clear(self._connections)
 
-	if self._flag and self._window and self._window.UnregisterConfigElement then
-		self._window:UnregisterConfigElement(self._flag)
-	end
+    if self._flag and self._window and self._window.UnregisterConfigElement then
+        self._window:UnregisterConfigElement(self._flag)
+    end
 
-	self._frame:Destroy()
+    self._frame:Destroy()
 end
 
 return Slider

@@ -98,6 +98,10 @@ local function GetConfigPath(configFolder: string, configName: string): string
     return GetConfigFolder(configFolder) .. "/" .. SanitizeConfigName(configName) .. ".json"
 end
 
+local function GetAutoLoadPath(configFolder: string): string
+    return GetConfigFolder(configFolder) .. "/_autoload.json"
+end
+
 local function EnsureConfigFolder(configFolder: string)
     if not makeFolder then
         return
@@ -238,7 +242,10 @@ function Window.new(config: WindowConfig?)
     self._autoSaveThreadRunning = false
     self._currentConfig = "default"
     self._destroyed = false
+    self._autoLoad = false
+    self._autoLoadConfigName = "default"
     self._pendingConfigData = nil
+    self:_LoadAutoLoadState()
 
     self:_CreateGui()
     self:_SetupKeybinds()
@@ -880,6 +887,10 @@ function Window:SaveConfig(configName: string?): boolean
 
     if success then
         self._currentConfig = sanitizedName
+        if self._autoLoad then
+            self._autoLoadConfigName = sanitizedName
+            self:_SaveAutoLoadState()
+        end
         self:Notify({
             Title = "Config Saved",
             Description = "Saved as: " .. sanitizedName,
@@ -957,6 +968,10 @@ function Window:LoadConfig(configName: string?): boolean
     end
 
     self._currentConfig = sanitizedName
+    if self._autoLoad then
+        self._autoLoadConfigName = sanitizedName
+        self:_SaveAutoLoadState()
+    end
     self:Notify({
         Title = "Config Loaded",
         Description = "Loaded: " .. sanitizedName,
@@ -1041,6 +1056,11 @@ function Window:SetAutoSave(enabled: boolean)
     end)
 end
 
+--[[
+    Enables or disables auto-load (persists config across sessions)
+
+    @param enabled boolean - Whether to auto-load on startup
+]]
 function Window:SetAutoLoad(enabled: boolean)
     if enabled then
         local sanitizedName = SanitizeConfigName(self._currentConfig)
@@ -1066,6 +1086,73 @@ function Window:SetAutoLoad(enabled: boolean)
 end
 
 --[[
+    Returns whether auto-load is enabled
+
+    @return boolean - Current auto-load state
+]]
+function Window:GetAutoLoad(): boolean
+    return self._autoLoad
+end
+
+--[[
+    Applies auto-load: loads the last saved config if auto-load is enabled
+]]
+function Window:ApplyAutoLoad()
+    if not self._autoLoad or not readFile or not isFile then
+        return
+    end
+
+    local path = GetConfigPath(self._configFolder, self._autoLoadConfigName)
+    if isFile(path) then
+        self:LoadConfig(self._autoLoadConfigName)
+    end
+end
+
+--[[
+    Saves the current auto-load state to a file
+]]
+function Window:_SaveAutoLoadState()
+    if not writeFile then
+        return
+    end
+
+    EnsureConfigFolder(self._configFolder)
+    local path = GetAutoLoadPath(self._configFolder)
+
+    local data = {
+        enabled = self._autoLoad,
+        lastConfig = self._autoLoadConfigName,
+    }
+
+    local success = pcall(function()
+        writeFile(path, Services.HttpService:JSONEncode(data))
+    end)
+end
+
+--[[
+    Loads the auto-load state from file
+]]
+function Window:_LoadAutoLoadState()
+    if not readFile or not isFile then
+        return
+    end
+
+    local path = GetAutoLoadPath(self._configFolder)
+    if not isFile(path) then
+        return
+    end
+
+    local success, data = pcall(function()
+        return Services.HttpService:JSONDecode(readFile(path))
+    end)
+
+    if success and type(data) == "table" then
+        self._autoLoad = if data.enabled == true then true else false
+        self._autoLoadConfigName = tostring(data.lastConfig or "default")
+    end
+end
+
+--[[
     Gets the content container for tabs
 
     @return ScrollingFrame
@@ -1081,81 +1168,6 @@ end
 ]]
 function Window:GetSectionsContainer(): ScrollingFrame
     return self._sectionsContainer
-end
-
-function Window:_LoadAutoLoadState()
-    if not readFile or not isFile then
-        return
-    end
-
-    local path = GetConfigPath(self._configFolder, AUTOLOAD_CONFIG_NAME)
-    if not isFile(path) then
-        return
-    end
-
-    local success, data = pcall(function()
-        return Services.HttpService:JSONDecode(readFile(path))
-    end)
-
-    if success and type(data) == "table" then
-        self._autoLoad = data.enabled == true
-        self._autoLoadConfigName = data.configName or "default"
-    end
-end
-
-function Window:_SaveAutoLoadState()
-    if not writeFile then
-        return
-    end
-
-    EnsureConfigFolder(self._configFolder)
-
-    local data = {
-        enabled = self._autoLoad,
-        configName = self._autoLoadConfigName,
-    }
-
-    pcall(function()
-        writeFile(
-            GetConfigPath(self._configFolder, AUTOLOAD_CONFIG_NAME),
-            Services.HttpService:JSONEncode(data)
-        )
-    end)
-end
-
-function Window:ApplyAutoLoad()
-    if not self._autoLoad or not self._autoLoadConfigName then
-        return
-    end
-
-    local path = GetConfigPath(self._configFolder, self._autoLoadConfigName)
-    if not readFile or not isFile or not isFile(path) then
-        return
-    end
-
-    local success, data = pcall(function()
-        return Services.HttpService:JSONDecode(readFile(path))
-    end)
-
-    if not success or type(data) ~= "table" then
-        return
-    end
-
-    for flag, value in pairs(data) do
-        local element = self._configElements[flag]
-        if element then
-            pcall(function()
-                element.setValue(DeserializeValue(value))
-            end)
-        else
-            if not self._pendingConfigData then
-                self._pendingConfigData = {}
-            end
-            self._pendingConfigData[flag] = value
-        end
-    end
-
-    self._currentConfig = self._autoLoadConfigName
 end
 
 --[[

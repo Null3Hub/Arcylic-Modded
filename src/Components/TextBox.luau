@@ -108,6 +108,11 @@ function TextBox.new(parent: Instance, config: TextBoxConfig?, window)
     table.insert(
         self._connections,
         self._input.Focused:Connect(function()
+            if self._blocked then
+                self._input:ReleaseFocus()
+                return
+            end
+
             Tween.Create(self._container, { BackgroundTransparency = 0 }, "Fast")
             Tween.Create(self._stroke, { Color = Colors.Accent }, "Fast")
             Tween.Create(self._icon, { ImageColor3 = Colors.Text }, "Fast")
@@ -147,6 +152,14 @@ function TextBox.new(parent: Instance, config: TextBoxConfig?, window)
         )
     end
 
+    Create.Blockable(self, self._frame)
+
+    local baseBlock = self.Block
+    self.Block = function(component, text: string?)
+        component._input:ReleaseFocus()
+        baseBlock(component, text)
+    end
+
     if self._flag and self._window and self._window.RegisterConfigElement then
         self._window:RegisterConfigElement(self._flag, "TextBox", function()
             return self._text
@@ -172,6 +185,10 @@ function TextBox:SetPlaceholder(placeholder: string)
 end
 
 function TextBox:Focus()
+    if self._blocked then
+        return
+    end
+
     self._input:CaptureFocus()
 end
 

@@ -86,7 +86,13 @@ function Keybind.new(parent: Instance, config, window)
     self._connections = {}
 
     self._id = name .. "_" .. tostring(math.floor(os.clock() * 1000))
-    window:RegisterKeybind(self._id, self._currentKey, callback)
+    window:RegisterKeybind(self._id, self._currentKey, function()
+        if self._blocked then
+            return
+        end
+
+        callback()
+    end)
 
     local function refresh()
         if self._listening then
@@ -103,6 +109,10 @@ function Keybind.new(parent: Instance, config, window)
     table.insert(
         self._connections,
         self._listenBtn.MouseButton1Click:Connect(function()
+            if self._blocked then
+                return
+            end
+
             self._listening = true
             refresh()
         end)
@@ -111,6 +121,10 @@ function Keybind.new(parent: Instance, config, window)
     table.insert(
         self._connections,
         Services.UserInputService.InputBegan:Connect(function(input, _gameProcessed)
+            if self._blocked then
+                return
+            end
+
             if not self._listening then
                 return
             end
@@ -124,6 +138,15 @@ function Keybind.new(parent: Instance, config, window)
     )
 
     self._refresh = refresh
+
+    Create.Blockable(self, self._frame)
+
+    local baseBlock = self.Block
+    self.Block = function(component, text: string?)
+        component._listening = false
+        component._refresh()
+        baseBlock(component, text)
+    end
 
     if self._flag and self._window and self._window.RegisterConfigElement then
         self._window:RegisterConfigElement(self._flag, "Keybind", function()

@@ -25,6 +25,9 @@ export type ToggleConfig = {
 export type ToggleObject = {
     SetValue: (self: ToggleObject, value: boolean) -> (),
     GetValue: (self: ToggleObject) -> boolean,
+    Block: (self: ToggleObject, text: string?) -> (),
+    Unblock: (self: ToggleObject) -> (),
+    IsBlocked: (self: ToggleObject) -> boolean,
     Destroy: (self: ToggleObject) -> (),
 }
 
@@ -118,9 +121,24 @@ function Toggle.new(parent: Instance, config: ToggleConfig, window): ToggleObjec
     table.insert(
         self._connections,
         button.MouseButton1Click:Connect(function()
+            if self._blocked then
+                return
+            end
+
             self:SetValue(not self._enabled)
         end)
     )
+
+    Create.Blockable(self, self._frame)
+
+    local baseBlock = self.Block
+    self.Block = function(component, text: string?)
+        if component._enabled then
+            component:SetValue(false)
+        end
+
+        baseBlock(component, text)
+    end
 
     if self._flag and self._window and self._window.RegisterConfigElement then
         self._window:RegisterConfigElement(self._flag, "Toggle", function()

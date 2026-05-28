@@ -123,6 +123,10 @@ function Button.new(parent, config)
     table.insert(
         self._connections,
         self._button.MouseButton1Click:Connect(function()
+            if self._blocked then
+                return
+            end
+
             -- Click animation
             Tween.Create(self._frame, { BackgroundTransparency = 0.2 }, "Fast")
             task.wait(0.1)
@@ -135,6 +139,10 @@ function Button.new(parent, config)
     table.insert(
         self._connections,
         self._button.MouseEnter:Connect(function()
+            if self._blocked then
+                return
+            end
+
             Tween.Create(self._frame, { BackgroundTransparency = 0.3 }, "Fast")
         end)
     )
@@ -145,6 +153,8 @@ function Button.new(parent, config)
             Tween.Create(self._frame, { BackgroundTransparency = 0.4 }, "Fast")
         end)
     )
+
+    Create.Blockable(self, self._frame)
 
     return self
 end
@@ -281,6 +291,10 @@ function ColorPicker.new(parent, config, window)
         table.insert(
             self._connections,
             swatch.MouseButton1Click:Connect(function()
+                if self._blocked then
+                    return
+                end
+
                 self:SetColor(col)
                 self._palette.Visible = false
             end)
@@ -288,6 +302,10 @@ function ColorPicker.new(parent, config, window)
     end
 
     local function open()
+        if self._blocked then
+            return
+        end
+
         local p = self._preview.AbsolutePosition
         self._palette.Position = UDim2.new(0, p.X - 160 + 35, 0, p.Y + 22)
         self._palette.Visible = true
@@ -296,12 +314,24 @@ function ColorPicker.new(parent, config, window)
     table.insert(
         self._connections,
         previewBtn.MouseButton1Click:Connect(function()
+            if self._blocked then
+                return
+            end
+
             self._palette.Visible = not self._palette.Visible
             if self._palette.Visible then
                 open()
             end
         end)
     )
+
+    Create.Blockable(self, self._frame)
+
+    local baseBlock = self.Block
+    self.Block = function(component, text)
+        component._palette.Visible = false
+        baseBlock(component, text)
+    end
 
     if self._flag and self._window and self._window.RegisterConfigElement then
         self._window:RegisterConfigElement(self._flag, "ColorPicker", function()
@@ -484,6 +514,10 @@ function Dropdown.new(parent, config, window)
     table.insert(
         self._connections,
         toggleBtn.MouseButton1Click:Connect(function()
+            if self._blocked then
+                return
+            end
+
             if self._expanded then
                 self:Close()
             else
@@ -491,6 +525,14 @@ function Dropdown.new(parent, config, window)
             end
         end)
     )
+
+    Create.Blockable(self, self._frame)
+
+    local baseBlock = self.Block
+    self.Block = function(component, text)
+        component:Close()
+        baseBlock(component, text)
+    end
 
     if self._flag and self._window and self._window.RegisterConfigElement then
         self._window:RegisterConfigElement(self._flag, "Dropdown", function()
@@ -584,6 +626,10 @@ function Dropdown:_PopulateOptions()
         end)
 
         optionBtn.MouseButton1Click:Connect(function()
+            if self._blocked then
+                return
+            end
+
             if self._multiSelect then
                 local index = table.find(self._selected, option)
                 if index then
@@ -608,6 +654,10 @@ function Dropdown:_UpdateDisplay()
 end
 
 function Dropdown:Open()
+    if self._blocked then
+        return
+    end
+
     self._expanded = true
     self._optionsContainer.Visible = true
     Tween.Create(self._arrow, { Rotation = 180 }, "Normal")
@@ -754,7 +804,13 @@ function Keybind.new(parent, config, window)
     self._connections = {}
 
     self._id = name .. "_" .. tostring(math.floor(os.clock() * 1000))
-    window:RegisterKeybind(self._id, self._currentKey, callback)
+    window:RegisterKeybind(self._id, self._currentKey, function()
+        if self._blocked then
+            return
+        end
+
+        callback()
+    end)
 
     local function refresh()
         if self._listening then
@@ -771,6 +827,10 @@ function Keybind.new(parent, config, window)
     table.insert(
         self._connections,
         self._listenBtn.MouseButton1Click:Connect(function()
+            if self._blocked then
+                return
+            end
+
             self._listening = true
             refresh()
         end)
@@ -779,6 +839,10 @@ function Keybind.new(parent, config, window)
     table.insert(
         self._connections,
         Services.UserInputService.InputBegan:Connect(function(input, _gameProcessed)
+            if self._blocked then
+                return
+            end
+
             if not self._listening then
                 return
             end
@@ -792,6 +856,15 @@ function Keybind.new(parent, config, window)
     )
 
     self._refresh = refresh
+
+    Create.Blockable(self, self._frame)
+
+    local baseBlock = self.Block
+    self.Block = function(component, text)
+        component._listening = false
+        component._refresh()
+        baseBlock(component, text)
+    end
 
     if self._flag and self._window and self._window.RegisterConfigElement then
         self._window:RegisterConfigElement(self._flag, "Keybind", function()
@@ -1152,6 +1225,10 @@ function Slider.new(parent, config, window)
     table.insert(
         self._connections,
         self._track.InputBegan:Connect(function(input)
+            if self._blocked then
+                return
+            end
+
             if
                 input.UserInputType == Enum.UserInputType.MouseButton1
                 or input.UserInputType == Enum.UserInputType.Touch
@@ -1179,6 +1256,7 @@ function Slider.new(parent, config, window)
         Services.UserInputService.InputChanged:Connect(function(input)
             if
                 self._dragging
+                and not self._blocked
                 and (
                     input.UserInputType == Enum.UserInputType.MouseMovement
                     or input.UserInputType == Enum.UserInputType.Touch
@@ -1188,6 +1266,14 @@ function Slider.new(parent, config, window)
             end
         end)
     )
+
+    Create.Blockable(self, self._frame)
+
+    local baseBlock = self.Block
+    self.Block = function(component, text)
+        component._dragging = false
+        baseBlock(component, text)
+    end
 
     if self._flag and self._window and self._window.RegisterConfigElement then
         self._window:RegisterConfigElement(self._flag, "Slider", function()
@@ -1672,6 +1758,11 @@ function TextBox.new(parent, config, window)
     table.insert(
         self._connections,
         self._input.Focused:Connect(function()
+            if self._blocked then
+                self._input:ReleaseFocus()
+                return
+            end
+
             Tween.Create(self._container, { BackgroundTransparency = 0 }, "Fast")
             Tween.Create(self._stroke, { Color = Colors.Accent }, "Fast")
             Tween.Create(self._icon, { ImageColor3 = Colors.Text }, "Fast")
@@ -1711,6 +1802,14 @@ function TextBox.new(parent, config, window)
         )
     end
 
+    Create.Blockable(self, self._frame)
+
+    local baseBlock = self.Block
+    self.Block = function(component, text)
+        component._input:ReleaseFocus()
+        baseBlock(component, text)
+    end
+
     if self._flag and self._window and self._window.RegisterConfigElement then
         self._window:RegisterConfigElement(self._flag, "TextBox", function()
             return self._text
@@ -1736,6 +1835,10 @@ function TextBox:SetPlaceholder(placeholder)
 end
 
 function TextBox:Focus()
+    if self._blocked then
+        return
+    end
+
     self._input:CaptureFocus()
 end
 
@@ -1863,9 +1966,24 @@ function Toggle.new(parent, config, window)
     table.insert(
         self._connections,
         button.MouseButton1Click:Connect(function()
+            if self._blocked then
+                return
+            end
+
             self:SetValue(not self._enabled)
         end)
     )
+
+    Create.Blockable(self, self._frame)
+
+    local baseBlock = self.Block
+    self.Block = function(component, text)
+        if component._enabled then
+            component:SetValue(false)
+        end
+
+        baseBlock(component, text)
+    end
 
     if self._flag and self._window and self._window.RegisterConfigElement then
         self._window:RegisterConfigElement(self._flag, "Toggle", function()
@@ -4252,6 +4370,59 @@ function Create.Description(
         Size = size,
         Parent = parent,
     })
+end
+
+function Create.Blockable(target, frame)
+    target._blocked = false
+
+    target._blocker = Create.Instance("TextButton", {
+        Name = "Blocker",
+        Text = "",
+        AutoButtonColor = false,
+        Active = true,
+        BackgroundColor3 = Constants.Colors.Background,
+        BackgroundTransparency = 0.22,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0, 0),
+        Size = UDim2.new(1, 0, 1, 0),
+        Visible = false,
+        ZIndex = 1000,
+        Parent = frame,
+    })
+
+    Create.Corner(target._blocker, Constants.Sizes.Corner.Medium)
+
+    target._blockerLabel = Create.Instance("TextLabel", {
+        Name = "BlockerLabel",
+        FontFace = Constants.Fonts.Regular,
+        TextColor3 = Constants.Colors.Text,
+        Text = "Blocked",
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        BackgroundTransparency = 1,
+        TextSize = Constants.Fonts.Size.Small,
+        Position = UDim2.new(0, 10, 0, 0),
+        Size = UDim2.new(1, -20, 1, 0),
+        ZIndex = 1001,
+        Parent = target._blocker,
+    })
+
+    function target:Block(text)
+        local blockText = if text == nil or tostring(text) == "" then "Blocked" else tostring(text)
+        self._blocked = true
+        self._blockerLabel.Text = blockText
+        self._blocker.Visible = true
+    end
+
+    function target:Unblock()
+        self._blocked = false
+        self._blocker.Visible = false
+    end
+
+    function target:IsBlocked()
+        return self._blocked == true
+    end
 end
 
 return Create

@@ -105,6 +105,10 @@ function ColorPicker.new(parent: Instance, config, window)
         table.insert(
             self._connections,
             swatch.MouseButton1Click:Connect(function()
+                if self._blocked then
+                    return
+                end
+
                 self:SetColor(col)
                 self._palette.Visible = false
             end)
@@ -112,6 +116,10 @@ function ColorPicker.new(parent: Instance, config, window)
     end
 
     local function open()
+        if self._blocked then
+            return
+        end
+
         local p = self._preview.AbsolutePosition
         self._palette.Position = UDim2.new(0, p.X - 160 + 35, 0, p.Y + 22)
         self._palette.Visible = true
@@ -120,12 +128,24 @@ function ColorPicker.new(parent: Instance, config, window)
     table.insert(
         self._connections,
         previewBtn.MouseButton1Click:Connect(function()
+            if self._blocked then
+                return
+            end
+
             self._palette.Visible = not self._palette.Visible
             if self._palette.Visible then
                 open()
             end
         end)
     )
+
+    Create.Blockable(self, self._frame)
+
+    local baseBlock = self.Block
+    self.Block = function(component, text: string?)
+        component._palette.Visible = false
+        baseBlock(component, text)
+    end
 
     if self._flag and self._window and self._window.RegisterConfigElement then
         self._window:RegisterConfigElement(self._flag, "ColorPicker", function()

@@ -32,6 +32,9 @@ export type SliderObject = {
     GetValue: (self: SliderObject) -> number,
     SetMin: (self: SliderObject, min: number) -> (),
     SetMax: (self: SliderObject, max: number) -> (),
+    Block: (self: SliderObject, text: string?) -> (),
+    Unblock: (self: SliderObject) -> (),
+    IsBlocked: (self: SliderObject) -> boolean,
     Destroy: (self: SliderObject) -> (),
 }
 
@@ -132,6 +135,10 @@ function Slider.new(parent: Instance, config: SliderConfig, window): SliderObjec
     table.insert(
         self._connections,
         self._track.InputBegan:Connect(function(input)
+            if self._blocked then
+                return
+            end
+
             if
                 input.UserInputType == Enum.UserInputType.MouseButton1
                 or input.UserInputType == Enum.UserInputType.Touch
@@ -159,6 +166,7 @@ function Slider.new(parent: Instance, config: SliderConfig, window): SliderObjec
         Services.UserInputService.InputChanged:Connect(function(input)
             if
                 self._dragging
+                and not self._blocked
                 and (
                     input.UserInputType == Enum.UserInputType.MouseMovement
                     or input.UserInputType == Enum.UserInputType.Touch
@@ -168,6 +176,14 @@ function Slider.new(parent: Instance, config: SliderConfig, window): SliderObjec
             end
         end)
     )
+
+    Create.Blockable(self, self._frame)
+
+    local baseBlock = self.Block
+    self.Block = function(component, text: string?)
+        component._dragging = false
+        baseBlock(component, text)
+    end
 
     if self._flag and self._window and self._window.RegisterConfigElement then
         self._window:RegisterConfigElement(self._flag, "Slider", function()

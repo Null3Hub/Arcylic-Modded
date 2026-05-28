@@ -25,6 +25,9 @@ export type ButtonObject = {
     SetText: (self: ButtonObject, text: string) -> (),
     SetIcon: (self: ButtonObject, icon: string) -> (),
     SetCallback: (self: ButtonObject, callback: () -> ()) -> (),
+    Block: (self: ButtonObject, text: string?) -> (),
+    Unblock: (self: ButtonObject) -> (),
+    IsBlocked: (self: ButtonObject) -> boolean,
     Destroy: (self: ButtonObject) -> (),
 }
 
@@ -116,6 +119,10 @@ function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
     table.insert(
         self._connections,
         self._button.MouseButton1Click:Connect(function()
+            if self._blocked then
+                return
+            end
+
             -- Click animation
             Tween.Create(self._frame, { BackgroundTransparency = 0.2 }, "Fast")
             task.wait(0.1)
@@ -128,6 +135,10 @@ function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
     table.insert(
         self._connections,
         self._button.MouseEnter:Connect(function()
+            if self._blocked then
+                return
+            end
+
             Tween.Create(self._frame, { BackgroundTransparency = 0.3 }, "Fast")
         end)
     )
@@ -138,6 +149,8 @@ function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
             Tween.Create(self._frame, { BackgroundTransparency = 0.4 }, "Fast")
         end)
     )
+
+    Create.Blockable(self, self._frame)
 
     return self
 end

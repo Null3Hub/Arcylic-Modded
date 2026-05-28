@@ -30,6 +30,9 @@ export type DropdownObject = {
     Refresh: (self: DropdownObject, options: { string }) -> (),
     Open: (self: DropdownObject) -> (),
     Close: (self: DropdownObject) -> (),
+    Block: (self: DropdownObject, text: string?) -> (),
+    Unblock: (self: DropdownObject) -> (),
+    IsBlocked: (self: DropdownObject) -> boolean,
     Destroy: (self: DropdownObject) -> (),
 }
 
@@ -156,6 +159,10 @@ function Dropdown.new(parent: Instance, config: DropdownConfig, window): Dropdow
     table.insert(
         self._connections,
         toggleBtn.MouseButton1Click:Connect(function()
+            if self._blocked then
+                return
+            end
+
             if self._expanded then
                 self:Close()
             else
@@ -163,6 +170,14 @@ function Dropdown.new(parent: Instance, config: DropdownConfig, window): Dropdow
             end
         end)
     )
+
+    Create.Blockable(self, self._frame)
+
+    local baseBlock = self.Block
+    self.Block = function(component, text: string?)
+        component:Close()
+        baseBlock(component, text)
+    end
 
     if self._flag and self._window and self._window.RegisterConfigElement then
         self._window:RegisterConfigElement(self._flag, "Dropdown", function()
@@ -256,6 +271,10 @@ function Dropdown:_PopulateOptions()
         end)
 
         optionBtn.MouseButton1Click:Connect(function()
+            if self._blocked then
+                return
+            end
+
             if self._multiSelect then
                 local index = table.find(self._selected, option)
                 if index then
@@ -280,6 +299,10 @@ function Dropdown:_UpdateDisplay()
 end
 
 function Dropdown:Open()
+    if self._blocked then
+        return
+    end
+
     self._expanded = true
     self._optionsContainer.Visible = true
     Tween.Create(self._arrow, { Rotation = 180 }, "Normal")

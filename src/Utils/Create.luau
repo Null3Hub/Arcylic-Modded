@@ -186,4 +186,57 @@ function Create.Description(
     }) :: TextLabel
 end
 
+function Create.Blockable(target: any, frame: Instance)
+    target._blocked = false
+
+    target._blocker = Create.Instance("TextButton", {
+        Name = "Blocker",
+        Text = "",
+        AutoButtonColor = false,
+        Active = true,
+        BackgroundColor3 = Constants.Colors.Background,
+        BackgroundTransparency = 0.22,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0, 0),
+        Size = UDim2.new(1, 0, 1, 0),
+        Visible = false,
+        ZIndex = 1000,
+        Parent = frame,
+    }) :: TextButton
+
+    Create.Corner(target._blocker, Constants.Sizes.Corner.Medium)
+
+    target._blockerLabel = Create.Instance("TextLabel", {
+        Name = "BlockerLabel",
+        FontFace = Constants.Fonts.Regular,
+        TextColor3 = Constants.Colors.Text,
+        Text = "Blocked",
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        BackgroundTransparency = 1,
+        TextSize = Constants.Fonts.Size.Small,
+        Position = UDim2.new(0, 10, 0, 0),
+        Size = UDim2.new(1, -20, 1, 0),
+        ZIndex = 1001,
+        Parent = target._blocker,
+    }) :: TextLabel
+
+    function target:Block(text: string?)
+        local blockText = if text == nil or tostring(text) == "" then "Blocked" else tostring(text)
+        self._blocked = true
+        self._blockerLabel.Text = blockText
+        self._blocker.Visible = true
+    end
+
+    function target:Unblock()
+        self._blocked = false
+        self._blocker.Visible = false
+    end
+
+    function target:IsBlocked(): boolean
+        return self._blocked == true
+    end
+end
+
 return Create

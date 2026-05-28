@@ -117,6 +117,12 @@ export type ParagraphConfig = {
     Content: string?,
 }
 
+export type Blockable = {
+    Block: (self: Blockable, text: string?) -> (),
+    Unblock: (self: Blockable) -> (),
+    IsBlocked: (self: Blockable) -> boolean,
+}
+
 export type NotificationConfig = {
     Title: string?,
     Description: string?,

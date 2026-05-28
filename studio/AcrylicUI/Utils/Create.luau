@@ -5,9 +5,9 @@
 ]]
 
 local Constants = {
-	Colors = require(script.Parent.Parent.Constants.Colors),
-	Sizes = require(script.Parent.Parent.Constants.Sizes),
-	Fonts = require(script.Parent.Parent.Constants.Fonts),
+    Colors = require(script.Parent.Parent.Constants.Colors),
+    Sizes = require(script.Parent.Parent.Constants.Sizes),
+    Fonts = require(script.Parent.Parent.Constants.Fonts),
 }
 
 local Create = {}
@@ -28,20 +28,20 @@ local Create = {}
     })
 ]]
 function Create.Instance(className: string, properties: { [string]: any }): Instance
-	local instance = Instance.new(className)
+    local instance = Instance.new(className)
 
-	for property, value in pairs(properties) do
-		if property ~= "Parent" then
-			instance[property] = value
-		end
-	end
+    for property, value in pairs(properties) do
+        if property ~= "Parent" then
+            instance[property] = value
+        end
+    end
 
-	-- Set parent last to avoid unnecessary property updates
-	if properties.Parent then
-		instance.Parent = properties.Parent
-	end
+    -- Set parent last to avoid unnecessary property updates
+    if properties.Parent then
+        instance.Parent = properties.Parent
+    end
 
-	return instance
+    return instance
 end
 
 --[[
@@ -52,10 +52,10 @@ end
     @return UICorner
 ]]
 function Create.Corner(parent: Instance, radius: number?): UICorner
-	return Create.Instance("UICorner", {
-		CornerRadius = UDim.new(0, radius or Constants.Sizes.Corner.Medium),
-		Parent = parent,
-	}) :: UICorner
+    return Create.Instance("UICorner", {
+        CornerRadius = UDim.new(0, radius or Constants.Sizes.Corner.Medium),
+        Parent = parent,
+    }) :: UICorner
 end
 
 --[[
@@ -67,14 +67,19 @@ end
     @param thickness number? - Stroke thickness (default: 1)
     @return UIStroke
 ]]
-function Create.Stroke(parent: Instance, color: Color3?, transparency: number?, thickness: number?): UIStroke
-	return Create.Instance("UIStroke", {
-		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-		Color = color or Constants.Colors.Border,
-		Transparency = transparency or 0,
-		Thickness = thickness or 1,
-		Parent = parent,
-	}) :: UIStroke
+function Create.Stroke(
+    parent: Instance,
+    color: Color3?,
+    transparency: number?,
+    thickness: number?
+): UIStroke
+    return Create.Instance("UIStroke", {
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+        Color = color or Constants.Colors.Border,
+        Transparency = transparency or 0,
+        Thickness = thickness or 1,
+        Parent = parent,
+    }) :: UIStroke
 end
 
 --[[
@@ -87,14 +92,20 @@ end
     @param right number? - Right padding
     @return UIPadding
 ]]
-function Create.Padding(parent: Instance, top: number?, bottom: number?, left: number?, right: number?): UIPadding
-	return Create.Instance("UIPadding", {
-		PaddingTop = UDim.new(0, top or 0),
-		PaddingBottom = UDim.new(0, bottom or 0),
-		PaddingLeft = UDim.new(0, left or 0),
-		PaddingRight = UDim.new(0, right or 0),
-		Parent = parent,
-	}) :: UIPadding
+function Create.Padding(
+    parent: Instance,
+    top: number?,
+    bottom: number?,
+    left: number?,
+    right: number?
+): UIPadding
+    return Create.Instance("UIPadding", {
+        PaddingTop = UDim.new(0, top or 0),
+        PaddingBottom = UDim.new(0, bottom or 0),
+        PaddingLeft = UDim.new(0, left or 0),
+        PaddingRight = UDim.new(0, right or 0),
+        Parent = parent,
+    }) :: UIPadding
 end
 
 --[[
@@ -107,17 +118,17 @@ end
     @return UIListLayout
 ]]
 function Create.ListLayout(
-	parent: Instance,
-	padding: number?,
-	sortOrder: Enum.SortOrder?,
-	direction: Enum.FillDirection?
+    parent: Instance,
+    padding: number?,
+    sortOrder: Enum.SortOrder?,
+    direction: Enum.FillDirection?
 ): UIListLayout
-	return Create.Instance("UIListLayout", {
-		Padding = UDim.new(0, padding or 0),
-		SortOrder = sortOrder or Enum.SortOrder.LayoutOrder,
-		FillDirection = direction or Enum.FillDirection.Vertical,
-		Parent = parent,
-	}) :: UIListLayout
+    return Create.Instance("UIListLayout", {
+        Padding = UDim.new(0, padding or 0),
+        SortOrder = sortOrder or Enum.SortOrder.LayoutOrder,
+        FillDirection = direction or Enum.FillDirection.Vertical,
+        Parent = parent,
+    }) :: UIListLayout
 end
 
 --[[
@@ -129,45 +140,103 @@ end
     @return UIGridLayout
 ]]
 function Create.GridLayout(parent: Instance, cellSize: UDim2, cellPadding: UDim2?): UIGridLayout
-	return Create.Instance("UIGridLayout", {
-		CellSize = cellSize,
-		CellPadding = cellPadding or UDim2.new(0, 5, 0, 5),
-		SortOrder = Enum.SortOrder.LayoutOrder,
-		Parent = parent,
-	}) :: UIGridLayout
+    return Create.Instance("UIGridLayout", {
+        CellSize = cellSize,
+        CellPadding = cellPadding or UDim2.new(0, 5, 0, 5),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = parent,
+    }) :: UIGridLayout
 end
 
-function Create.GetDescription(config)
-	if not config then
-		return nil
-	end
+function Create.GetDescription(config: { [string]: any }?): string?
+    if not config then
+        return nil
+    end
 
-	local description = config.Description or config.Desc
-	if description == nil or description == "" then
-		return nil
-	end
+    local description = config.Description or config.Desc
+    if description == nil or description == "" then
+        return nil
+    end
 
-	return tostring(description)
+    return tostring(description)
 end
 
-function Create.Description(parent, text, position, size)
-	if not text then
-		return nil
-	end
+function Create.Description(
+    parent: Instance,
+    text: string?,
+    position: UDim2,
+    size: UDim2
+): TextLabel?
+    if not text then
+        return nil
+    end
 
-	return Create.Instance("TextLabel", {
-		Name = "Description",
-		FontFace = Constants.Fonts.Light,
-		TextColor3 = Constants.Colors.TextDark,
-		Text = text,
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextTruncate = Enum.TextTruncate.AtEnd,
-		BackgroundTransparency = 1,
-		TextSize = Constants.Fonts.Size.Tiny,
-		Position = position,
-		Size = size,
-		Parent = parent,
-	})
+    return Create.Instance("TextLabel", {
+        Name = "Description",
+        FontFace = Constants.Fonts.Light,
+        TextColor3 = Constants.Colors.TextDark,
+        Text = text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        BackgroundTransparency = 1,
+        TextSize = Constants.Fonts.Size.Tiny,
+        Position = position,
+        Size = size,
+        Parent = parent,
+    }) :: TextLabel
+end
+
+function Create.Blockable(target: any, frame: Instance)
+    target._blocked = false
+
+    target._blocker = Create.Instance("TextButton", {
+        Name = "Blocker",
+        Text = "",
+        AutoButtonColor = false,
+        Active = true,
+        BackgroundColor3 = Constants.Colors.Background,
+        BackgroundTransparency = 0.22,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0, 0),
+        Size = UDim2.new(1, 0, 1, 0),
+        Visible = false,
+        ZIndex = 1000,
+        Parent = frame,
+    }) :: TextButton
+
+    Create.Corner(target._blocker, Constants.Sizes.Corner.Medium)
+
+    target._blockerLabel = Create.Instance("TextLabel", {
+        Name = "BlockerLabel",
+        FontFace = Constants.Fonts.Regular,
+        TextColor3 = Constants.Colors.Text,
+        Text = "Blocked",
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        BackgroundTransparency = 1,
+        TextSize = Constants.Fonts.Size.Small,
+        Position = UDim2.new(0, 10, 0, 0),
+        Size = UDim2.new(1, -20, 1, 0),
+        ZIndex = 1001,
+        Parent = target._blocker,
+    }) :: TextLabel
+
+    function target:Block(text: string?)
+        local blockText = if text == nil or tostring(text) == "" then "Blocked" else tostring(text)
+        self._blocked = true
+        self._blockerLabel.Text = blockText
+        self._blocker.Visible = true
+    end
+
+    function target:Unblock()
+        self._blocked = false
+        self._blocker.Visible = false
+    end
+
+    function target:IsBlocked(): boolean
+        return self._blocked == true
+    end
 end
 
 return Create

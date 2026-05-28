@@ -268,6 +268,14 @@ function Tab:CreateConfigSection()
         end,
     })
 
+    self:CreateToggle({
+        Name = "Auto Load",
+        Default = self._window:GetAutoLoad(),
+        Callback = function(enabled)
+            self._window:SetAutoLoad(enabled)
+        end,
+    })
+
     return {
         RefreshConfigs = function()
             configDropdown:Refresh(getConfigOptions())

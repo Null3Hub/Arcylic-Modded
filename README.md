@@ -483,6 +483,34 @@ local paragraph = tab:CreateParagraph({
 
 ---
 
+### Blocking Components
+
+Interactive components support a shared blocking API:
+
+```lua
+local farmToggle = tab:CreateToggle({
+    Name = "Auto Farm",
+    Default = true,
+    Callback = function(enabled)
+        print("Farm:", enabled)
+    end,
+})
+
+farmToggle:Block()
+farmToggle:Block("Need level 10")
+farmToggle:Unblock()
+print(farmToggle:IsBlocked())
+```
+
+**Methods:**
+- `component:Block(text)` - Blocks user interaction and shows a centered overlay. Text is optional and defaults to `"Blocked"`.
+- `component:Unblock()` - Removes the overlay and restores normal user interaction.
+- `component:IsBlocked()` - Returns whether the component is currently blocked.
+
+Blocking prevents user input only. Programmatic setters such as `SetValue`, `SetText`, `SetColor`, and `SetKey` continue to work. `Toggle:Block()` is the only method that changes component value: if the toggle is on, it turns off and calls `Callback(false)`.
+
+---
+
 #### `tab:CreateConfigSection()`
 Creates a pre-built configuration management UI with save, load, delete, and auto-save functionality.
 
