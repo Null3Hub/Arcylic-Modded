@@ -7,6 +7,7 @@
 local Constants = {
     Colors = require(script.Parent.Parent.Constants.Colors),
     Sizes = require(script.Parent.Parent.Constants.Sizes),
+    Fonts = require(script.Parent.Parent.Constants.Fonts),
 }
 
 local Create = {}
@@ -145,6 +146,44 @@ function Create.GridLayout(parent: Instance, cellSize: UDim2, cellPadding: UDim2
         SortOrder = Enum.SortOrder.LayoutOrder,
         Parent = parent,
     }) :: UIGridLayout
+end
+
+function Create.GetDescription(config: { [string]: any }?): string?
+    if not config then
+        return nil
+    end
+
+    local description = config.Description or config.Desc
+    if description == nil or description == "" then
+        return nil
+    end
+
+    return tostring(description)
+end
+
+function Create.Description(
+    parent: Instance,
+    text: string?,
+    position: UDim2,
+    size: UDim2
+): TextLabel?
+    if not text then
+        return nil
+    end
+
+    return Create.Instance("TextLabel", {
+        Name = "Description",
+        FontFace = Constants.Fonts.Light,
+        TextColor3 = Constants.Colors.TextDark,
+        Text = text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        BackgroundTransparency = 1,
+        TextSize = Constants.Fonts.Size.Tiny,
+        Position = position,
+        Size = size,
+        Parent = parent,
+    }) :: TextLabel
 end
 
 return Create

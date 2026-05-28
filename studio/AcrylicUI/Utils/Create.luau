@@ -5,8 +5,9 @@
 ]]
 
 local Constants = {
-    Colors = require(script.Parent.Parent.Constants.Colors),
-    Sizes = require(script.Parent.Parent.Constants.Sizes),
+	Colors = require(script.Parent.Parent.Constants.Colors),
+	Sizes = require(script.Parent.Parent.Constants.Sizes),
+	Fonts = require(script.Parent.Parent.Constants.Fonts),
 }
 
 local Create = {}
@@ -27,20 +28,20 @@ local Create = {}
     })
 ]]
 function Create.Instance(className: string, properties: { [string]: any }): Instance
-    local instance = Instance.new(className)
+	local instance = Instance.new(className)
 
-    for property, value in pairs(properties) do
-        if property ~= "Parent" then
-            instance[property] = value
-        end
-    end
+	for property, value in pairs(properties) do
+		if property ~= "Parent" then
+			instance[property] = value
+		end
+	end
 
-    -- Set parent last to avoid unnecessary property updates
-    if properties.Parent then
-        instance.Parent = properties.Parent
-    end
+	-- Set parent last to avoid unnecessary property updates
+	if properties.Parent then
+		instance.Parent = properties.Parent
+	end
 
-    return instance
+	return instance
 end
 
 --[[
@@ -51,10 +52,10 @@ end
     @return UICorner
 ]]
 function Create.Corner(parent: Instance, radius: number?): UICorner
-    return Create.Instance("UICorner", {
-        CornerRadius = UDim.new(0, radius or Constants.Sizes.Corner.Medium),
-        Parent = parent,
-    }) :: UICorner
+	return Create.Instance("UICorner", {
+		CornerRadius = UDim.new(0, radius or Constants.Sizes.Corner.Medium),
+		Parent = parent,
+	}) :: UICorner
 end
 
 --[[
@@ -66,19 +67,14 @@ end
     @param thickness number? - Stroke thickness (default: 1)
     @return UIStroke
 ]]
-function Create.Stroke(
-    parent: Instance,
-    color: Color3?,
-    transparency: number?,
-    thickness: number?
-): UIStroke
-    return Create.Instance("UIStroke", {
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-        Color = color or Constants.Colors.Border,
-        Transparency = transparency or 0,
-        Thickness = thickness or 1,
-        Parent = parent,
-    }) :: UIStroke
+function Create.Stroke(parent: Instance, color: Color3?, transparency: number?, thickness: number?): UIStroke
+	return Create.Instance("UIStroke", {
+		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+		Color = color or Constants.Colors.Border,
+		Transparency = transparency or 0,
+		Thickness = thickness or 1,
+		Parent = parent,
+	}) :: UIStroke
 end
 
 --[[
@@ -91,20 +87,14 @@ end
     @param right number? - Right padding
     @return UIPadding
 ]]
-function Create.Padding(
-    parent: Instance,
-    top: number?,
-    bottom: number?,
-    left: number?,
-    right: number?
-): UIPadding
-    return Create.Instance("UIPadding", {
-        PaddingTop = UDim.new(0, top or 0),
-        PaddingBottom = UDim.new(0, bottom or 0),
-        PaddingLeft = UDim.new(0, left or 0),
-        PaddingRight = UDim.new(0, right or 0),
-        Parent = parent,
-    }) :: UIPadding
+function Create.Padding(parent: Instance, top: number?, bottom: number?, left: number?, right: number?): UIPadding
+	return Create.Instance("UIPadding", {
+		PaddingTop = UDim.new(0, top or 0),
+		PaddingBottom = UDim.new(0, bottom or 0),
+		PaddingLeft = UDim.new(0, left or 0),
+		PaddingRight = UDim.new(0, right or 0),
+		Parent = parent,
+	}) :: UIPadding
 end
 
 --[[
@@ -117,17 +107,17 @@ end
     @return UIListLayout
 ]]
 function Create.ListLayout(
-    parent: Instance,
-    padding: number?,
-    sortOrder: Enum.SortOrder?,
-    direction: Enum.FillDirection?
+	parent: Instance,
+	padding: number?,
+	sortOrder: Enum.SortOrder?,
+	direction: Enum.FillDirection?
 ): UIListLayout
-    return Create.Instance("UIListLayout", {
-        Padding = UDim.new(0, padding or 0),
-        SortOrder = sortOrder or Enum.SortOrder.LayoutOrder,
-        FillDirection = direction or Enum.FillDirection.Vertical,
-        Parent = parent,
-    }) :: UIListLayout
+	return Create.Instance("UIListLayout", {
+		Padding = UDim.new(0, padding or 0),
+		SortOrder = sortOrder or Enum.SortOrder.LayoutOrder,
+		FillDirection = direction or Enum.FillDirection.Vertical,
+		Parent = parent,
+	}) :: UIListLayout
 end
 
 --[[
@@ -139,12 +129,45 @@ end
     @return UIGridLayout
 ]]
 function Create.GridLayout(parent: Instance, cellSize: UDim2, cellPadding: UDim2?): UIGridLayout
-    return Create.Instance("UIGridLayout", {
-        CellSize = cellSize,
-        CellPadding = cellPadding or UDim2.new(0, 5, 0, 5),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Parent = parent,
-    }) :: UIGridLayout
+	return Create.Instance("UIGridLayout", {
+		CellSize = cellSize,
+		CellPadding = cellPadding or UDim2.new(0, 5, 0, 5),
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Parent = parent,
+	}) :: UIGridLayout
+end
+
+function Create.GetDescription(config)
+	if not config then
+		return nil
+	end
+
+	local description = config.Description or config.Desc
+	if description == nil or description == "" then
+		return nil
+	end
+
+	return tostring(description)
+end
+
+function Create.Description(parent, text, position, size)
+	if not text then
+		return nil
+	end
+
+	return Create.Instance("TextLabel", {
+		Name = "Description",
+		FontFace = Constants.Fonts.Light,
+		TextColor3 = Constants.Colors.TextDark,
+		Text = text,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextTruncate = Enum.TextTruncate.AtEnd,
+		BackgroundTransparency = 1,
+		TextSize = Constants.Fonts.Size.Tiny,
+		Position = position,
+		Size = size,
+		Parent = parent,
+	})
 end
 
 return Create

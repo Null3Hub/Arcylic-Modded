@@ -15,6 +15,8 @@ Button.__index = Button
 
 export type ButtonConfig = {
     Name: string?,
+    Description: string?,
+    Desc: string?,
     Icon: string?,
     Callback: (() -> ())?,
 }
@@ -48,6 +50,9 @@ function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
     local name = config.Name or "Button"
     local icon = config.Icon or "rbxassetid://10734898355"
     local callback = config.Callback or function() end
+    local description = Create.GetDescription(config)
+    local hasDescription = description ~= nil
+    local height = hasDescription and 50 or Sizes.Button.Height
 
     self._connections = {}
 
@@ -57,7 +62,7 @@ function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
         BackgroundColor3 = Colors.Secondary,
         BackgroundTransparency = 0.4,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, Sizes.Button.Height),
+        Size = UDim2.new(1, 0, 0, height),
         Parent = parent,
     })
 
@@ -72,11 +77,14 @@ function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0.5, -10),
+        Position = hasDescription and UDim2.new(0, 10, 0, 7) or UDim2.new(0, 10, 0.5, -10),
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(1, -50, 0, 20),
         Parent = self._frame,
     })
+
+    -- Description
+    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 27), UDim2.new(1, -50, 0, 14))
 
     -- Icon
     self._icon = Create.Instance("ImageLabel", {

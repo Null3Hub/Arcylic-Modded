@@ -9,6 +9,8 @@ TextBox.__index = TextBox
 
 export type TextBoxConfig = {
     Name: string?,
+    Description: string?,
+    Desc: string?,
     Default: string?,
     Placeholder: string?,
     ClearOnFocus: boolean?,
@@ -23,6 +25,9 @@ function TextBox.new(parent: Instance, config: TextBoxConfig?, window)
 
     local name = config.Name or "TextBox"
     local placeholder = config.Placeholder or "Enter text..."
+    local description = Create.GetDescription(config)
+    local hasDescription = description ~= nil
+    local height = hasDescription and 50 or Sizes.TextBox.Height
 
     self._callback = config.Callback or function() end
     self._text = tostring(config.Default or "")
@@ -36,7 +41,7 @@ function TextBox.new(parent: Instance, config: TextBoxConfig?, window)
         BackgroundColor3 = Colors.Secondary,
         BackgroundTransparency = 0.4,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, Sizes.TextBox.Height),
+        Size = UDim2.new(1, 0, 0, height),
         Parent = parent,
     })
 
@@ -50,11 +55,13 @@ function TextBox.new(parent: Instance, config: TextBoxConfig?, window)
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0.5, -10),
+        Position = hasDescription and UDim2.new(0, 10, 0, 7) or UDim2.new(0, 10, 0.5, -10),
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(1, -190, 0, 20),
         Parent = self._frame,
     })
+
+    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 27), UDim2.new(1, -190, 0, 14))
 
     self._icon = Create.Instance("ImageLabel", {
         Name = "Icon",

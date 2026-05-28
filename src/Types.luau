@@ -45,11 +45,15 @@ export type WindowConfig = {
 
 export type ButtonConfig = {
     Name: string?,
+    Description: string?,
+    Desc: string?,
     Callback: (() -> ())?,
 }
 
 export type ToggleConfig = {
     Name: string?,
+    Description: string?,
+    Desc: string?,
     Default: boolean?,
     Flag: string?,
     Callback: ((enabled: boolean) -> ())?,
@@ -57,6 +61,8 @@ export type ToggleConfig = {
 
 export type SliderConfig = {
     Name: string?,
+    Description: string?,
+    Desc: string?,
     Min: number?,
     Max: number?,
     Default: number?,
@@ -67,6 +73,8 @@ export type SliderConfig = {
 
 export type DropdownConfig = {
     Name: string?,
+    Description: string?,
+    Desc: string?,
     Options: { string }?,
     Default: string | { string }?,
     MultiSelect: boolean?,
@@ -76,6 +84,8 @@ export type DropdownConfig = {
 
 export type KeybindConfig = {
     Name: string?,
+    Description: string?,
+    Desc: string?,
     Default: Enum.KeyCode?,
     Flag: string?,
     Callback: (() -> ())?,
@@ -83,6 +93,8 @@ export type KeybindConfig = {
 
 export type ColorPickerConfig = {
     Name: string?,
+    Description: string?,
+    Desc: string?,
     Default: Color3?,
     Flag: string?,
     Callback: ((color: Color3) -> ())?,
@@ -90,6 +102,8 @@ export type ColorPickerConfig = {
 
 export type TextBoxConfig = {
     Name: string?,
+    Description: string?,
+    Desc: string?,
     Default: string?,
     Placeholder: string?,
     ClearOnFocus: boolean?,

@@ -15,6 +15,8 @@ Toggle.__index = Toggle
 
 export type ToggleConfig = {
     Name: string?,
+    Description: string?,
+    Desc: string?,
     Default: boolean?,
     Flag: string?,
     Callback: ((enabled: boolean) -> ())?,
@@ -39,6 +41,9 @@ function Toggle.new(parent: Instance, config: ToggleConfig, window): ToggleObjec
     local name = config.Name or "Toggle"
     local default = config.Default or false
     local callback = config.Callback or function() end
+    local description = Create.GetDescription(config)
+    local hasDescription = description ~= nil
+    local height = hasDescription and 50 or Sizes.Button.Height
 
     self._enabled = default
     self._callback = callback
@@ -52,7 +57,7 @@ function Toggle.new(parent: Instance, config: ToggleConfig, window): ToggleObjec
         BackgroundColor3 = Colors.Secondary,
         BackgroundTransparency = 0.4,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, Sizes.Button.Height),
+        Size = UDim2.new(1, 0, 0, height),
         Parent = parent,
     })
 
@@ -67,11 +72,14 @@ function Toggle.new(parent: Instance, config: ToggleConfig, window): ToggleObjec
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0.5, -10),
+        Position = hasDescription and UDim2.new(0, 10, 0, 7) or UDim2.new(0, 10, 0.5, -10),
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(1, -60, 0, 20),
         Parent = self._frame,
     })
+
+    -- Description
+    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 27), UDim2.new(1, -60, 0, 14))
 
     -- Switch background
     self._switchBg = Create.Instance("Frame", {

@@ -14,16 +14,16 @@ local Button = {}
 Button.__index = Button
 
 export type ButtonConfig = {
-    Name: string?,
-    Icon: string?,
-    Callback: (() -> ())?,
+	Name: string?,
+	Icon: string?,
+	Callback: (() -> ())?,
 }
 
 export type ButtonObject = {
-    SetText: (self: ButtonObject, text: string) -> (),
-    SetIcon: (self: ButtonObject, icon: string) -> (),
-    SetCallback: (self: ButtonObject, callback: () -> ()) -> (),
-    Destroy: (self: ButtonObject) -> (),
+	SetText: (self: ButtonObject, text: string) -> (),
+	SetIcon: (self: ButtonObject, icon: string) -> (),
+	SetCallback: (self: ButtonObject, callback: () -> ()) -> (),
+	Destroy: (self: ButtonObject) -> (),
 }
 
 --[[
@@ -43,116 +43,122 @@ export type ButtonObject = {
     })
 ]]
 function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
-    local self = setmetatable({}, Button)
+	local self = setmetatable({}, Button)
 
-    local name = config.Name or "Button"
-    local icon = config.Icon or "rbxassetid://10734898355"
-    local callback = config.Callback or function() end
+	local name = config.Name or "Button"
+	local icon = config.Icon or "rbxassetid://10734898355"
+	local callback = config.Callback or function() end
 
-    self._connections = {}
+	local description = Create.GetDescription(config)
+	local hasDescription = description ~= nil
+	local height = hasDescription and 50 or Sizes.Button.Height
 
-    -- Main container
-    self._frame = Create.Instance("Frame", {
-        Name = "Button_" .. name,
-        BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.4,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, Sizes.Button.Height),
-        Parent = parent,
-    })
+	self._connections = {}
 
-    Create.Corner(self._frame, Sizes.Corner.Medium)
-    Create.Stroke(self._frame)
+	-- Main container
+	self._frame = Create.Instance("Frame", {
+		Name = "Button_" .. name,
+		BackgroundColor3 = Colors.Secondary,
+		BackgroundTransparency = 0.4,
+		BorderSizePixel = 0,
+		Size = UDim2.new(1, 0, 0, height),
+		Parent = parent,
+	})
 
-    -- Button label
-    self._label = Create.Instance("TextLabel", {
-        Name = "Label",
-        FontFace = Fonts.Regular,
-        TextColor3 = Colors.Text,
-        Text = name,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0.5, -10),
-        TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(1, -50, 0, 20),
-        Parent = self._frame,
-    })
+	Create.Corner(self._frame, Sizes.Corner.Medium)
+	Create.Stroke(self._frame)
 
-    -- Icon
-    self._icon = Create.Instance("ImageLabel", {
-        Name = "Icon",
-        BackgroundTransparency = 1,
-        Image = icon,
-        ImageColor3 = Colors.Text,
-        Position = UDim2.new(1, -30, 0.5, -10),
-        Size = UDim2.new(0, 20, 0, 20),
-        Parent = self._frame,
-    })
+	-- Button label
+	self._label = Create.Instance("TextLabel", {
+		Name = "Label",
+		FontFace = Fonts.Regular,
+		TextColor3 = Colors.Text,
+		Text = name,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		BackgroundTransparency = 1,
+		Position = hasDescription and UDim2.new(0, 10, 0, 7) or UDim2.new(0, 10, 0.5, -10),
+		TextSize = Fonts.Size.Normal,
+		Size = UDim2.new(1, -50, 0, 20),
+		Parent = self._frame,
+	})
 
-    Create.Instance("UIAspectRatioConstraint", {
-        Parent = self._icon,
-    })
+	Create.Description(self._frame, description, UDim2.new(0, 10, 0, 27), UDim2.new(1, -50, 0, 14))
 
-    -- Click button
-    self._button = Create.Instance("TextButton", {
-        Name = "ClickArea",
-        Text = "",
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 1, 0),
-        Parent = self._frame,
-    })
+	-- Icon
+	self._icon = Create.Instance("ImageLabel", {
+		Name = "Icon",
+		BackgroundTransparency = 1,
+		Image = icon,
+		ImageColor3 = Colors.Text,
+		Position = UDim2.new(1, -30, 0.5, -10),
+		Size = UDim2.new(0, 20, 0, 20),
+		Parent = self._frame,
+	})
 
-    self._callback = callback
+	Create.Instance("UIAspectRatioConstraint", {
+		Parent = self._icon,
+	})
 
-    -- Event handlers
-    table.insert(
-        self._connections,
-        self._button.MouseButton1Click:Connect(function()
-            -- Click animation
-            Tween.Create(self._frame, { BackgroundTransparency = 0.2 }, "Fast")
-            task.wait(0.1)
-            Tween.Create(self._frame, { BackgroundTransparency = 0.4 }, "Fast")
+	-- Click button
+	self._button = Create.Instance("TextButton", {
+		Name = "ClickArea",
+		Text = "",
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 1, 0),
+		Parent = self._frame,
+	})
 
-            self._callback()
-        end)
-    )
+	self._callback = callback
 
-    table.insert(
-        self._connections,
-        self._button.MouseEnter:Connect(function()
-            Tween.Create(self._frame, { BackgroundTransparency = 0.3 }, "Fast")
-        end)
-    )
+	-- Event handlers
+	table.insert(
+		self._connections,
+		self._button.MouseButton1Click:Connect(function()
+			-- Click animation
+			Tween.Create(self._frame, { BackgroundTransparency = 0.2 }, "Fast")
+			task.wait(0.1)
+			Tween.Create(self._frame, { BackgroundTransparency = 0.4 }, "Fast")
 
-    table.insert(
-        self._connections,
-        self._button.MouseLeave:Connect(function()
-            Tween.Create(self._frame, { BackgroundTransparency = 0.4 }, "Fast")
-        end)
-    )
+			self._callback()
+		end)
+	)
 
-    return self
+	table.insert(
+		self._connections,
+		self._button.MouseEnter:Connect(function()
+			Tween.Create(self._frame, { BackgroundTransparency = 0.3 }, "Fast")
+		end)
+	)
+
+	table.insert(
+		self._connections,
+		self._button.MouseLeave:Connect(function()
+			Tween.Create(self._frame, { BackgroundTransparency = 0.4 }, "Fast")
+		end)
+	)
+
+	return self
 end
 
 function Button:SetText(text: string)
-    self._label.Text = text
+	self._label.Text = text
 end
 
 function Button:SetIcon(icon: string)
-    self._icon.Image = icon
+	self._icon.Image = icon
 end
 
 function Button:SetCallback(callback: () -> ())
-    self._callback = callback
+	self._callback = callback
 end
 
 function Button:Destroy()
-    for _, connection in ipairs(self._connections) do
-        connection:Disconnect()
-    end
-    table.clear(self._connections)
+	for _, connection in ipairs(self._connections) do
+		connection:Disconnect()
+	end
+	table.clear(self._connections)
 
-    self._frame:Destroy()
+	self._frame:Destroy()
 end
 
 return Button

@@ -15,6 +15,8 @@ Dropdown.__index = Dropdown
 
 export type DropdownConfig = {
     Name: string?,
+    Description: string?,
+    Desc: string?,
     Options: { string }?,
     Default: string | { string }?,
     MultiSelect: boolean?,
@@ -49,6 +51,9 @@ function Dropdown.new(parent: Instance, config: DropdownConfig, window): Dropdow
     self._flag = config.Flag
     self._window = window
     self._connections = {}
+    local description = Create.GetDescription(config)
+    local hasDescription = description ~= nil
+    local height = hasDescription and 50 or Sizes.Dropdown.Height
 
     -- Initialize selected value
     if self._multiSelect then
@@ -63,7 +68,7 @@ function Dropdown.new(parent: Instance, config: DropdownConfig, window): Dropdow
         BackgroundColor3 = Colors.Secondary,
         BackgroundTransparency = 0.4,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, Sizes.Dropdown.Height),
+        Size = UDim2.new(1, 0, 0, height),
         ClipsDescendants = false,
         ZIndex = 1,
         Parent = parent,
@@ -80,19 +85,23 @@ function Dropdown.new(parent: Instance, config: DropdownConfig, window): Dropdow
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0, 10),
+        Position = UDim2.new(0, 10, 0, hasDescription and 6 or 10),
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(0, 200, 0, 20),
         ZIndex = 1,
         Parent = self._frame,
     })
 
+    -- Description
+    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 25), UDim2.new(1, -155, 0, 14))
+
     -- Selected display
     self._display = Create.Instance("Frame", {
         Name = "Display",
         BackgroundColor3 = Colors.Secondary,
         BackgroundTransparency = 0.04,
-        Position = UDim2.new(1, -145, 0, 6),
+        AnchorPoint = Vector2.new(0, 0.5),
+        Position = UDim2.new(1, -145, 0.5, 0),
         BorderSizePixel = 0,
         Size = UDim2.new(0, 135, 0, 26),
         ZIndex = 2,
@@ -187,7 +196,7 @@ function Dropdown:_CreateOptionsContainer()
         Name = "OptionsContainer",
         BackgroundColor3 = Colors.Secondary,
         BackgroundTransparency = 0.04,
-        Position = UDim2.new(1, -145, 0, 38),
+        Position = UDim2.new(1, -145, 0, self._frame.AbsoluteSize.Y - 1),
         BorderSizePixel = 0,
         Size = UDim2.new(0, 135, 0, totalHeight),
         Visible = false,

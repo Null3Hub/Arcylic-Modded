@@ -24,13 +24,16 @@ function ColorPicker.new(parent: Instance, config, window)
     self._flag = config and config.Flag
     self._window = window
     self._connections = {}
+    local description = Create.GetDescription(config)
+    local hasDescription = description ~= nil
+    local height = hasDescription and 50 or Sizes.Button.Height
 
     self._frame = Create.Instance("Frame", {
         Name = "ColorPicker_" .. name,
         BackgroundColor3 = Colors.Secondary,
         BackgroundTransparency = 0.4,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, Sizes.Button.Height),
+        Size = UDim2.new(1, 0, 0, height),
         Parent = parent,
     })
 
@@ -44,11 +47,13 @@ function ColorPicker.new(parent: Instance, config, window)
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0, 0),
+        Position = hasDescription and UDim2.new(0, 10, 0, 7) or UDim2.new(0, 10, 0, 0),
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(1, -50, 1, 0),
+        Size = UDim2.new(1, -50, 0, 20),
         Parent = self._frame,
     })
+
+    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 27), UDim2.new(1, -50, 0, 14))
 
     self._preview = Create.Instance("Frame", {
         Name = "Preview",

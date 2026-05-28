@@ -57,6 +57,9 @@ function Button.new(parent, config)
     local name = config.Name or "Button"
     local icon = config.Icon or "rbxassetid://10734898355"
     local callback = config.Callback or function() end
+    local description = Create.GetDescription(config)
+    local hasDescription = description ~= nil
+    local height = hasDescription and 50 or Sizes.Button.Height
 
     self._connections = {}
 
@@ -66,7 +69,7 @@ function Button.new(parent, config)
         BackgroundColor3 = Colors.Secondary,
         BackgroundTransparency = 0.4,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, Sizes.Button.Height),
+        Size = UDim2.new(1, 0, 0, height),
         Parent = parent,
     })
 
@@ -81,11 +84,14 @@ function Button.new(parent, config)
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0.5, -10),
+        Position = hasDescription and UDim2.new(0, 10, 0, 7) or UDim2.new(0, 10, 0.5, -10),
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(1, -50, 0, 20),
         Parent = self._frame,
     })
+
+    -- Description
+    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 27), UDim2.new(1, -50, 0, 14))
 
     -- Icon
     self._icon = Create.Instance("ImageLabel", {
@@ -194,13 +200,16 @@ function ColorPicker.new(parent, config, window)
     self._flag = config and config.Flag
     self._window = window
     self._connections = {}
+    local description = Create.GetDescription(config)
+    local hasDescription = description ~= nil
+    local height = hasDescription and 50 or Sizes.Button.Height
 
     self._frame = Create.Instance("Frame", {
         Name = "ColorPicker_" .. name,
         BackgroundColor3 = Colors.Secondary,
         BackgroundTransparency = 0.4,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, Sizes.Button.Height),
+        Size = UDim2.new(1, 0, 0, height),
         Parent = parent,
     })
 
@@ -214,11 +223,13 @@ function ColorPicker.new(parent, config, window)
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0, 0),
+        Position = hasDescription and UDim2.new(0, 10, 0, 7) or UDim2.new(0, 10, 0, 0),
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(1, -50, 1, 0),
+        Size = UDim2.new(1, -50, 0, 20),
         Parent = self._frame,
     })
+
+    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 27), UDim2.new(1, -50, 0, 14))
 
     self._preview = Create.Instance("Frame", {
         Name = "Preview",
@@ -368,6 +379,9 @@ function Dropdown.new(parent, config, window)
     self._flag = config.Flag
     self._window = window
     self._connections = {}
+    local description = Create.GetDescription(config)
+    local hasDescription = description ~= nil
+    local height = hasDescription and 50 or Sizes.Dropdown.Height
 
     -- Initialize selected value
     if self._multiSelect then
@@ -382,7 +396,7 @@ function Dropdown.new(parent, config, window)
         BackgroundColor3 = Colors.Secondary,
         BackgroundTransparency = 0.4,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, Sizes.Dropdown.Height),
+        Size = UDim2.new(1, 0, 0, height),
         ClipsDescendants = false,
         ZIndex = 1,
         Parent = parent,
@@ -399,19 +413,23 @@ function Dropdown.new(parent, config, window)
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0, 10),
+        Position = UDim2.new(0, 10, 0, hasDescription and 6 or 10),
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(0, 200, 0, 20),
         ZIndex = 1,
         Parent = self._frame,
     })
 
+    -- Description
+    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 25), UDim2.new(1, -155, 0, 14))
+
     -- Selected display
     self._display = Create.Instance("Frame", {
         Name = "Display",
         BackgroundColor3 = Colors.Secondary,
         BackgroundTransparency = 0.04,
-        Position = UDim2.new(1, -145, 0, 6),
+        AnchorPoint = Vector2.new(0, 0.5),
+        Position = UDim2.new(1, -145, 0.5, 0),
         BorderSizePixel = 0,
         Size = UDim2.new(0, 135, 0, 26),
         ZIndex = 2,
@@ -506,7 +524,7 @@ function Dropdown:_CreateOptionsContainer()
         Name = "OptionsContainer",
         BackgroundColor3 = Colors.Secondary,
         BackgroundTransparency = 0.04,
-        Position = UDim2.new(1, -145, 0, 38),
+        Position = UDim2.new(1, -145, 0, self._frame.AbsoluteSize.Y - 1),
         BorderSizePixel = 0,
         Size = UDim2.new(0, 135, 0, totalHeight),
         Visible = false,
@@ -665,13 +683,16 @@ function Keybind.new(parent, config, window)
     local default = (config and config.Default) or Enum.KeyCode.F
     local callback = (config and config.Callback) or function() end
     local flag = config and config.Flag
+    local description = Create.GetDescription(config)
+    local hasDescription = description ~= nil
+    local height = hasDescription and 50 or Sizes.Button.Height
 
     self._frame = Create.Instance("Frame", {
         Name = "Keybind_" .. name,
         BackgroundColor3 = Colors.Secondary,
         BackgroundTransparency = 0.4,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, Sizes.Button.Height),
+        Size = UDim2.new(1, 0, 0, height),
         Parent = parent,
     })
 
@@ -685,11 +706,13 @@ function Keybind.new(parent, config, window)
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0.5, -10),
+        Position = hasDescription and UDim2.new(0, 10, 0, 7) or UDim2.new(0, 10, 0.5, -10),
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(0, 200, 0, 20),
         Parent = self._frame,
     })
+
+    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 27), UDim2.new(0, 200, 0, 14))
 
     self._box = Create.Instance("Frame", {
         Name = "KeyBox",
@@ -1052,6 +1075,9 @@ function Slider.new(parent, config, window)
     self._flag = config.Flag
     self._window = window
     self._connections = {}
+    local description = Create.GetDescription(config)
+    local hasDescription = description ~= nil
+    local height = hasDescription and 56 or Sizes.Slider.Height
 
     -- Main container
     self._frame = Create.Instance("Frame", {
@@ -1059,7 +1085,7 @@ function Slider.new(parent, config, window)
         BackgroundColor3 = Colors.Secondary,
         BackgroundTransparency = 0.4,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, Sizes.Slider.Height),
+        Size = UDim2.new(1, 0, 0, height),
         Parent = parent,
     })
 
@@ -1074,11 +1100,14 @@ function Slider.new(parent, config, window)
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0, 5),
+        Position = UDim2.new(0, 10, 0, hasDescription and 4 or 5),
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(0, 200, 0, 20),
         Parent = self._frame,
     })
+
+    -- Description
+    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 22), UDim2.new(1, -80, 0, 14))
 
     -- Value display
     self._valueLabel = Create.Instance("TextLabel", {
@@ -1088,7 +1117,7 @@ function Slider.new(parent, config, window)
         Text = tostring(self._value),
         TextXAlignment = Enum.TextXAlignment.Right,
         BackgroundTransparency = 1,
-        Position = UDim2.new(1, -60, 0, 5),
+        Position = UDim2.new(1, -60, 0, hasDescription and 4 or 5),
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(0, 50, 0, 20),
         Parent = self._frame,
@@ -1098,7 +1127,7 @@ function Slider.new(parent, config, window)
     self._track = Create.Instance("Frame", {
         Name = "Track",
         BackgroundColor3 = Colors.Background,
-        Position = UDim2.new(0, 10, 0, 29),
+        Position = UDim2.new(0, 10, 0, hasDescription and 39 or 29),
         BorderSizePixel = 0,
         Size = UDim2.new(1, -20, 0, Sizes.Slider.TrackHeight),
         Parent = self._frame,
@@ -1560,6 +1589,9 @@ function TextBox.new(parent, config, window)
 
     local name = config.Name or "TextBox"
     local placeholder = config.Placeholder or "Enter text..."
+    local description = Create.GetDescription(config)
+    local hasDescription = description ~= nil
+    local height = hasDescription and 50 or Sizes.TextBox.Height
 
     self._callback = config.Callback or function() end
     self._text = tostring(config.Default or "")
@@ -1573,7 +1605,7 @@ function TextBox.new(parent, config, window)
         BackgroundColor3 = Colors.Secondary,
         BackgroundTransparency = 0.4,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, Sizes.TextBox.Height),
+        Size = UDim2.new(1, 0, 0, height),
         Parent = parent,
     })
 
@@ -1587,11 +1619,13 @@ function TextBox.new(parent, config, window)
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0.5, -10),
+        Position = hasDescription and UDim2.new(0, 10, 0, 7) or UDim2.new(0, 10, 0.5, -10),
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(1, -190, 0, 20),
         Parent = self._frame,
     })
+
+    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 27), UDim2.new(1, -190, 0, 14))
 
     self._icon = Create.Instance("ImageLabel", {
         Name = "Icon",
@@ -1752,6 +1786,9 @@ function Toggle.new(parent, config, window)
     local name = config.Name or "Toggle"
     local default = config.Default or false
     local callback = config.Callback or function() end
+    local description = Create.GetDescription(config)
+    local hasDescription = description ~= nil
+    local height = hasDescription and 50 or Sizes.Button.Height
 
     self._enabled = default
     self._callback = callback
@@ -1765,7 +1802,7 @@ function Toggle.new(parent, config, window)
         BackgroundColor3 = Colors.Secondary,
         BackgroundTransparency = 0.4,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, Sizes.Button.Height),
+        Size = UDim2.new(1, 0, 0, height),
         Parent = parent,
     })
 
@@ -1780,11 +1817,14 @@ function Toggle.new(parent, config, window)
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0.5, -10),
+        Position = hasDescription and UDim2.new(0, 10, 0, 7) or UDim2.new(0, 10, 0.5, -10),
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(1, -60, 0, 20),
         Parent = self._frame,
     })
+
+    -- Description
+    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 27), UDim2.new(1, -60, 0, 14))
 
     -- Switch background
     self._switchBg = Create.Instance("Frame", {
@@ -4035,6 +4075,7 @@ __modules["Utils.Create"] = function()
 local Constants = {
     Colors = __require("Constants.Colors"),
     Sizes = __require("Constants.Sizes"),
+    Fonts = __require("Constants.Fonts"),
 }
 
 local Create = {}
@@ -4171,6 +4212,44 @@ function Create.GridLayout(parent, cellSize, cellPadding)
         CellSize = cellSize,
         CellPadding = cellPadding or UDim2.new(0, 5, 0, 5),
         SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = parent,
+    })
+end
+
+function Create.GetDescription(config)
+    if not config then
+        return nil
+    end
+
+    local description = config.Description or config.Desc
+    if description == nil or description == "" then
+        return nil
+    end
+
+    return tostring(description)
+end
+
+function Create.Description(
+    parent,
+    text,
+    position,
+    size
+)
+    if not text then
+        return nil
+    end
+
+    return Create.Instance("TextLabel", {
+        Name = "Description",
+        FontFace = Constants.Fonts.Light,
+        TextColor3 = Constants.Colors.TextDark,
+        Text = text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        BackgroundTransparency = 1,
+        TextSize = Constants.Fonts.Size.Tiny,
+        Position = position,
+        Size = size,
         Parent = parent,
     })
 end

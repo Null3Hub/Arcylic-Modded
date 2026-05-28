@@ -17,6 +17,8 @@ Slider.__index = Slider
 
 export type SliderConfig = {
     Name: string?,
+    Description: string?,
+    Desc: string?,
     Min: number?,
     Max: number?,
     Default: number?,
@@ -53,6 +55,9 @@ function Slider.new(parent: Instance, config: SliderConfig, window): SliderObjec
     self._flag = config.Flag
     self._window = window
     self._connections = {}
+    local description = Create.GetDescription(config)
+    local hasDescription = description ~= nil
+    local height = hasDescription and 56 or Sizes.Slider.Height
 
     -- Main container
     self._frame = Create.Instance("Frame", {
@@ -60,7 +65,7 @@ function Slider.new(parent: Instance, config: SliderConfig, window): SliderObjec
         BackgroundColor3 = Colors.Secondary,
         BackgroundTransparency = 0.4,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, Sizes.Slider.Height),
+        Size = UDim2.new(1, 0, 0, height),
         Parent = parent,
     })
 
@@ -75,11 +80,14 @@ function Slider.new(parent: Instance, config: SliderConfig, window): SliderObjec
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0, 5),
+        Position = UDim2.new(0, 10, 0, hasDescription and 4 or 5),
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(0, 200, 0, 20),
         Parent = self._frame,
     })
+
+    -- Description
+    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 22), UDim2.new(1, -80, 0, 14))
 
     -- Value display
     self._valueLabel = Create.Instance("TextLabel", {
@@ -89,7 +97,7 @@ function Slider.new(parent: Instance, config: SliderConfig, window): SliderObjec
         Text = tostring(self._value),
         TextXAlignment = Enum.TextXAlignment.Right,
         BackgroundTransparency = 1,
-        Position = UDim2.new(1, -60, 0, 5),
+        Position = UDim2.new(1, -60, 0, hasDescription and 4 or 5),
         TextSize = Fonts.Size.Normal,
         Size = UDim2.new(0, 50, 0, 20),
         Parent = self._frame,
@@ -99,7 +107,7 @@ function Slider.new(parent: Instance, config: SliderConfig, window): SliderObjec
     self._track = Create.Instance("Frame", {
         Name = "Track",
         BackgroundColor3 = Colors.Background,
-        Position = UDim2.new(0, 10, 0, 29),
+        Position = UDim2.new(0, 10, 0, hasDescription and 39 or 29),
         BorderSizePixel = 0,
         Size = UDim2.new(1, -20, 0, Sizes.Slider.TrackHeight),
         Parent = self._frame,
