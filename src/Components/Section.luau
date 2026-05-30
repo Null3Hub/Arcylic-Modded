@@ -2,9 +2,14 @@ local Create = require(script.Parent.Parent.Utils.Create)
 local Tween = require(script.Parent.Parent.Utils.Tween)
 local Colors = require(script.Parent.Parent.Constants.Colors)
 local Fonts = require(script.Parent.Parent.Constants.Fonts)
+local Sizes = require(script.Parent.Parent.Constants.Sizes)
+local Defaults = require(script.Parent.Parent.Constants.Defaults)
+local Icons = require(script.Parent.Parent.Constants.Icons)
 
 local Section = {}
 Section.__index = Section
+local ComponentIcons = Icons.Components or {}
+local CommonDefaults = Defaults.Components and Defaults.Components.Common or {}
 
 function Section.new(window, name: string)
     local self = setmetatable({}, Section)
@@ -17,18 +22,18 @@ function Section.new(window, name: string)
     self._frame = Create.Instance("Frame", {
         Name = "Section_" .. name,
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, -10, 0, 0),
+        Size = UDim2.new(1, -(Sizes.Section.FrameRightPadding or 10), 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         Parent = window:GetSectionsContainer(),
     })
 
-    Create.ListLayout(self._frame, 2)
+    Create.ListLayout(self._frame, Sizes.Section.LayoutPadding or 2)
 
     -- Header container
     local header = Create.Instance("Frame", {
         Name = "Header",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 25),
+        Size = UDim2.new(1, 0, 0, Sizes.Section.HeaderHeight or 25),
         LayoutOrder = 0,
         Parent = self._frame,
     })
@@ -38,7 +43,7 @@ function Section.new(window, name: string)
         Name = "HeaderButton",
         FontFace = Fonts.Regular,
         TextColor3 = Colors.TextDark,
-        Text = "",
+        Text = CommonDefaults.EmptyText or "",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
         Parent = header,
@@ -52,20 +57,25 @@ function Section.new(window, name: string)
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 5, 0, 0),
+        Position = UDim2.new(0, Sizes.Section.LabelLeft or 5, 0, 0),
         TextSize = Fonts.Size.Small,
-        Size = UDim2.new(1, -25, 1, 0),
+        Size = UDim2.new(1, -(Sizes.Section.LabelRightPadding or 25), 1, 0),
         Parent = header,
     })
 
     -- Arrow
     local arrow = Create.Instance("ImageButton", {
         Name = "Arrow",
-        Image = "rbxassetid://105558791071013",
+        Image = ComponentIcons.Arrow or "rbxassetid://105558791071013",
         ImageColor3 = Colors.TextDark,
         BackgroundTransparency = 1,
-        Position = UDim2.new(1, -20, 0.5, -7),
-        Size = UDim2.new(0, 15, 0, 15),
+        Position = UDim2.new(
+            1,
+            -(Sizes.Section.ArrowRightOffset or 20),
+            0.5,
+            -(Sizes.Section.ArrowVerticalOffset or 7)
+        ),
+        Size = UDim2.new(0, Sizes.Section.ArrowSize or 15, 0, Sizes.Section.ArrowSize or 15),
         Rotation = 0,
         Parent = header,
     })
@@ -81,8 +91,8 @@ function Section.new(window, name: string)
         Parent = self._frame,
     })
 
-    Create.ListLayout(self._tabsContainer, 2)
-    Create.Padding(self._tabsContainer, 0, 0, 15, 0)
+    Create.ListLayout(self._tabsContainer, Sizes.Section.LayoutPadding or 2)
+    Create.Padding(self._tabsContainer, 0, 0, Sizes.Section.TabsIndent or 15, 0)
 
     local expanded = true
     local function toggle()

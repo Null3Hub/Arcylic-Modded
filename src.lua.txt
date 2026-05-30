@@ -29,9 +29,15 @@ local Tween = __require("Utils.Tween")
 local Colors = __require("Constants.Colors")
 local Sizes = __require("Constants.Sizes")
 local Fonts = __require("Constants.Fonts")
+local Defaults = __require("Constants.Defaults")
+local Icons = __require("Constants.Icons")
 
 local Button = {}
 Button.__index = Button
+local ComponentDefaults = Defaults.Components or {}
+local CommonDefaults = ComponentDefaults.Common or {}
+local ButtonDefaults = ComponentDefaults.Button or {}
+local ComponentIcons = Icons.Components or {}
 
 
 
@@ -53,13 +59,16 @@ Button.__index = Button
 ]]
 function Button.new(parent, config)
     local self = setmetatable({}, Button)
+    config = config or {}
 
-    local name = config.Name or "Button"
-    local icon = config.Icon or "rbxassetid://10734898355"
+    local name = config.Name or ButtonDefaults.Name or "Button"
+    local icon = config.Icon or ComponentIcons.Button or "rbxassetid://10734898355"
     local callback = config.Callback or function() end
     local description = Create.GetDescription(config)
     local hasDescription = description ~= nil
-    local height = hasDescription and 50 or Sizes.Button.Height
+    local height = hasDescription
+            and (Sizes.Component.HeightWithDescription or CommonDefaults.HeightWithDescription or 50)
+        or Sizes.Button.Height
 
     self._connections = {}
 
@@ -67,7 +76,7 @@ function Button.new(parent, config)
     self._frame = Create.Instance("Frame", {
         Name = "Button_" .. name,
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.4,
+        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, height),
         Parent = parent,
@@ -84,14 +93,36 @@ function Button.new(parent, config)
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = hasDescription and UDim2.new(0, 10, 0, 7) or UDim2.new(0, 10, 0.5, -10),
+        Position = hasDescription
+                and UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.LabelTop or 7)
+            or UDim2.new(
+                0,
+                Sizes.Component.LabelLeft or 10,
+                0.5,
+                -(Sizes.Component.LabelCenterOffset or 10)
+            ),
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(1, -50, 0, 20),
+        Size = UDim2.new(
+            1,
+            -(Sizes.Button.LabelRightPadding or 50),
+            0,
+            Sizes.Component.LabelHeight or 20
+        ),
         Parent = self._frame,
     })
 
     -- Description
-    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 27), UDim2.new(1, -50, 0, 14))
+    Create.Description(
+        self._frame,
+        description,
+        UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.DescriptionTop or 27),
+        UDim2.new(
+            1,
+            -(Sizes.Button.LabelRightPadding or 50),
+            0,
+            Sizes.Component.DescriptionHeight or 14
+        )
+    )
 
     -- Icon
     self._icon = Create.Instance("ImageLabel", {
@@ -99,8 +130,13 @@ function Button.new(parent, config)
         BackgroundTransparency = 1,
         Image = icon,
         ImageColor3 = Colors.Text,
-        Position = UDim2.new(1, -30, 0.5, -10),
-        Size = UDim2.new(0, 20, 0, 20),
+        Position = UDim2.new(
+            1,
+            -(Sizes.Button.IconRightOffset or 30),
+            0.5,
+            -((Sizes.Button.IconSize or 20) / 2)
+        ),
+        Size = UDim2.new(0, Sizes.Button.IconSize or 20, 0, Sizes.Button.IconSize or 20),
         Parent = self._frame,
     })
 
@@ -111,7 +147,7 @@ function Button.new(parent, config)
     -- Click button
     self._button = Create.Instance("TextButton", {
         Name = "ClickArea",
-        Text = "",
+        Text = CommonDefaults.EmptyText or "",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
         Parent = self._frame,
@@ -128,9 +164,17 @@ function Button.new(parent, config)
             end
 
             -- Click animation
-            Tween.Create(self._frame, { BackgroundTransparency = 0.2 }, "Fast")
-            task.wait(0.1)
-            Tween.Create(self._frame, { BackgroundTransparency = 0.4 }, "Fast")
+            Tween.Create(
+                self._frame,
+                { BackgroundTransparency = CommonDefaults.PressedTransparency or 0.2 },
+                "Fast"
+            )
+            task.wait(CommonDefaults.ClickFlashDelay or 0.1)
+            Tween.Create(
+                self._frame,
+                { BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4 },
+                "Fast"
+            )
 
             self._callback()
         end)
@@ -143,14 +187,22 @@ function Button.new(parent, config)
                 return
             end
 
-            Tween.Create(self._frame, { BackgroundTransparency = 0.3 }, "Fast")
+            Tween.Create(
+                self._frame,
+                { BackgroundTransparency = CommonDefaults.HoverTransparency or 0.3 },
+                "Fast"
+            )
         end)
     )
 
     table.insert(
         self._connections,
         self._button.MouseLeave:Connect(function()
-            Tween.Create(self._frame, { BackgroundTransparency = 0.4 }, "Fast")
+            Tween.Create(
+                self._frame,
+                { BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4 },
+                "Fast"
+            )
         end)
     )
 
@@ -188,23 +240,31 @@ local Create = __require("Utils.Create")
 local Colors = __require("Constants.Colors")
 local Sizes = __require("Constants.Sizes")
 local Fonts = __require("Constants.Fonts")
+local Defaults = __require("Constants.Defaults")
+local Layers = __require("Constants.Layers")
 
 local ColorPicker = {}
 ColorPicker.__index = ColorPicker
+local ComponentDefaults = Defaults.Components or {}
+local CommonDefaults = ComponentDefaults.Common or {}
+local ColorPickerDefaults = ComponentDefaults.ColorPicker or {}
+local ColorPickerLayers = Layers.ColorPicker or {}
+local ColorPickerSizes = Sizes.ColorPicker or {}
 
 -- Minimal color picker: preview + simple palette popup
-local PRESETS = {
-    Color3.fromRGB(255, 255, 255),
-    Color3.fromRGB(255, 0, 0),
-    Color3.fromRGB(0, 255, 0),
-    Color3.fromRGB(0, 128, 255),
-    Color3.fromRGB(255, 128, 0),
-    Color3.fromRGB(255, 0, 255),
-}
+local PRESETS = ColorPickerDefaults.Presets
+    or {
+        Color3.fromRGB(255, 255, 255),
+        Color3.fromRGB(255, 0, 0),
+        Color3.fromRGB(0, 255, 0),
+        Color3.fromRGB(0, 128, 255),
+        Color3.fromRGB(255, 128, 0),
+        Color3.fromRGB(255, 0, 255),
+    }
 
 function ColorPicker.new(parent, config, window)
     local self = setmetatable({}, ColorPicker)
-    local name = (config and config.Name) or "Color Picker"
+    local name = (config and config.Name) or ColorPickerDefaults.Name or "Color Picker"
     self._callback = (config and config.Callback) or function() end
     self._color = (config and config.Default) or PRESETS[1]
     self._flag = config and config.Flag
@@ -212,12 +272,14 @@ function ColorPicker.new(parent, config, window)
     self._connections = {}
     local description = Create.GetDescription(config)
     local hasDescription = description ~= nil
-    local height = hasDescription and 50 or Sizes.Button.Height
+    local height = hasDescription
+            and (ColorPickerSizes.HeightWithDescription or CommonDefaults.HeightWithDescription or 50)
+        or Sizes.Button.Height
 
     self._frame = Create.Instance("Frame", {
         Name = "ColorPicker_" .. name,
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.4,
+        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, height),
         Parent = parent,
@@ -233,26 +295,53 @@ function ColorPicker.new(parent, config, window)
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = hasDescription and UDim2.new(0, 10, 0, 7) or UDim2.new(0, 10, 0, 0),
+        Position = hasDescription
+                and UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.LabelTop or 7)
+            or UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, 0),
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(1, -50, 0, 20),
+        Size = UDim2.new(
+            1,
+            -(ColorPickerSizes.LabelRightPadding or 50),
+            0,
+            Sizes.Component.LabelHeight or 20
+        ),
         Parent = self._frame,
     })
 
-    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 27), UDim2.new(1, -50, 0, 14))
+    Create.Description(
+        self._frame,
+        description,
+        UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.DescriptionTop or 27),
+        UDim2.new(
+            1,
+            -(ColorPickerSizes.LabelRightPadding or 50),
+            0,
+            Sizes.Component.DescriptionHeight or 14
+        )
+    )
 
     self._preview = Create.Instance("Frame", {
         Name = "Preview",
         BackgroundColor3 = self._color,
-        Position = UDim2.new(1, -45, 0.5, -8),
-        Size = UDim2.new(0, 35, 0, 16),
+        Position = UDim2.new(
+            1,
+            -(ColorPickerSizes.PreviewRightOffset or 45),
+            0.5,
+            -(ColorPickerSizes.PreviewVerticalOffset or 8)
+        ),
+        Size = UDim2.new(
+            0,
+            ColorPickerSizes.PreviewWidth or 35,
+            0,
+            ColorPickerSizes.PreviewHeight or 16
+        ),
         Parent = self._frame,
     })
     Create.Corner(self._preview, Sizes.Corner.Small)
     Create.Stroke(self._preview)
 
     local previewBtn = Create.Instance("TextButton", {
-        Text = "",
+        Text = CommonDefaults.EmptyText or "",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
         Parent = self._preview,
@@ -262,28 +351,54 @@ function ColorPicker.new(parent, config, window)
     self._palette = Create.Instance("Frame", {
         Name = "Palette",
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.04,
+        BackgroundTransparency = CommonDefaults.ControlTransparency or 0.04,
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 160, 0, 70),
+        Size = UDim2.new(
+            0,
+            ColorPickerSizes.PaletteWidth or 160,
+            0,
+            ColorPickerSizes.PaletteHeight or 70
+        ),
         Visible = false,
-        ZIndex = 2000,
+        ZIndex = ColorPickerLayers.Palette or 2000,
         Parent = parent,
     })
     Create.Corner(self._palette, Sizes.Corner.Medium)
     Create.Stroke(self._palette)
-    Create.Padding(self._palette, 8, 8, 8, 8)
+    Create.Padding(
+        self._palette,
+        ColorPickerSizes.PalettePadding or 8,
+        ColorPickerSizes.PalettePadding or 8,
+        ColorPickerSizes.PalettePadding or 8,
+        ColorPickerSizes.PalettePadding or 8
+    )
 
     Create.Instance("UIGridLayout", {
-        CellPadding = UDim2.new(0, 8, 0, 8),
-        CellSize = UDim2.new(0, 24, 0, 24),
+        CellPadding = UDim2.new(
+            0,
+            ColorPickerSizes.PaletteCellPadding or 8,
+            0,
+            ColorPickerSizes.PaletteCellPadding or 8
+        ),
+        CellSize = UDim2.new(
+            0,
+            ColorPickerSizes.PaletteSwatchSize or 24,
+            0,
+            ColorPickerSizes.PaletteSwatchSize or 24
+        ),
         Parent = self._palette,
     })
 
     for _, col in ipairs(PRESETS) do
         local swatch = Create.Instance("TextButton", {
             BackgroundColor3 = col,
-            Text = "",
-            Size = UDim2.new(0, 24, 0, 24),
+            Text = CommonDefaults.EmptyText or "",
+            Size = UDim2.new(
+                0,
+                ColorPickerSizes.PaletteSwatchSize or 24,
+                0,
+                ColorPickerSizes.PaletteSwatchSize or 24
+            ),
             Parent = self._palette,
         })
         Create.Corner(swatch, Sizes.Corner.Small)
@@ -307,7 +422,12 @@ function ColorPicker.new(parent, config, window)
         end
 
         local p = self._preview.AbsolutePosition
-        self._palette.Position = UDim2.new(0, p.X - 160 + 35, 0, p.Y + 22)
+        self._palette.Position = UDim2.new(
+            0,
+            p.X - (ColorPickerSizes.PaletteWidth or 160) + (ColorPickerSizes.PreviewWidth or 35),
+            0,
+            p.Y + (ColorPickerSizes.PaletteYOffset or 22)
+        )
         self._palette.Visible = true
     end
 
@@ -385,9 +505,18 @@ local Tween = __require("Utils.Tween")
 local Colors = __require("Constants.Colors")
 local Sizes = __require("Constants.Sizes")
 local Fonts = __require("Constants.Fonts")
+local Defaults = __require("Constants.Defaults")
+local Icons = __require("Constants.Icons")
+local Layers = __require("Constants.Layers")
 
 local Dropdown = {}
 Dropdown.__index = Dropdown
+local ComponentDefaults = Defaults.Components or {}
+local CommonDefaults = ComponentDefaults.Common or {}
+local DropdownDefaults = ComponentDefaults.Dropdown or {}
+local ComponentIcons = Icons.Components or {}
+local DropdownLayers = Layers.Dropdown or {}
+local DropdownSizes = Sizes.Dropdown or {}
 
 
 
@@ -400,10 +529,15 @@ Dropdown.__index = Dropdown
 ]]
 function Dropdown.new(parent, config, window)
     local self = setmetatable({}, Dropdown)
+    config = config or {}
 
-    local name = config.Name or "Dropdown"
-    self._options = config.Options or { "Option 1", "Option 2", "Option 3" }
-    self._multiSelect = config.MultiSelect or false
+    local name = config.Name or DropdownDefaults.Name or "Dropdown"
+    self._options = config.Options
+        or DropdownDefaults.Options
+        or { "Option 1", "Option 2", "Option 3" }
+    self._multiSelect = if config.MultiSelect == nil
+        then (DropdownDefaults.MultiSelect or false)
+        else config.MultiSelect
     self._callback = config.Callback or function() end
     self._expanded = false
     self._flag = config.Flag
@@ -411,7 +545,9 @@ function Dropdown.new(parent, config, window)
     self._connections = {}
     local description = Create.GetDescription(config)
     local hasDescription = description ~= nil
-    local height = hasDescription and 50 or Sizes.Dropdown.Height
+    local height = hasDescription
+            and (DropdownSizes.HeightWithDescription or CommonDefaults.HeightWithDescription or 50)
+        or Sizes.Dropdown.Height
 
     -- Initialize selected value
     if self._multiSelect then
@@ -424,11 +560,11 @@ function Dropdown.new(parent, config, window)
     self._frame = Create.Instance("Frame", {
         Name = "Dropdown_" .. name,
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.4,
+        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, height),
         ClipsDescendants = false,
-        ZIndex = 1,
+        ZIndex = DropdownLayers.Base or 1,
         Parent = parent,
     })
 
@@ -445,24 +581,39 @@ function Dropdown.new(parent, config, window)
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 10, 0, hasDescription and 6 or 10),
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(0, 200, 0, 20),
-        ZIndex = 1,
+        Size = UDim2.new(0, DropdownSizes.LabelWidth or 200, 0, Sizes.Component.LabelHeight or 20),
+        ZIndex = DropdownLayers.Label or 1,
         Parent = self._frame,
     })
 
     -- Description
-    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 25), UDim2.new(1, -155, 0, 14))
+    Create.Description(
+        self._frame,
+        description,
+        UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.SectionHeaderHeight or 25),
+        UDim2.new(
+            1,
+            -(DropdownSizes.DescriptionRightPadding or 155),
+            0,
+            Sizes.Component.DescriptionHeight or 14
+        )
+    )
 
     -- Selected display
     self._display = Create.Instance("Frame", {
         Name = "Display",
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.04,
+        BackgroundTransparency = CommonDefaults.ControlTransparency or 0.04,
         AnchorPoint = Vector2.new(0, 0.5),
-        Position = UDim2.new(1, -145, 0.5, 0),
+        Position = UDim2.new(1, -(DropdownSizes.DisplayRightOffset or 145), 0.5, 0),
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 135, 0, 26),
-        ZIndex = 2,
+        Size = UDim2.new(
+            0,
+            DropdownSizes.DisplayWidth or 135,
+            0,
+            DropdownSizes.DisplayHeight or 26
+        ),
+        ZIndex = DropdownLayers.Display or 2,
         Parent = self._frame,
     })
 
@@ -478,23 +629,28 @@ function Dropdown.new(parent, config, window)
         TextTruncate = Enum.TextTruncate.AtEnd,
         BackgroundTransparency = 1,
         TextSize = Fonts.Size.Small,
-        Size = UDim2.new(1, -30, 1, 0),
-        Position = UDim2.new(0, 10, 0, 0),
+        Size = UDim2.new(1, -(DropdownSizes.SelectedLabelRightPadding or 30), 1, 0),
+        Position = UDim2.new(0, DropdownSizes.SelectedLabelPadding or 10, 0, 0),
         TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 2,
+        ZIndex = DropdownLayers.Display or 2,
         Parent = self._display,
     })
 
     -- Arrow indicator
     self._arrow = Create.Instance("ImageLabel", {
         Name = "Arrow",
-        Image = "rbxassetid://105558791071013",
+        Image = ComponentIcons.Arrow or "rbxassetid://105558791071013",
         ImageColor3 = Colors.TextDark,
         BackgroundTransparency = 1,
-        Position = UDim2.new(1, -20, 0.5, -5),
-        Size = UDim2.new(0, 10, 0, 10),
+        Position = UDim2.new(
+            1,
+            -(DropdownSizes.ArrowRightOffset or 20),
+            0.5,
+            -(DropdownSizes.ArrowVerticalOffset or 5)
+        ),
+        Size = UDim2.new(0, DropdownSizes.ArrowSize or 10, 0, DropdownSizes.ArrowSize or 10),
         Rotation = 0,
-        ZIndex = 2,
+        ZIndex = DropdownLayers.Display or 2,
         Parent = self._display,
     })
 
@@ -504,10 +660,10 @@ function Dropdown.new(parent, config, window)
     -- Toggle button
     local toggleBtn = Create.Instance("TextButton", {
         Name = "ToggleButton",
-        Text = "",
+        Text = CommonDefaults.EmptyText or "",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
-        ZIndex = 3,
+        ZIndex = DropdownLayers.ToggleButton or 3,
         Parent = self._display,
     })
 
@@ -548,29 +704,34 @@ end
 function Dropdown:_GetDisplayText()
     if self._multiSelect then
         if #self._selected == 0 then
-            return "None"
+            return DropdownDefaults.NoneText or "None"
         end
-        return table.concat(self._selected, ", ")
+        return table.concat(self._selected, DropdownDefaults.Separator or ", ")
     end
     return tostring(self._selected)
 end
 
 function Dropdown:_CreateOptionsContainer()
-    local maxVisible = Sizes.Dropdown.MaxVisibleOptions
+    local maxVisible = DropdownSizes.MaxVisibleOptions or Sizes.Dropdown.MaxVisibleOptions
     local totalHeight = math.min(
-        #self._options * Sizes.Dropdown.OptionHeight,
-        maxVisible * Sizes.Dropdown.OptionHeight
+        #self._options * (DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight),
+        maxVisible * (DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight)
     )
 
     self._optionsContainer = Create.Instance("Frame", {
         Name = "OptionsContainer",
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.04,
-        Position = UDim2.new(1, -145, 0, self._frame.AbsoluteSize.Y - 1),
+        BackgroundTransparency = CommonDefaults.ControlTransparency or 0.04,
+        Position = UDim2.new(
+            1,
+            -(DropdownSizes.DisplayRightOffset or 145),
+            0,
+            self._frame.AbsoluteSize.Y - (DropdownSizes.PopupOverlap or 1)
+        ),
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 135, 0, totalHeight),
+        Size = UDim2.new(0, DropdownSizes.DisplayWidth or 135, 0, totalHeight),
         Visible = false,
-        ZIndex = 100,
+        ZIndex = DropdownLayers.Options or 100,
         ClipsDescendants = true,
         Parent = self._frame,
     })
@@ -583,10 +744,15 @@ function Dropdown:_CreateOptionsContainer()
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 1, 0),
-        CanvasSize = UDim2.new(0, 0, 0, #self._options * Sizes.Dropdown.OptionHeight),
-        ScrollBarThickness = 3,
+        CanvasSize = UDim2.new(
+            0,
+            0,
+            0,
+            #self._options * (DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight)
+        ),
+        ScrollBarThickness = DropdownSizes.ScrollbarThickness or 3,
         ScrollBarImageColor3 = Colors.Scrollbar,
-        ZIndex = 100,
+        ZIndex = DropdownLayers.Options or 100,
         Parent = self._optionsContainer,
     })
 
@@ -609,20 +775,28 @@ function Dropdown:_PopulateOptions()
             TextColor3 = Colors.Text,
             Text = option,
             BackgroundColor3 = Colors.Secondary,
-            BackgroundTransparency = 1,
+            BackgroundTransparency = CommonDefaults.Transparent or 1,
             BorderSizePixel = 0,
             TextSize = Fonts.Size.Small,
-            Size = UDim2.new(1, 0, 0, Sizes.Dropdown.OptionHeight),
-            ZIndex = 100,
+            Size = UDim2.new(1, 0, 0, DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight),
+            ZIndex = DropdownLayers.Options or 100,
             Parent = self._optionsScroll,
         })
 
         optionBtn.MouseEnter:Connect(function()
-            Tween.Create(optionBtn, { BackgroundTransparency = 0.5 }, "Fast")
+            Tween.Create(
+                optionBtn,
+                { BackgroundTransparency = CommonDefaults.OptionHoverTransparency or 0.5 },
+                "Fast"
+            )
         end)
 
         optionBtn.MouseLeave:Connect(function()
-            Tween.Create(optionBtn, { BackgroundTransparency = 1 }, "Fast")
+            Tween.Create(
+                optionBtn,
+                { BackgroundTransparency = CommonDefaults.Transparent or 1 },
+                "Fast"
+            )
         end)
 
         optionBtn.MouseButton1Click:Connect(function()
@@ -661,14 +835,14 @@ function Dropdown:Open()
     self._expanded = true
     self._optionsContainer.Visible = true
     Tween.Create(self._arrow, { Rotation = 180 }, "Normal")
-    self._frame.ZIndex = 10
+    self._frame.ZIndex = DropdownLayers.Open or 10
 end
 
 function Dropdown:Close()
     self._expanded = false
     self._optionsContainer.Visible = false
     Tween.Create(self._arrow, { Rotation = 0 }, "Normal")
-    self._frame.ZIndex = 1
+    self._frame.ZIndex = DropdownLayers.Base or 1
 end
 
 function Dropdown:SetValue(value)
@@ -689,12 +863,15 @@ end
 
 function Dropdown:Refresh(options)
     self._options = options
-    self._optionsScroll.CanvasSize = UDim2.new(0, 0, 0, #options * Sizes.Dropdown.OptionHeight)
+    self._optionsScroll.CanvasSize =
+        UDim2.new(0, 0, 0, #options * (DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight))
 
-    local maxVisible = Sizes.Dropdown.MaxVisibleOptions
-    local totalHeight =
-        math.min(#options * Sizes.Dropdown.OptionHeight, maxVisible * Sizes.Dropdown.OptionHeight)
-    self._optionsContainer.Size = UDim2.new(0, 135, 0, totalHeight)
+    local maxVisible = DropdownSizes.MaxVisibleOptions or Sizes.Dropdown.MaxVisibleOptions
+    local totalHeight = math.min(
+        #options * (DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight),
+        maxVisible * (DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight)
+    )
+    self._optionsContainer.Size = UDim2.new(0, DropdownSizes.DisplayWidth or 135, 0, totalHeight)
 
     self:_PopulateOptions()
 end
@@ -722,25 +899,32 @@ local Create = __require("Utils.Create")
 local Colors = __require("Constants.Colors")
 local Sizes = __require("Constants.Sizes")
 local Fonts = __require("Constants.Fonts")
+local Defaults = __require("Constants.Defaults")
 
 local Keybind = {}
 Keybind.__index = Keybind
+local ComponentDefaults = Defaults.Components or {}
+local CommonDefaults = ComponentDefaults.Common or {}
+local KeybindDefaults = ComponentDefaults.Keybind or {}
+local KeybindSizes = Sizes.Keybind or {}
 
 function Keybind.new(parent, config, window)
     local self = setmetatable({}, Keybind)
 
-    local name = (config and config.Name) or "Keybind"
-    local default = (config and config.Default) or Enum.KeyCode.F
+    local name = (config and config.Name) or KeybindDefaults.Name or "Keybind"
+    local default = (config and config.Default) or KeybindDefaults.Key or Enum.KeyCode.F
     local callback = (config and config.Callback) or function() end
     local flag = config and config.Flag
     local description = Create.GetDescription(config)
     local hasDescription = description ~= nil
-    local height = hasDescription and 50 or Sizes.Button.Height
+    local height = hasDescription
+            and (KeybindSizes.HeightWithDescription or CommonDefaults.HeightWithDescription or 50)
+        or Sizes.Button.Height
 
     self._frame = Create.Instance("Frame", {
         Name = "Keybind_" .. name,
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.4,
+        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, height),
         Parent = parent,
@@ -756,22 +940,39 @@ function Keybind.new(parent, config, window)
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = hasDescription and UDim2.new(0, 10, 0, 7) or UDim2.new(0, 10, 0.5, -10),
+        Position = hasDescription
+                and UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.LabelTop or 7)
+            or UDim2.new(
+                0,
+                Sizes.Component.LabelLeft or 10,
+                0.5,
+                -(Sizes.Component.LabelCenterOffset or 10)
+            ),
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(0, 200, 0, 20),
+        Size = UDim2.new(0, KeybindSizes.LabelWidth or 200, 0, Sizes.Component.LabelHeight or 20),
         Parent = self._frame,
     })
 
-    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 27), UDim2.new(0, 200, 0, 14))
+    Create.Description(
+        self._frame,
+        description,
+        UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.DescriptionTop or 27),
+        UDim2.new(0, KeybindSizes.LabelWidth or 200, 0, Sizes.Component.DescriptionHeight or 14)
+    )
 
     self._box = Create.Instance("Frame", {
         Name = "KeyBox",
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.04,
+        BackgroundTransparency = CommonDefaults.ControlTransparency or 0.04,
         AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, -10, 0.5, 0),
+        Position = UDim2.new(1, -(KeybindSizes.BoxRightOffset or 10), 0.5, 0),
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 30, 0, 26),
+        Size = UDim2.new(
+            0,
+            KeybindSizes.BoxWidth or KeybindDefaults.BoxWidth or 30,
+            0,
+            KeybindSizes.BoxHeight or 26
+        ),
         Parent = self._frame,
     })
 
@@ -791,7 +992,7 @@ function Keybind.new(parent, config, window)
 
     self._listenBtn = Create.Instance("TextButton", {
         Name = "Listen",
-        Text = "",
+        Text = CommonDefaults.EmptyText or "",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
         Parent = self._box,
@@ -803,7 +1004,9 @@ function Keybind.new(parent, config, window)
     self._window = window
     self._connections = {}
 
-    self._id = name .. "_" .. tostring(math.floor(os.clock() * 1000))
+    self._id = name
+        .. "_"
+        .. tostring(math.floor(os.clock() * (KeybindDefaults.IdClockScale or 1000)))
     window:RegisterKeybind(self._id, self._currentKey, function()
         if self._blocked then
             return
@@ -814,12 +1017,21 @@ function Keybind.new(parent, config, window)
 
     local function refresh()
         if self._listening then
-            self._label.Text = "..."
-            self._box.Size = UDim2.new(0, 43, 0, 26)
+            self._label.Text = KeybindDefaults.ListeningText or "..."
+            self._box.Size = UDim2.new(
+                0,
+                KeybindSizes.ListeningWidth or KeybindDefaults.ListeningWidth or 43,
+                0,
+                KeybindSizes.BoxHeight or 26
+            )
         else
             local keyName = self._currentKey.Name
-            local w = math.max(#keyName * 9 + 10, 24)
-            self._box.Size = UDim2.new(0, w, 0, 26)
+            local w = math.max(
+                #keyName * (KeybindDefaults.TextWidthScale or 9)
+                    + (KeybindDefaults.TextWidthPadding or 10),
+                KeybindDefaults.MinWidth or 24
+            )
+            self._box.Size = UDim2.new(0, w, 0, KeybindSizes.BoxHeight or 26)
             self._label.Text = keyName
         end
     end
@@ -913,19 +1125,25 @@ local Create = __require("Utils.Create")
 local Colors = __require("Constants.Colors")
 local Sizes = __require("Constants.Sizes")
 local Fonts = __require("Constants.Fonts")
+local Defaults = __require("Constants.Defaults")
 
 local Paragraph = {}
 Paragraph.__index = Paragraph
+local ComponentDefaults = Defaults.Components or {}
+local CommonDefaults = ComponentDefaults.Common or {}
+local ParagraphDefaults = ComponentDefaults.Paragraph or {}
 
 function Paragraph.new(parent, config)
     local self = setmetatable({}, Paragraph)
-    local title = (config and config.Title) or "Paragraph"
-    local content = (config and config.Content) or "Description text here."
+    local title = (config and config.Title) or ParagraphDefaults.Title or "Paragraph"
+    local content = (config and config.Content)
+        or ParagraphDefaults.Content
+        or "Description text here."
 
     self._frame = Create.Instance("Frame", {
         Name = "Paragraph",
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.4,
+        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
@@ -944,7 +1162,7 @@ function Paragraph.new(parent, config)
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(1, 0, 0, 20),
+        Size = UDim2.new(1, 0, 0, Sizes.Paragraph.TitleHeight or 20),
         Parent = self._frame,
     })
 
@@ -957,7 +1175,7 @@ function Paragraph.new(parent, config)
         TextWrapped = true,
         BackgroundTransparency = 1,
         TextSize = Fonts.Size.Small,
-        Position = UDim2.new(0, 0, 0, 22),
+        Position = UDim2.new(0, 0, 0, Sizes.Paragraph.ContentTop or 22),
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         Parent = self._frame,
@@ -982,9 +1200,14 @@ local Create = __require("Utils.Create")
 local Tween = __require("Utils.Tween")
 local Colors = __require("Constants.Colors")
 local Fonts = __require("Constants.Fonts")
+local Sizes = __require("Constants.Sizes")
+local Defaults = __require("Constants.Defaults")
+local Icons = __require("Constants.Icons")
 
 local Section = {}
 Section.__index = Section
+local ComponentIcons = Icons.Components or {}
+local CommonDefaults = Defaults.Components and Defaults.Components.Common or {}
 
 function Section.new(window, name)
     local self = setmetatable({}, Section)
@@ -997,18 +1220,18 @@ function Section.new(window, name)
     self._frame = Create.Instance("Frame", {
         Name = "Section_" .. name,
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, -10, 0, 0),
+        Size = UDim2.new(1, -(Sizes.Section.FrameRightPadding or 10), 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         Parent = window:GetSectionsContainer(),
     })
 
-    Create.ListLayout(self._frame, 2)
+    Create.ListLayout(self._frame, Sizes.Section.LayoutPadding or 2)
 
     -- Header container
     local header = Create.Instance("Frame", {
         Name = "Header",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 25),
+        Size = UDim2.new(1, 0, 0, Sizes.Section.HeaderHeight or 25),
         LayoutOrder = 0,
         Parent = self._frame,
     })
@@ -1018,7 +1241,7 @@ function Section.new(window, name)
         Name = "HeaderButton",
         FontFace = Fonts.Regular,
         TextColor3 = Colors.TextDark,
-        Text = "",
+        Text = CommonDefaults.EmptyText or "",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
         Parent = header,
@@ -1032,20 +1255,25 @@ function Section.new(window, name)
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 5, 0, 0),
+        Position = UDim2.new(0, Sizes.Section.LabelLeft or 5, 0, 0),
         TextSize = Fonts.Size.Small,
-        Size = UDim2.new(1, -25, 1, 0),
+        Size = UDim2.new(1, -(Sizes.Section.LabelRightPadding or 25), 1, 0),
         Parent = header,
     })
 
     -- Arrow
     local arrow = Create.Instance("ImageButton", {
         Name = "Arrow",
-        Image = "rbxassetid://105558791071013",
+        Image = ComponentIcons.Arrow or "rbxassetid://105558791071013",
         ImageColor3 = Colors.TextDark,
         BackgroundTransparency = 1,
-        Position = UDim2.new(1, -20, 0.5, -7),
-        Size = UDim2.new(0, 15, 0, 15),
+        Position = UDim2.new(
+            1,
+            -(Sizes.Section.ArrowRightOffset or 20),
+            0.5,
+            -(Sizes.Section.ArrowVerticalOffset or 7)
+        ),
+        Size = UDim2.new(0, Sizes.Section.ArrowSize or 15, 0, Sizes.Section.ArrowSize or 15),
         Rotation = 0,
         Parent = header,
     })
@@ -1061,8 +1289,8 @@ function Section.new(window, name)
         Parent = self._frame,
     })
 
-    Create.ListLayout(self._tabsContainer, 2)
-    Create.Padding(self._tabsContainer, 0, 0, 15, 0)
+    Create.ListLayout(self._tabsContainer, Sizes.Section.LayoutPadding or 2)
+    Create.Padding(self._tabsContainer, 0, 0, Sizes.Section.TabsIndent or 15, 0)
 
     local expanded = true
     local function toggle()
@@ -1122,11 +1350,61 @@ local Tween = __require("Utils.Tween")
 local Colors = __require("Constants.Colors")
 local Sizes = __require("Constants.Sizes")
 local Fonts = __require("Constants.Fonts")
+local Defaults = __require("Constants.Defaults")
 
 local Slider = {}
 Slider.__index = Slider
+local SliderDefaults = Defaults.Slider
+local ComponentDefaults = Defaults.Components or {}
+local CommonDefaults = ComponentDefaults.Common or {}
+local SliderComponentDefaults = ComponentDefaults.Slider or {}
 
 
+
+local function isFiniteNumber(value)
+    return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge
+end
+
+local function resolveNumber(value, fallback)
+    if isFiniteNumber(value) then
+        return value
+    end
+
+    return fallback
+end
+
+local function resolveRange(minValue, maxValue)
+    local min = resolveNumber(minValue, SliderDefaults.Min)
+    local max = resolveNumber(maxValue, SliderDefaults.Max)
+
+    if max < min then
+        min, max = max, min
+    end
+
+    return min, max
+end
+
+local function resolveIncrement(increment)
+    local resolved = resolveNumber(increment, SliderDefaults.Increment)
+    if resolved <= 0 then
+        return SliderDefaults.Increment
+    end
+
+    return resolved
+end
+
+local function normalizeValue(
+    value,
+    fallback,
+    min,
+    max,
+    increment
+)
+    local resolved = resolveNumber(value, fallback)
+    local snapped = math.floor(resolved / increment + 0.5) * increment
+
+    return math.clamp(snapped, min, max)
+end
 
 --[[
     Creates a new slider component
@@ -1138,11 +1416,11 @@ Slider.__index = Slider
 function Slider.new(parent, config, window)
     local self = setmetatable({}, Slider)
 
-    local name = config.Name or "Slider"
-    self._min = config.Min or 0
-    self._max = config.Max or 100
-    self._value = config.Default or 50
-    self._increment = config.Increment or 1
+    local name = config.Name or SliderComponentDefaults.Name or "Slider"
+    self._min, self._max = resolveRange(config.Min, config.Max)
+    self._increment = resolveIncrement(config.Increment)
+    self._value =
+        normalizeValue(config.Default, SliderDefaults.Value, self._min, self._max, self._increment)
     self._callback = config.Callback or function() end
     self._dragging = false
     self._flag = config.Flag
@@ -1150,13 +1428,14 @@ function Slider.new(parent, config, window)
     self._connections = {}
     local description = Create.GetDescription(config)
     local hasDescription = description ~= nil
-    local height = hasDescription and 56 or Sizes.Slider.Height
+    local height = hasDescription and (Sizes.Slider.HeightWithDescription or 56)
+        or Sizes.Slider.Height
 
     -- Main container
     self._frame = Create.Instance("Frame", {
         Name = "Slider_" .. name,
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.4,
+        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, height),
         Parent = parent,
@@ -1173,14 +1452,30 @@ function Slider.new(parent, config, window)
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0, hasDescription and 4 or 5),
+        Position = UDim2.new(
+            0,
+            Sizes.Component.LabelLeft or 10,
+            0,
+            hasDescription and (Sizes.Slider.HeaderTopWithDescription or 4)
+                or (Sizes.Slider.HeaderTop or 5)
+        ),
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(0, 200, 0, 20),
+        Size = UDim2.new(0, Sizes.Slider.LabelWidth or 200, 0, Sizes.Component.LabelHeight or 20),
         Parent = self._frame,
     })
 
     -- Description
-    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 22), UDim2.new(1, -80, 0, 14))
+    Create.Description(
+        self._frame,
+        description,
+        UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Slider.DescriptionTop or 22),
+        UDim2.new(
+            1,
+            -(Sizes.Slider.DescriptionRightPadding or 80),
+            0,
+            Sizes.Component.DescriptionHeight or 14
+        )
+    )
 
     -- Value display
     self._valueLabel = Create.Instance("TextLabel", {
@@ -1190,9 +1485,15 @@ function Slider.new(parent, config, window)
         Text = tostring(self._value),
         TextXAlignment = Enum.TextXAlignment.Right,
         BackgroundTransparency = 1,
-        Position = UDim2.new(1, -60, 0, hasDescription and 4 or 5),
+        Position = UDim2.new(
+            1,
+            -(Sizes.Slider.ValueRightOffset or 60),
+            0,
+            hasDescription and (Sizes.Slider.HeaderTopWithDescription or 4)
+                or (Sizes.Slider.HeaderTop or 5)
+        ),
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(0, 50, 0, 20),
+        Size = UDim2.new(0, Sizes.Slider.ValueWidth or 50, 0, Sizes.Component.LabelHeight or 20),
         Parent = self._frame,
     })
 
@@ -1200,9 +1501,20 @@ function Slider.new(parent, config, window)
     self._track = Create.Instance("Frame", {
         Name = "Track",
         BackgroundColor3 = Colors.Background,
-        Position = UDim2.new(0, 10, 0, hasDescription and 39 or 29),
+        Position = UDim2.new(
+            0,
+            Sizes.Slider.TrackHorizontalPadding or 10,
+            0,
+            hasDescription and (Sizes.Slider.TrackTopWithDescription or 39)
+                or (Sizes.Slider.TrackTop or 29)
+        ),
         BorderSizePixel = 0,
-        Size = UDim2.new(1, -20, 0, Sizes.Slider.TrackHeight),
+        Size = UDim2.new(
+            1,
+            -((Sizes.Slider.TrackHorizontalPadding or 10) * 2),
+            0,
+            Sizes.Slider.TrackHeight
+        ),
         Parent = self._frame,
     })
 
@@ -1295,8 +1607,7 @@ function Slider:_UpdateFromInput(input)
     local rawValue = self._min + (self._max - self._min) * relativeX
 
     -- Apply increment
-    self._value = math.floor(rawValue / self._increment + 0.5) * self._increment
-    self._value = math.clamp(self._value, self._min, self._max)
+    self._value = normalizeValue(rawValue, self._value, self._min, self._max, self._increment)
 
     self:_UpdateVisual()
     self._callback(self._value)
@@ -1304,13 +1615,13 @@ end
 
 function Slider:_UpdateVisual()
     local range = math.max(self._max - self._min, 1)
-    local fillRatio = (self._value - self._min) / range
+    local fillRatio = math.clamp((self._value - self._min) / range, 0, 1)
     Tween.Create(self._fill, { Size = UDim2.new(fillRatio, 0, 1, 0) }, "Instant")
     self._valueLabel.Text = tostring(self._value)
 end
 
 function Slider:SetValue(value)
-    self._value = math.clamp(value, self._min, self._max)
+    self._value = normalizeValue(value, self._value, self._min, self._max, self._increment)
     self:_UpdateVisual()
     self._callback(self._value)
 end
@@ -1320,14 +1631,20 @@ function Slider:GetValue()
 end
 
 function Slider:SetMin(min)
-    self._min = min
-    self._value = math.clamp(self._value, self._min, self._max)
+    self._min = resolveNumber(min, self._min)
+    if self._max < self._min then
+        self._max = self._min
+    end
+    self._value = normalizeValue(self._value, self._value, self._min, self._max, self._increment)
     self:_UpdateVisual()
 end
 
 function Slider:SetMax(max)
-    self._max = max
-    self._value = math.clamp(self._value, self._min, self._max)
+    self._max = resolveNumber(max, self._max)
+    if self._max < self._min then
+        self._min = self._max
+    end
+    self._value = normalizeValue(self._value, self._value, self._min, self._max, self._increment)
     self:_UpdateVisual()
 end
 
@@ -1353,6 +1670,8 @@ local Tween = __require("Utils.Tween")
 local Colors = __require("Constants.Colors")
 local Sizes = __require("Constants.Sizes")
 local Fonts = __require("Constants.Fonts")
+local Defaults = __require("Constants.Defaults")
+local Icons = __require("Constants.Icons")
 
 local Button = __require("Components.Button")
 local Toggle = __require("Components.Toggle")
@@ -1362,6 +1681,14 @@ local TextBox = __require("Components.TextBox")
 
 local Tab = {}
 Tab.__index = Tab
+local ComponentDefaults = Defaults.Components or {}
+local CommonDefaults = ComponentDefaults.Common or {}
+local ConfigUIDefaults = ComponentDefaults.ConfigUI or {}
+local ConfigDefaults = Defaults.Config or {}
+local MessageDefaults = Defaults.Messages or {}
+local NotificationDefaults = Defaults.Notification or {}
+local ComponentIcons = Icons.Components or {}
+local NotificationIcons = Icons.Notification or {}
 
 function Tab.new(window, section, name, icon)
     local self = setmetatable({}, Tab)
@@ -1387,11 +1714,11 @@ function Tab.new(window, section, name, icon)
     self._icon = Create.Instance("ImageLabel", {
         Name = "Icon",
         BackgroundTransparency = 1,
-        Image = icon or "rbxassetid://112235310154264",
+        Image = icon or ComponentIcons.Tab or "rbxassetid://112235310154264",
         ImageColor3 = Colors.TextDark,
         AnchorPoint = Vector2.new(0, 0.5),
-        Position = UDim2.new(0, 11, 0.5, 0),
-        Size = UDim2.new(0, 15, 0, 15),
+        Position = UDim2.new(0, Sizes.Tab.IconLeft or 11, 0.5, 0),
+        Size = UDim2.new(0, Sizes.Tab.IconSize or 15, 0, Sizes.Tab.IconSize or 15),
         Parent = self._button,
     })
 
@@ -1402,17 +1729,20 @@ function Tab.new(window, section, name, icon)
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 33, 0, 0),
-        Size = UDim2.new(1, -42, 1, 0),
+        Position = UDim2.new(0, Sizes.Tab.TextLeft or 33, 0, 0),
+        Size = UDim2.new(1, -(Sizes.Tab.TextRightPadding or 42), 1, 0),
         TextSize = Fonts.Size.Small,
         Parent = self._button,
     })
 
-    Create.Instance("UIPadding", { PaddingRight = UDim.new(0, 9), Parent = self._text })
+    Create.Instance(
+        "UIPadding",
+        { PaddingRight = UDim.new(0, Sizes.Tab.TextPaddingRight or 9), Parent = self._text }
+    )
 
     local click = Create.Instance("TextButton", {
         Name = "Click",
-        Text = "",
+        Text = CommonDefaults.EmptyText or "",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
         Parent = self._button,
@@ -1428,7 +1758,7 @@ function Tab.new(window, section, name, icon)
         Parent = window:GetContentContainer(),
     })
 
-    Create.ListLayout(self._content, 8)
+    Create.ListLayout(self._content, Sizes.Tab.ContentPadding or 8)
 
     table.insert(
         self._connections,
@@ -1441,7 +1771,11 @@ function Tab.new(window, section, name, icon)
         self._connections,
         click.MouseEnter:Connect(function()
             if window._currentTab ~= self then
-                Tween.Create(self._button, { BackgroundTransparency = 0.7 }, "Fast")
+                Tween.Create(
+                    self._button,
+                    { BackgroundTransparency = CommonDefaults.HoverFaintTransparency or 0.7 },
+                    "Fast"
+                )
             end
         end)
     )
@@ -1450,7 +1784,11 @@ function Tab.new(window, section, name, icon)
         self._connections,
         click.MouseLeave:Connect(function()
             if window._currentTab ~= self then
-                Tween.Create(self._button, { BackgroundTransparency = 1 }, "Fast")
+                Tween.Create(
+                    self._button,
+                    { BackgroundTransparency = CommonDefaults.Transparent or 1 },
+                    "Fast"
+                )
             end
         end)
     )
@@ -1469,7 +1807,11 @@ end
 
 function Tab:Select()
     self._content.Visible = true
-    Tween.Create(self._button, { BackgroundTransparency = 0.4 }, "Fast")
+    Tween.Create(
+        self._button,
+        { BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4 },
+        "Fast"
+    )
     Tween.Create(self._text, { TextColor3 = Colors.Text }, "Fast")
     Tween.Create(self._icon, { ImageColor3 = Colors.Text }, "Fast")
     self._stroke.Transparency = 0
@@ -1477,7 +1819,7 @@ end
 
 function Tab:Deselect()
     self._content.Visible = false
-    Tween.Create(self._button, { BackgroundTransparency = 1 }, "Fast")
+    Tween.Create(self._button, { BackgroundTransparency = CommonDefaults.Transparent or 1 }, "Fast")
     Tween.Create(self._text, { TextColor3 = Colors.TextDark }, "Fast")
     Tween.Create(self._icon, { ImageColor3 = Colors.TextDark }, "Fast")
     self._stroke.Transparency = 1
@@ -1493,7 +1835,7 @@ function Tab:CreateSection(title)
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
         TextSize = Fonts.Size.Section,
-        Size = UDim2.new(1, 0, 0, 25),
+        Size = UDim2.new(1, 0, 0, Sizes.Tab.SectionHeight or 25),
         Parent = self._content,
     })
     return label
@@ -1535,20 +1877,20 @@ function Tab:CreateTextBox(config)
 end
 
 function Tab:CreateConfigSection()
-    self:CreateSection("Configuration")
+    self:CreateSection(ConfigUIDefaults.SectionTitle or "Configuration")
 
     local function getConfigOptions()
         local configs = self._window:GetConfigs()
         if #configs == 0 then
-            return { "default" }
+            return { ConfigDefaults.DefaultName or "default" }
         end
         return configs
     end
 
     local configNameBox = self:CreateTextBox({
-        Name = "Config Name",
+        Name = ConfigUIDefaults.ConfigName or "Config Name",
         Default = self._window._currentConfig,
-        Placeholder = "Enter config name...",
+        Placeholder = ConfigUIDefaults.ConfigPlaceholder or "Enter config name...",
         Callback = function(text)
             self._window._currentConfig = text
         end,
@@ -1556,7 +1898,7 @@ function Tab:CreateConfigSection()
 
     local configDropdown
     configDropdown = self:CreateDropdown({
-        Name = "Select Config",
+        Name = ConfigUIDefaults.SelectConfig or "Select Config",
         Options = getConfigOptions(),
         Default = self._window._currentConfig,
         Callback = function(selected)
@@ -1568,7 +1910,7 @@ function Tab:CreateConfigSection()
     })
 
     self:CreateButton({
-        Name = "Save Config",
+        Name = ConfigUIDefaults.SaveConfig or "Save Config",
         Callback = function()
             local configName = configNameBox:GetText()
             if configName ~= "" and self._window:SaveConfig(configName) then
@@ -1578,7 +1920,7 @@ function Tab:CreateConfigSection()
     })
 
     self:CreateButton({
-        Name = "Load Config",
+        Name = ConfigUIDefaults.LoadConfig or "Load Config",
         Callback = function()
             local configName = configNameBox:GetText()
             if configName ~= "" then
@@ -1588,7 +1930,7 @@ function Tab:CreateConfigSection()
     })
 
     self:CreateButton({
-        Name = "Delete Config",
+        Name = ConfigUIDefaults.DeleteConfig or "Delete Config",
         Callback = function()
             local configName = configNameBox:GetText()
             if configName ~= "" and self._window:DeleteConfig(configName) then
@@ -1598,20 +1940,22 @@ function Tab:CreateConfigSection()
     })
 
     self:CreateButton({
-        Name = "Refresh Configs",
+        Name = ConfigUIDefaults.RefreshConfigs or "Refresh Configs",
         Callback = function()
             configDropdown:Refresh(getConfigOptions())
             self._window:Notify({
-                Title = "Configs Refreshed",
-                Description = "Config list updated",
-                Duration = 2,
-                Icon = "rbxassetid://10723356507",
+                Title = MessageDefaults.ConfigsRefreshedTitle or "Configs Refreshed",
+                Description = MessageDefaults.ConfigsRefreshedDescription or "Config list updated",
+                Duration = NotificationDefaults.SuccessDuration or 2,
+                Icon = NotificationIcons.Config
+                    or ComponentIcons.Config
+                    or "rbxassetid://10723356507",
             })
         end,
     })
 
     self:CreateToggle({
-        Name = "Auto Save",
+        Name = ConfigUIDefaults.AutoSave or "Auto Save",
         Default = false,
         Callback = function(enabled)
             self._window:SetAutoSave(enabled)
@@ -1619,7 +1963,7 @@ function Tab:CreateConfigSection()
     })
 
     self:CreateToggle({
-        Name = "Auto Load",
+        Name = ConfigUIDefaults.AutoLoad or "Auto Load",
         Default = self._window:GetAutoLoad(),
         Callback = function(enabled)
             self._window:SetAutoLoad(enabled)
@@ -1664,32 +2008,43 @@ local Tween = __require("Utils.Tween")
 local Colors = __require("Constants.Colors")
 local Sizes = __require("Constants.Sizes")
 local Fonts = __require("Constants.Fonts")
+local Defaults = __require("Constants.Defaults")
+local Icons = __require("Constants.Icons")
 
 local TextBox = {}
 TextBox.__index = TextBox
+local ComponentDefaults = Defaults.Components or {}
+local CommonDefaults = ComponentDefaults.Common or {}
+local TextBoxDefaults = ComponentDefaults.TextBox or {}
+local ComponentIcons = Icons.Components or {}
+local TextBoxSizes = Sizes.TextBox or {}
 
 
 function TextBox.new(parent, config, window)
     local self = setmetatable({}, TextBox)
     config = config or {}
 
-    local name = config.Name or "TextBox"
-    local placeholder = config.Placeholder or "Enter text..."
+    local name = config.Name or TextBoxDefaults.Name or "TextBox"
+    local placeholder = config.Placeholder or TextBoxDefaults.Placeholder or "Enter text..."
     local description = Create.GetDescription(config)
     local hasDescription = description ~= nil
-    local height = hasDescription and 50 or Sizes.TextBox.Height
+    local height = hasDescription
+            and (TextBoxSizes.HeightWithDescription or CommonDefaults.HeightWithDescription or 50)
+        or Sizes.TextBox.Height
 
     self._callback = config.Callback or function() end
-    self._text = tostring(config.Default or "")
+    self._text = tostring(config.Default or TextBoxDefaults.DefaultText or "")
     self._connections = {}
     self._window = window
     self._flag = config.Flag
-    self._numbersOnly = config.NumbersOnly or false
+    self._numbersOnly = if config.NumbersOnly == nil
+        then (TextBoxDefaults.NumbersOnly or false)
+        else config.NumbersOnly
 
     self._frame = Create.Instance("Frame", {
         Name = "TextBox_" .. name,
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.4,
+        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, height),
         Parent = parent,
@@ -1705,33 +2060,55 @@ function TextBox.new(parent, config, window)
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = hasDescription and UDim2.new(0, 10, 0, 7) or UDim2.new(0, 10, 0.5, -10),
+        Position = hasDescription
+                and UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.LabelTop or 7)
+            or UDim2.new(
+                0,
+                Sizes.Component.LabelLeft or 10,
+                0.5,
+                -(Sizes.Component.LabelCenterOffset or 10)
+            ),
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(1, -190, 0, 20),
+        Size = UDim2.new(
+            1,
+            -(TextBoxSizes.LabelRightPadding or 190),
+            0,
+            Sizes.Component.LabelHeight or 20
+        ),
         Parent = self._frame,
     })
 
-    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 27), UDim2.new(1, -190, 0, 14))
+    Create.Description(
+        self._frame,
+        description,
+        UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.DescriptionTop or 27),
+        UDim2.new(
+            1,
+            -(TextBoxSizes.LabelRightPadding or 190),
+            0,
+            Sizes.Component.DescriptionHeight or 14
+        )
+    )
 
     self._icon = Create.Instance("ImageLabel", {
         Name = "Icon",
         BackgroundTransparency = 1,
-        Image = "rbxassetid://93828793199781",
+        Image = ComponentIcons.TextBox or "rbxassetid://93828793199781",
         ImageColor3 = Colors.TextDark,
         AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, -165, 0.5, 0),
-        Size = UDim2.new(0, 18, 0, 18),
+        Position = UDim2.new(1, -(TextBoxSizes.IconRightOffset or 165), 0.5, 0),
+        Size = UDim2.new(0, TextBoxSizes.IconSize or 18, 0, TextBoxSizes.IconSize or 18),
         Parent = self._frame,
     })
 
     self._container = Create.Instance("Frame", {
         Name = "TextBoxContainer",
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.04,
+        BackgroundTransparency = CommonDefaults.ControlTransparency or 0.04,
         AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, -10, 0.5, 0),
+        Position = UDim2.new(1, -(TextBoxSizes.InputRightOffset or 10), 0.5, 0),
         BorderSizePixel = 0,
-        Size = UDim2.new(0, Sizes.TextBox.InputWidth, 0, 26),
+        Size = UDim2.new(0, Sizes.TextBox.InputWidth, 0, TextBoxSizes.InputHeight or 26),
         Parent = self._frame,
     })
 
@@ -1749,9 +2126,11 @@ function TextBox.new(parent, config, window)
         TextTruncate = Enum.TextTruncate.AtEnd,
         BackgroundTransparency = 1,
         TextSize = Fonts.Size.Small,
-        Size = UDim2.new(1, -16, 1, 0),
-        Position = UDim2.new(0, 8, 0, 0),
-        ClearTextOnFocus = config.ClearOnFocus or false,
+        Size = UDim2.new(1, -(TextBoxSizes.InputTextRightPadding or 16), 1, 0),
+        Position = UDim2.new(0, TextBoxSizes.InputTextPadding or 8, 0, 0),
+        ClearTextOnFocus = if config.ClearOnFocus == nil
+            then (TextBoxDefaults.ClearOnFocus or false)
+            else config.ClearOnFocus,
         Parent = self._container,
     })
 
@@ -1772,7 +2151,11 @@ function TextBox.new(parent, config, window)
     table.insert(
         self._connections,
         self._input.FocusLost:Connect(function(enterPressed)
-            Tween.Create(self._container, { BackgroundTransparency = 0.04 }, "Fast")
+            Tween.Create(
+                self._container,
+                { BackgroundTransparency = CommonDefaults.ControlTransparency or 0.04 },
+                "Fast"
+            )
             Tween.Create(self._stroke, { Color = Colors.Border }, "Fast")
             Tween.Create(self._icon, { ImageColor3 = Colors.TextDark }, "Fast")
 
@@ -1870,9 +2253,13 @@ local Tween = __require("Utils.Tween")
 local Colors = __require("Constants.Colors")
 local Sizes = __require("Constants.Sizes")
 local Fonts = __require("Constants.Fonts")
+local Defaults = __require("Constants.Defaults")
 
 local Toggle = {}
 Toggle.__index = Toggle
+local ComponentDefaults = Defaults.Components or {}
+local CommonDefaults = ComponentDefaults.Common or {}
+local ToggleDefaults = ComponentDefaults.Toggle or {}
 
 
 
@@ -1885,13 +2272,20 @@ Toggle.__index = Toggle
 ]]
 function Toggle.new(parent, config, window)
     local self = setmetatable({}, Toggle)
+    config = config or {}
 
-    local name = config.Name or "Toggle"
-    local default = config.Default or false
+    local name = config.Name or ToggleDefaults.Name or "Toggle"
+    local default = if config.Default == nil
+        then (ToggleDefaults.Enabled or false)
+        else config.Default
     local callback = config.Callback or function() end
     local description = Create.GetDescription(config)
     local hasDescription = description ~= nil
-    local height = hasDescription and 50 or Sizes.Button.Height
+    local height = hasDescription
+            and (Sizes.Component.HeightWithDescription or CommonDefaults.HeightWithDescription or 50)
+        or Sizes.Button.Height
+    local knobPadding = Sizes.Toggle.Padding or 4
+    local knobEnabledX = Sizes.Toggle.Width - Sizes.Toggle.Circle - knobPadding
 
     self._enabled = default
     self._callback = callback
@@ -1903,7 +2297,7 @@ function Toggle.new(parent, config, window)
     self._frame = Create.Instance("Frame", {
         Name = "Toggle_" .. name,
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.4,
+        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, height),
         Parent = parent,
@@ -1920,20 +2314,47 @@ function Toggle.new(parent, config, window)
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = hasDescription and UDim2.new(0, 10, 0, 7) or UDim2.new(0, 10, 0.5, -10),
+        Position = hasDescription
+                and UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.LabelTop or 7)
+            or UDim2.new(
+                0,
+                Sizes.Component.LabelLeft or 10,
+                0.5,
+                -(Sizes.Component.LabelCenterOffset or 10)
+            ),
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(1, -60, 0, 20),
+        Size = UDim2.new(
+            1,
+            -(Sizes.Toggle.LabelRightPadding or 60),
+            0,
+            Sizes.Component.LabelHeight or 20
+        ),
         Parent = self._frame,
     })
 
     -- Description
-    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 27), UDim2.new(1, -60, 0, 14))
+    Create.Description(
+        self._frame,
+        description,
+        UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.DescriptionTop or 27),
+        UDim2.new(
+            1,
+            -(Sizes.Toggle.LabelRightPadding or 60),
+            0,
+            Sizes.Component.DescriptionHeight or 14
+        )
+    )
 
     -- Switch background
     self._switchBg = Create.Instance("Frame", {
         Name = "SwitchBackground",
         BackgroundColor3 = self._enabled and Colors.Toggle.Enabled or Colors.Toggle.Disabled,
-        Position = UDim2.new(1, -48, 0.5, -10),
+        Position = UDim2.new(
+            1,
+            -(Sizes.Toggle.RightOffset or 48),
+            0.5,
+            -(Sizes.Toggle.VerticalOffset or 10)
+        ),
         BorderSizePixel = 0,
         Size = UDim2.new(0, Sizes.Toggle.Width, 0, Sizes.Toggle.Height),
         Parent = self._frame,
@@ -1946,7 +2367,9 @@ function Toggle.new(parent, config, window)
         Name = "Circle",
         BackgroundColor3 = Colors.Toggle.Circle,
         AnchorPoint = Vector2.new(0, 0.5),
-        Position = self._enabled and UDim2.new(0, 21, 0.5, 0) or UDim2.new(0, 4, 0.5, 0),
+        Position = if self._enabled
+            then UDim2.new(0, knobEnabledX, 0.5, 0)
+            else UDim2.new(0, knobPadding, 0.5, 0),
         BorderSizePixel = 0,
         Size = UDim2.new(0, Sizes.Toggle.Circle, 0, Sizes.Toggle.Circle),
         Parent = self._switchBg,
@@ -1957,7 +2380,7 @@ function Toggle.new(parent, config, window)
     -- Click area
     local button = Create.Instance("TextButton", {
         Name = "ClickArea",
-        Text = "",
+        Text = CommonDefaults.EmptyText or "",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
         Parent = self._frame,
@@ -1999,10 +2422,21 @@ end
 function Toggle:_UpdateVisual()
     if self._enabled then
         Tween.Create(self._switchBg, { BackgroundColor3 = Colors.Toggle.Enabled }, "Normal")
-        Tween.Create(self._circle, { Position = UDim2.new(0, 21, 0.5, 0) }, "Normal")
+        Tween.Create(self._circle, {
+            Position = UDim2.new(
+                0,
+                Sizes.Toggle.Width - Sizes.Toggle.Circle - (Sizes.Toggle.Padding or 4),
+                0.5,
+                0
+            ),
+        }, "Normal")
     else
         Tween.Create(self._switchBg, { BackgroundColor3 = Colors.Toggle.Disabled }, "Normal")
-        Tween.Create(self._circle, { Position = UDim2.new(0, 4, 0.5, 0) }, "Normal")
+        Tween.Create(
+            self._circle,
+            { Position = UDim2.new(0, Sizes.Toggle.Padding or 4, 0.5, 0) },
+            "Normal"
+        )
     end
 end
 
@@ -2221,6 +2655,175 @@ end
 return Colors
 end
 
+__modules["Constants.Defaults"] = function()
+--[[
+    AcrylicUI - Default Value Constants
+
+    Runtime defaults for component configuration when callers omit values.
+]]
+
+local Defaults = {
+    Window = {
+        Title = "AcrylicUI",
+        ToggleKey = Enum.KeyCode.RightControl,
+        ClampToViewport = true,
+        ScreenGuiName = "AcrylicUI",
+        AutoSaveInterval = 30,
+        MinimizeRestoreDelay = 0.1,
+    },
+
+    Notification = {
+        Title = "Notification",
+        InstanceName = "Notification",
+        ContainerName = "NotificationContainer",
+        Description = "",
+        Duration = 3,
+        SuccessDuration = 2,
+        AnimationDuration = 0.3,
+        WarningUninitialized = "AcrylicUI: Notification container not initialized",
+    },
+
+    Config = {
+        Root = "AcrylicConfigs",
+        DefaultName = "default",
+        AutoLoadName = "_autoload",
+        Extension = ".json",
+    },
+
+    Messages = {
+        ErrorTitle = "Error",
+        Blocked = "Blocked",
+        ConfigSystemUnsupported = "Config system not supported",
+        ConfigReservedName = "Name reserved for internal use",
+        ConfigSavedTitle = "Config Saved",
+        ConfigSavedDescriptionPrefix = "Saved as: ",
+        ConfigSaveFailed = "Failed to save config",
+        ConfigLoadedTitle = "Config Loaded",
+        ConfigLoadedDescriptionPrefix = "Loaded: ",
+        ConfigNotFoundPrefix = "Config not found: ",
+        ConfigLoadFailed = "Failed to load config",
+        ConfigDeletedTitle = "Config Deleted",
+        ConfigDeletedDescriptionPrefix = "Deleted: ",
+        ConfigAutoLoadNeedsConfig = "Save or load a config before enabling Auto Load",
+        ConfigsRefreshedTitle = "Configs Refreshed",
+        ConfigsRefreshedDescription = "Config list updated",
+    },
+
+    Device = {
+        DefaultViewport = Vector2.new(1280, 720),
+        TabletMinShortSide = 600,
+        SafeAreaBottom = 0,
+        SafeAreaLeft = 0,
+        SafeAreaRight = 0,
+    },
+
+    AcrylicBlur = {
+        FolderPrefix = "AcrylicBlur_",
+        DepthOfFieldPrefix = "AcrylicBlurDepthOfField_",
+        BlurPrefix = "AcrylicBlurEffect_",
+        FarIntensity = 0,
+        FocusDistance = 0.01,
+        InFocusRadius = 0.01,
+        NearIntensity = 1,
+        BlurSize = 6,
+        RootTransparency = 0.9,
+        DisabledTransparency = 1,
+        CameraDistance = 0.0005,
+        FallbackOffset = 28,
+        ReferenceViewportHeight = 2560,
+        OffsetScale = 24,
+        OffsetBase = 4,
+    },
+
+    Components = {
+        Common = {
+            EmptyText = "",
+            HeightWithDescription = 50,
+            SurfaceTransparency = 0.4,
+            ControlTransparency = 0.04,
+            HoverTransparency = 0.3,
+            PressedTransparency = 0.2,
+            HoverFaintTransparency = 0.7,
+            OptionHoverTransparency = 0.5,
+            BlockerTransparency = 0.22,
+            Transparent = 1,
+            ClickFlashDelay = 0.1,
+        },
+        Button = {
+            Name = "Button",
+        },
+        Toggle = {
+            Name = "Toggle",
+            Enabled = false,
+        },
+        Slider = {
+            Name = "Slider",
+        },
+        Dropdown = {
+            Name = "Dropdown",
+            Options = { "Option 1", "Option 2", "Option 3" },
+            MultiSelect = false,
+            NoneText = "None",
+            Separator = ", ",
+        },
+        Keybind = {
+            Name = "Keybind",
+            Key = Enum.KeyCode.F,
+            ListeningText = "...",
+            IdClockScale = 1000,
+            TextWidthScale = 9,
+            TextWidthPadding = 10,
+            MinWidth = 24,
+            BoxWidth = 30,
+            ListeningWidth = 43,
+        },
+        ColorPicker = {
+            Name = "Color Picker",
+            Presets = {
+                Color3.fromRGB(255, 255, 255),
+                Color3.fromRGB(255, 0, 0),
+                Color3.fromRGB(0, 255, 0),
+                Color3.fromRGB(0, 128, 255),
+                Color3.fromRGB(255, 128, 0),
+                Color3.fromRGB(255, 0, 255),
+            },
+        },
+        TextBox = {
+            Name = "TextBox",
+            Placeholder = "Enter text...",
+            DefaultText = "",
+            ClearOnFocus = false,
+            NumbersOnly = false,
+        },
+        Paragraph = {
+            Title = "Paragraph",
+            Content = "Description text here.",
+        },
+        ConfigUI = {
+            SectionTitle = "Configuration",
+            ConfigName = "Config Name",
+            ConfigPlaceholder = "Enter config name...",
+            SelectConfig = "Select Config",
+            SaveConfig = "Save Config",
+            LoadConfig = "Load Config",
+            DeleteConfig = "Delete Config",
+            RefreshConfigs = "Refresh Configs",
+            AutoSave = "Auto Save",
+            AutoLoad = "Auto Load",
+        },
+    },
+
+    Slider = {
+        Min = 0,
+        Max = 100,
+        Value = 50,
+        Increment = 1,
+    },
+}
+
+return Defaults
+end
+
 __modules["Constants.Fonts"] = function()
 --[[
     AcrylicUI - Font Constants
@@ -2249,6 +2852,74 @@ local Fonts = {
 return Fonts
 end
 
+__modules["Constants.Icons"] = function()
+--[[
+    AcrylicUI - Icon Constants
+
+    Named defaults for runtime asset IDs used by the UI.
+]]
+
+local Icons = {
+    Window = {
+        Minimize = "rbxassetid://82603981310445",
+        Close = "rbxassetid://119943770201674",
+        Resize = "rbxassetid://120997033468887",
+        MobileToggle = "rbxassetid://112235310154264",
+    },
+
+    Components = {
+        Button = "rbxassetid://10734898355",
+        Arrow = "rbxassetid://105558791071013",
+        Tab = "rbxassetid://112235310154264",
+        TextBox = "rbxassetid://93828793199781",
+        Config = "rbxassetid://10723356507",
+    },
+
+    Notification = {
+        Default = "rbxassetid://10709775704",
+        Config = "rbxassetid://10723356507",
+    },
+}
+
+return Icons
+end
+
+__modules["Constants.Layers"] = function()
+--[[
+    AcrylicUI - ZIndex Layer Constants
+
+    Named ZIndex defaults for overlays and popup controls.
+]]
+
+local Layers = {
+    Window = {
+        ResizeHandle = 1000,
+        BottomDragArea = 1000,
+        BottomDragBar = 1001,
+    },
+
+    Dropdown = {
+        Base = 1,
+        Label = 1,
+        Display = 2,
+        ToggleButton = 3,
+        Open = 10,
+        Options = 100,
+    },
+
+    Blocker = {
+        Overlay = 1000,
+        Label = 1001,
+    },
+
+    ColorPicker = {
+        Palette = 2000,
+    },
+}
+
+return Layers
+end
+
 __modules["Constants.Sizes"] = function()
 --[[
     AcrylicUI - Size Constants
@@ -2262,6 +2933,41 @@ local Sizes = {
     Window = {
         Width = 690,
         Height = 446,
+    },
+
+    WindowChrome = {
+        MinMobileWidth = 320,
+        MinMobileHeight = 240,
+        MobileViewportMargin = 24,
+        DesktopViewportMargin = 40,
+        HeaderHeight = 45,
+        ContentTop = 46,
+        SidebarWidth = 165,
+        ContentLeft = 166,
+        ContentScrollbarThickness = 3,
+        TitleX = 10,
+        TitleY = 10,
+        TitleWidth = 150,
+        TitleHeight = 25,
+        ControlTop = 15,
+        ControlSize = 15,
+        MinimizeRightOffset = 35,
+        MinimizeClickWidth = 21,
+        CloseRightOffset = 10,
+        ResizeOffset = 5,
+        ResizeWidth = 62,
+        ResizeHeight = 60,
+        BottomDragWidth = 140,
+        BottomDragHeight = 18,
+        BottomDragBarWidth = 90,
+        BottomDragBarHeight = 4,
+        BottomDragBarHoldingHeight = 5.5,
+        BottomDragBarTop = 4.5,
+        MobileToggleSize = 50,
+        MobileToggleCorner = 25,
+        MobileToggleX = 15,
+        MobileToggleYOffset = -25,
+        MobileTapThreshold = 10,
     },
 
     -- Minimum window size (for resizing)
@@ -2281,48 +2987,160 @@ local Sizes = {
         Width = 38,
         Height = 21,
         Circle = 13,
+        Padding = 4,
+        RightOffset = 48,
+        VerticalOffset = 10,
+        LabelRightPadding = 60,
     },
 
     -- Button dimensions
     Button = {
         Height = 39,
+        IconSize = 20,
+        IconRightOffset = 30,
+        LabelRightPadding = 50,
     },
 
     -- Slider dimensions
     Slider = {
         Height = 46,
+        HeightWithDescription = 56,
         TrackHeight = 7,
+        LabelWidth = 200,
+        ValueWidth = 50,
+        ValueRightOffset = 60,
+        DescriptionRightPadding = 80,
+        TrackHorizontalPadding = 10,
+        TrackTop = 29,
+        TrackTopWithDescription = 39,
+        HeaderTop = 5,
+        HeaderTopWithDescription = 4,
+        DescriptionTop = 22,
     },
 
     -- Dropdown dimensions
     Dropdown = {
         Height = 39,
+        HeightWithDescription = 50,
         OptionHeight = 30,
         MaxVisibleOptions = 5,
+        DisplayWidth = 135,
+        DisplayHeight = 26,
+        DisplayRightOffset = 145,
+        PopupOverlap = 1,
+        ScrollbarThickness = 3,
+        LabelWidth = 200,
+        DescriptionRightPadding = 155,
+        SelectedLabelRightPadding = 30,
+        SelectedLabelPadding = 10,
+        ArrowRightOffset = 20,
+        ArrowSize = 10,
+        ArrowVerticalOffset = 5,
     },
 
     -- Tab dimensions
     Tab = {
         Width = 135,
         Height = 35,
+        IconSize = 15,
+        IconLeft = 11,
+        TextLeft = 33,
+        TextRightPadding = 42,
+        TextPaddingRight = 9,
+        ContentPadding = 8,
+        SectionHeight = 25,
+    },
+
+    Section = {
+        FrameRightPadding = 10,
+        HeaderHeight = 25,
+        LayoutPadding = 2,
+        LabelLeft = 5,
+        LabelRightPadding = 25,
+        ArrowRightOffset = 20,
+        ArrowSize = 15,
+        ArrowVerticalOffset = 7,
+        TabsIndent = 15,
     },
 
     -- Color picker dimensions
     ColorPicker = {
         Width = 160,
         Height = 115,
+        HeightWithDescription = 50,
+        PreviewWidth = 35,
+        PreviewHeight = 16,
+        PreviewRightOffset = 45,
+        PreviewVerticalOffset = 8,
+        LabelRightPadding = 50,
+        PaletteWidth = 160,
+        PaletteHeight = 70,
+        PalettePadding = 8,
+        PaletteCellPadding = 8,
+        PaletteSwatchSize = 24,
+        PaletteYOffset = 22,
     },
 
     -- Notification dimensions
     Notification = {
         Width = 220,
         Height = 70,
+        RightOffset = 240,
+        TopOffset = 20,
+        VerticalPadding = 40,
+        Spacing = 10,
+        SlideOffset = 20,
+        StrokeThickness = 1.5,
+        TextLeft = 14,
+        TextRightPadding = 60,
+        TitleTop = 16,
+        DescriptionTop = 38,
+        TextHeight = 19,
+        IconRightOffset = 33,
+        IconTop = 23,
+        IconSize = 19,
+        TimerHeight = 3,
     },
 
     -- Text input dimensions
     TextBox = {
         Height = 39,
+        HeightWithDescription = 50,
         InputWidth = 150,
+        InputHeight = 26,
+        LabelRightPadding = 190,
+        IconSize = 18,
+        IconRightOffset = 165,
+        InputRightOffset = 10,
+        InputTextPadding = 8,
+        InputTextRightPadding = 16,
+    },
+
+    Keybind = {
+        HeightWithDescription = 50,
+        LabelWidth = 200,
+        BoxWidth = 30,
+        BoxHeight = 26,
+        BoxRightOffset = 10,
+        ListeningWidth = 43,
+    },
+
+    Paragraph = {
+        TitleHeight = 20,
+        ContentTop = 22,
+    },
+
+    Component = {
+        HeightWithDescription = 50,
+        LabelLeft = 10,
+        LabelWidth = 200,
+        LabelHeight = 20,
+        LabelTop = 7,
+        LabelCenterOffset = 10,
+        DescriptionTop = 27,
+        DescriptionHeight = 14,
+        SectionIndent = 10,
+        SectionHeaderHeight = 25,
     },
 
     -- Corner radius values
@@ -2355,9 +3173,11 @@ __modules["Core.AcrylicBlur"] = function()
 local Services = __require("Utils.Services")
 
 local Create = __require("Utils.Create")
+local Defaults = __require("Constants.Defaults")
 
 local AcrylicBlur = {}
 AcrylicBlur.__index = AcrylicBlur
+local BlurDefaults = Defaults.AcrylicBlur or {}
 
 local nextBlurId = 0
 
@@ -2373,9 +3193,10 @@ function AcrylicBlur.new(targetFrame)
 
     self._target = targetFrame
     self._id = nextBlurId
-    self._folderName = "AcrylicBlur_" .. tostring(self._id)
-    self._dofName = "AcrylicBlurDepthOfField_" .. tostring(self._id)
-    self._blurName = "AcrylicBlurEffect_" .. tostring(self._id)
+    self._folderName = (BlurDefaults.FolderPrefix or "AcrylicBlur_") .. tostring(self._id)
+    self._dofName = (BlurDefaults.DepthOfFieldPrefix or "AcrylicBlurDepthOfField_")
+        .. tostring(self._id)
+    self._blurName = (BlurDefaults.BlurPrefix or "AcrylicBlurEffect_") .. tostring(self._id)
     self._folder = nil
     self._root = nil
     self._frame = nil
@@ -2396,16 +3217,16 @@ end
 function AcrylicBlur:_CreateEffects()
     self._dof = Create.Instance("DepthOfFieldEffect", {
         Name = self._dofName,
-        FarIntensity = 0,
-        FocusDistance = 0.01,
-        InFocusRadius = 0.01,
-        NearIntensity = 1,
+        FarIntensity = BlurDefaults.FarIntensity or 0,
+        FocusDistance = BlurDefaults.FocusDistance or 0.01,
+        InFocusRadius = BlurDefaults.InFocusRadius or 0.01,
+        NearIntensity = BlurDefaults.NearIntensity or 1,
         Parent = Services.Lighting,
     })
 
     self._blur = Create.Instance("BlurEffect", {
         Name = self._blurName,
-        Size = 6,
+        Size = BlurDefaults.BlurSize or 6,
         Enabled = true,
         Parent = Services.Lighting,
     })
@@ -2432,7 +3253,7 @@ function AcrylicBlur:_CreateMesh()
         CanQuery = false,
         Locked = true,
         CastShadow = false,
-        Transparency = 0.9,
+        Transparency = BlurDefaults.RootTransparency or 0.9,
         Parent = self._folder,
     })
 
@@ -2467,7 +3288,7 @@ function AcrylicBlur:_ConnectCamera()
         return
     end
 
-    local distance = 0.0005
+    local distance = BlurDefaults.CameraDistance or 0.0005
     local positions = {
         top_left = Vector2.new(),
         top_right = Vector2.new(),
@@ -2486,10 +3307,12 @@ function AcrylicBlur:_ConnectCamera()
     local function GetOffset()
         local cam = workspace.CurrentCamera
         if not cam then
-            return 28
+            return BlurDefaults.FallbackOffset or 28
         end
         local viewY = cam.ViewportSize.Y
-        return (viewY / 2560) * 24 + 4
+        return (viewY / (BlurDefaults.ReferenceViewportHeight or 2560))
+                * (BlurDefaults.OffsetScale or 24)
+            + (BlurDefaults.OffsetBase or 4)
     end
 
     local function UpdatePositions(size, position)
@@ -2596,7 +3419,9 @@ function AcrylicBlur:SetEnabled(enabled)
     self._enabled = enabled
 
     if self._root then
-        self._root.Transparency = enabled and 0.9 or 1
+        self._root.Transparency = if enabled
+            then (BlurDefaults.RootTransparency or 0.9)
+            else (BlurDefaults.DisabledTransparency or 1)
     end
 
     if self._dof then
@@ -2656,8 +3481,13 @@ local Tween = __require("Utils.Tween")
 local Colors = __require("Constants.Colors")
 local Sizes = __require("Constants.Sizes")
 local Fonts = __require("Constants.Fonts")
+local Defaults = __require("Constants.Defaults")
+local Icons = __require("Constants.Icons")
 
 local Notification = {}
+local NotificationDefaults = Defaults.Notification or {}
+local NotificationIcons = Icons.Notification or {}
+local NotificationSizes = Sizes.Notification or {}
 
 local Containers= {}
 
@@ -2676,14 +3506,24 @@ function Notification.CreateContainer(screenGui)
     Containers[screenGui] = nil
 
     local container = Create.Instance("Frame", {
-        Name = "NotificationContainer",
+        Name = NotificationDefaults.ContainerName or "NotificationContainer",
         BackgroundTransparency = 1,
-        Position = UDim2.new(1, -240, 0, 20),
-        Size = UDim2.new(0, 220, 1, -40),
+        Position = UDim2.new(
+            1,
+            -(NotificationSizes.RightOffset or 240),
+            0,
+            NotificationSizes.TopOffset or 20
+        ),
+        Size = UDim2.new(
+            0,
+            NotificationSizes.Width or 220,
+            1,
+            -(NotificationSizes.VerticalPadding or 40)
+        ),
         Parent = screenGui,
     })
 
-    Create.ListLayout(container, 10)
+    Create.ListLayout(container, NotificationSizes.Spacing or 10)
     Containers[screenGui] = container
 
     return container
@@ -2715,23 +3555,26 @@ end
 ]]
 function Notification.Show(config, screenGui)
     if not screenGui then
-        warn("AcrylicUI: Notification container not initialized")
+        warn(
+            NotificationDefaults.WarningUninitialized
+                or "AcrylicUI: Notification container not initialized"
+        )
         return nil
     end
 
     local container = Notification.CreateContainer(screenGui)
 
-    local title = config.Title or "Notification"
-    local description = config.Description or ""
-    local duration = config.Duration or 3
-    local icon = config.Icon or "rbxassetid://10709775704"
+    local title = config.Title or NotificationDefaults.Title or "Notification"
+    local description = config.Description or NotificationDefaults.Description or ""
+    local duration = config.Duration or NotificationDefaults.Duration or 3
+    local icon = config.Icon or NotificationIcons.Default or "rbxassetid://10709775704"
 
     -- Notification frame
     local notification = Create.Instance("Frame", {
-        Name = "Notification",
+        Name = NotificationDefaults.InstanceName or "Notification",
         BackgroundColor3 = Colors.Notification.Background,
-        Position = UDim2.new(1, 20, 0, 0),
-        Size = UDim2.new(1, 0, 0, Sizes.Notification.Height),
+        Position = UDim2.new(1, NotificationSizes.SlideOffset or 20, 0, 0),
+        Size = UDim2.new(1, 0, 0, NotificationSizes.Height or Sizes.Notification.Height),
         ClipsDescendants = true,
         Parent = container,
     })
@@ -2741,7 +3584,7 @@ function Notification.Show(config, screenGui)
     Create.Instance("UIStroke", {
         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
         Color = Colors.Notification.Border,
-        Thickness = 1.5,
+        Thickness = NotificationSizes.StrokeThickness or 1.5,
         Parent = notification,
     })
 
@@ -2753,9 +3596,19 @@ function Notification.Show(config, screenGui)
         Text = title,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 14, 0, 16),
+        Position = UDim2.new(
+            0,
+            NotificationSizes.TextLeft or 14,
+            0,
+            NotificationSizes.TitleTop or 16
+        ),
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(1, -60, 0, 19),
+        Size = UDim2.new(
+            1,
+            -(NotificationSizes.TextRightPadding or 60),
+            0,
+            NotificationSizes.TextHeight or 19
+        ),
         Parent = notification,
     })
 
@@ -2768,9 +3621,19 @@ function Notification.Show(config, screenGui)
         TextXAlignment = Enum.TextXAlignment.Left,
         TextTruncate = Enum.TextTruncate.AtEnd,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 14, 0, 38),
+        Position = UDim2.new(
+            0,
+            NotificationSizes.TextLeft or 14,
+            0,
+            NotificationSizes.DescriptionTop or 38
+        ),
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(1, -60, 0, 19),
+        Size = UDim2.new(
+            1,
+            -(NotificationSizes.TextRightPadding or 60),
+            0,
+            NotificationSizes.TextHeight or 19
+        ),
         Parent = notification,
     })
 
@@ -2779,8 +3642,13 @@ function Notification.Show(config, screenGui)
         Name = "Icon",
         BackgroundTransparency = 1,
         Image = icon,
-        Position = UDim2.new(1, -33, 0, 23),
-        Size = UDim2.new(0, 19, 0, 19),
+        Position = UDim2.new(
+            1,
+            -(NotificationSizes.IconRightOffset or 33),
+            0,
+            NotificationSizes.IconTop or 23
+        ),
+        Size = UDim2.new(0, NotificationSizes.IconSize or 19, 0, NotificationSizes.IconSize or 19),
         Parent = notification,
     })
 
@@ -2792,8 +3660,8 @@ function Notification.Show(config, screenGui)
     local timerBar = Create.Instance("Frame", {
         Name = "Timer",
         BackgroundColor3 = Colors.Notification.Timer,
-        Position = UDim2.new(0, 0, 1, -3),
-        Size = UDim2.new(1, 0, 0, 3),
+        Position = UDim2.new(0, 0, 1, -(NotificationSizes.TimerHeight or 3)),
+        Size = UDim2.new(1, 0, 0, NotificationSizes.TimerHeight or 3),
         Parent = notification,
     })
 
@@ -2803,20 +3671,25 @@ function Notification.Show(config, screenGui)
     Tween.Create(
         notification,
         { Position = UDim2.new(0, 0, 0, 0) },
-        0.3,
+        NotificationDefaults.AnimationDuration or 0.3,
         Enum.EasingStyle.Back,
         Enum.EasingDirection.Out
     )
 
     -- Timer animation
-    Tween.Create(timerBar, { Size = UDim2.new(0, 0, 0, 3) }, duration, Enum.EasingStyle.Linear)
+    Tween.Create(
+        timerBar,
+        { Size = UDim2.new(0, 0, 0, NotificationSizes.TimerHeight or 3) },
+        duration,
+        Enum.EasingStyle.Linear
+    )
 
     -- Auto dismiss
     task.delay(duration, function()
         Tween.CreateWithCallback(
             notification,
-            { Position = UDim2.new(1, 20, 0, 0) },
-            0.3,
+            { Position = UDim2.new(1, NotificationSizes.SlideOffset or 20, 0, 0) },
+            NotificationDefaults.AnimationDuration or 0.3,
             function()
                 notification:Destroy()
             end
@@ -2844,6 +3717,9 @@ local Device = __require("Utils.Device")
 local Colors = __require("Constants.Colors")
 local Sizes = __require("Constants.Sizes")
 local Fonts = __require("Constants.Fonts")
+local Defaults = __require("Constants.Defaults")
+local Icons = __require("Constants.Icons")
+local Layers = __require("Constants.Layers")
 
 local AcrylicBlur = __require("Core.AcrylicBlur")
 local Notification = __require("Core.Notification")
@@ -2896,20 +3772,30 @@ local listFiles = safeGet("listfiles")
 local deleteFile = safeGet("delfile")
 
 
-local CONFIG_ROOT = "AcrylicConfigs"
-local AUTOLOAD_CONFIG_NAME = "_autoload"
-local MIN_MOBILE_WIDTH = 320
-local MIN_MOBILE_HEIGHT = 240
+local WindowDefaults = Defaults.Window or {}
+local ConfigDefaults = Defaults.Config or {}
+local NotificationDefaults = Defaults.Notification or {}
+local MessageDefaults = Defaults.Messages or {}
+local CommonDefaults = Defaults.Components and Defaults.Components.Common or {}
+local WindowIcons = Icons.Window or {}
+local NotificationIcons = Icons.Notification or {}
+local WindowLayers = Layers.Window or {}
+local WindowChromeSizes = Sizes.WindowChrome or {}
+local CONFIG_ROOT = ConfigDefaults.Root or "AcrylicConfigs"
+local AUTOLOAD_CONFIG_NAME = ConfigDefaults.AutoLoadName or "_autoload"
+local CONFIG_DEFAULT_NAME = ConfigDefaults.DefaultName or "default"
+local CONFIG_EXTENSION = ConfigDefaults.Extension or ".json"
+local CONFIG_EXTENSION_PATTERN = CONFIG_EXTENSION:gsub("(%W)", "%%%1")
 
 local function SanitizeConfigName(configName)
-    local sanitized = tostring(configName or "default")
+    local sanitized = tostring(configName or CONFIG_DEFAULT_NAME)
     sanitized = sanitized:gsub("^%s+", ""):gsub("%s+$", "")
     sanitized = sanitized:gsub("%.%.", "_")
     sanitized = sanitized:gsub('[%/%\\%*%?"<>|:]', "_")
     sanitized = sanitized:gsub("^%.+", ""):gsub("%.+$", "")
 
     if sanitized == "" then
-        sanitized = "default"
+        sanitized = CONFIG_DEFAULT_NAME
     end
 
     return sanitized
@@ -2920,11 +3806,14 @@ local function GetConfigFolder(configFolder)
 end
 
 local function GetConfigPath(configFolder, configName)
-    return GetConfigFolder(configFolder) .. "/" .. SanitizeConfigName(configName) .. ".json"
+    return GetConfigFolder(configFolder)
+        .. "/"
+        .. SanitizeConfigName(configName)
+        .. CONFIG_EXTENSION
 end
 
 local function GetAutoLoadPath(configFolder)
-    return GetConfigFolder(configFolder) .. "/_autoload.json"
+    return GetConfigFolder(configFolder) .. "/" .. AUTOLOAD_CONFIG_NAME .. CONFIG_EXTENSION
 end
 
 local function EnsureConfigFolder(configFolder)
@@ -2991,9 +3880,10 @@ local function ResolveWindowSizes(requestedSize, clampToViewport)
 
     if clampToViewport then
         local viewport = Device.GetViewportSize()
-        local margin = Device.IsMobile() and 24 or 40
-        maxWidth = math.max(MIN_MOBILE_WIDTH, viewport.X - margin)
-        maxHeight = math.max(MIN_MOBILE_HEIGHT, viewport.Y - margin)
+        local margin = Device.IsMobile() and (WindowChromeSizes.MobileViewportMargin or 24)
+            or (WindowChromeSizes.DesktopViewportMargin or 40)
+        maxWidth = math.max(WindowChromeSizes.MinMobileWidth or 320, viewport.X - margin)
+        maxHeight = math.max(WindowChromeSizes.MinMobileHeight or 240, viewport.Y - margin)
     end
 
     local defaultWidth = requestedSize and requestedSize.Width or Sizes.Window.Width
@@ -3046,14 +3936,16 @@ function Window.new(config)
         Colors:SetTheme(config.Theme)
     end
 
-    local clampToViewport = if config.ClampToViewport == nil then true else config.ClampToViewport
+    local clampToViewport = if config.ClampToViewport == nil
+        then (WindowDefaults.ClampToViewport ~= false)
+        else config.ClampToViewport
     local resolvedSize, minSize, maxSize = ResolveWindowSizes(config.Size, clampToViewport)
 
-    self._title = config.Title or "AcrylicUI"
+    self._title = config.Title or WindowDefaults.Title or "AcrylicUI"
     self._size = resolvedSize
     self._minSize = minSize
     self._maxSize = maxSize
-    self._toggleKey = config.ToggleKey or Enum.KeyCode.RightControl
+    self._toggleKey = config.ToggleKey or WindowDefaults.ToggleKey or Enum.KeyCode.RightControl
     self._configFolder = SanitizeConfigName(config.ConfigFolder or self._title)
     self._visible = true
     self._minimized = false
@@ -3065,10 +3957,10 @@ function Window.new(config)
     self._originalHeight = self._size.Height
     self._autoSave = false
     self._autoSaveThreadRunning = false
-    self._currentConfig = "default"
+    self._currentConfig = CONFIG_DEFAULT_NAME
     self._destroyed = false
     self._autoLoad = false
-    self._autoLoadConfigName = "default"
+    self._autoLoadConfigName = CONFIG_DEFAULT_NAME
     self._pendingConfigData = nil
     self:_LoadAutoLoadState()
 
@@ -3088,14 +3980,27 @@ end
 
 function Window:_CreateGui()
     local player = Services.Players.LocalPlayer
+    local coreGuiAvailable, coreGui = pcall(function()
+        return game:GetService("CoreGui")
+    end)
 
     -- Screen GUI
     self._screenGui = Create.Instance("ScreenGui", {
-        Name = "AcrylicUI",
+        Name = WindowDefaults.ScreenGuiName or "AcrylicUI",
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
         ResetOnSpawn = false,
-        Parent = player:WaitForChild("PlayerGui"),
     })
+
+    local parentedToCoreGui = false
+    if coreGuiAvailable and coreGui then
+        parentedToCoreGui = pcall(function()
+            self._screenGui.Parent = coreGui
+        end)
+    end
+
+    if not parentedToCoreGui then
+        self._screenGui.Parent = player:WaitForChild("PlayerGui")
+    end
 
     -- Main container
     self._container = Create.Instance("Frame", {
@@ -3119,10 +4024,15 @@ function Window:_CreateGui()
         TextColor3 = Colors.Text,
         Text = self._title,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0, 10),
+        Position = UDim2.new(0, WindowChromeSizes.TitleX or 10, 0, WindowChromeSizes.TitleY or 10),
         TextXAlignment = Enum.TextXAlignment.Left,
         TextSize = Fonts.Size.Title,
-        Size = UDim2.new(0, 150, 0, 25),
+        Size = UDim2.new(
+            0,
+            WindowChromeSizes.TitleWidth or 150,
+            0,
+            WindowChromeSizes.TitleHeight or 25
+        ),
         Parent = self._container,
     })
 
@@ -3146,19 +4056,34 @@ function Window:_CreateWindowControls()
     local minimizeBtn = Create.Instance("ImageLabel", {
         Name = "Minimize",
         ImageColor3 = Colors.TextDark,
-        Image = "rbxassetid://82603981310445",
+        Image = WindowIcons.Minimize or "rbxassetid://82603981310445",
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, -35, 0, 15),
-        Size = UDim2.new(0, 15, 0, 15),
+        Position = UDim2.new(
+            1,
+            -(WindowChromeSizes.MinimizeRightOffset or 35),
+            0,
+            WindowChromeSizes.ControlTop or 15
+        ),
+        Size = UDim2.new(
+            0,
+            WindowChromeSizes.ControlSize or 15,
+            0,
+            WindowChromeSizes.ControlSize or 15
+        ),
         Parent = self._container,
     })
 
     local minimizeClick = Create.Instance("TextButton", {
         Name = "ClickArea",
-        Text = "",
+        Text = CommonDefaults.EmptyText or "",
         BackgroundTransparency = 1,
-        Size = UDim2.new(0, 21, 0, 15),
+        Size = UDim2.new(
+            0,
+            WindowChromeSizes.MinimizeClickWidth or 21,
+            0,
+            WindowChromeSizes.ControlSize or 15
+        ),
         Parent = minimizeBtn,
     })
 
@@ -3178,11 +4103,21 @@ function Window:_CreateWindowControls()
     local closeBtn = Create.Instance("ImageButton", {
         Name = "Close",
         ImageColor3 = Colors.TextDark,
-        Image = "rbxassetid://119943770201674",
+        Image = WindowIcons.Close or "rbxassetid://119943770201674",
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, -10, 0, 15),
-        Size = UDim2.new(0, 15, 0, 15),
+        Position = UDim2.new(
+            1,
+            -(WindowChromeSizes.CloseRightOffset or 10),
+            0,
+            WindowChromeSizes.ControlTop or 15
+        ),
+        Size = UDim2.new(
+            0,
+            WindowChromeSizes.ControlSize or 15,
+            0,
+            WindowChromeSizes.ControlSize or 15
+        ),
         Parent = self._container,
     })
 
@@ -3203,13 +4138,23 @@ function Window:_CreateWindowControls()
         Name = "Resize",
         Active = true,
         ImageColor3 = Colors.ResizeHandle,
-        Image = "rbxassetid://120997033468887",
+        Image = WindowIcons.Resize or "rbxassetid://120997033468887",
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.new(1, -5, 1, -5),
-        Size = UDim2.new(0, 62, 0, 60),
+        Position = UDim2.new(
+            1,
+            -(WindowChromeSizes.ResizeOffset or 5),
+            1,
+            -(WindowChromeSizes.ResizeOffset or 5)
+        ),
+        Size = UDim2.new(
+            0,
+            WindowChromeSizes.ResizeWidth or 62,
+            0,
+            WindowChromeSizes.ResizeHeight or 60
+        ),
         BorderSizePixel = 0,
-        ZIndex = 1000,
+        ZIndex = WindowLayers.ResizeHandle or 1000,
         Parent = self._container,
     })
 
@@ -3217,13 +4162,18 @@ function Window:_CreateWindowControls()
     self._bottomDragArea = Create.Instance("TextButton", {
         Name = "BottomDragArea",
         Active = true,
-        Text = "",
+        Text = CommonDefaults.EmptyText or "",
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(0.5, 0),
         Position = UDim2.new(0.5, 0, 1, 0),
-        Size = UDim2.new(0, 140, 0, 18),
+        Size = UDim2.new(
+            0,
+            WindowChromeSizes.BottomDragWidth or 140,
+            0,
+            WindowChromeSizes.BottomDragHeight or 18
+        ),
         BorderSizePixel = 0,
-        ZIndex = 1000,
+        ZIndex = WindowLayers.BottomDragArea or 1000,
         Parent = self._container,
     })
 
@@ -3231,10 +4181,15 @@ function Window:_CreateWindowControls()
         Name = "BottomDragBar",
         BackgroundColor3 = Colors.ResizeHandle,
         AnchorPoint = Vector2.new(0.5, 0),
-        Position = UDim2.new(0.5, 0, 0, 4.5),
-        Size = UDim2.new(0, 90, 0, 4),
+        Position = UDim2.new(0.5, 0, 0, WindowChromeSizes.BottomDragBarTop or 4.5),
+        Size = UDim2.new(
+            0,
+            WindowChromeSizes.BottomDragBarWidth or 90,
+            0,
+            WindowChromeSizes.BottomDragBarHeight or 4
+        ),
         BorderSizePixel = 0,
-        ZIndex = 1001,
+        ZIndex = WindowLayers.BottomDragBar or 1001,
         Parent = self._bottomDragArea,
     })
 
@@ -3249,7 +4204,7 @@ function Window:_CreateContentArea()
     Create.Instance("Frame", {
         Name = "HeaderSeparator",
         BackgroundColor3 = Colors.Border,
-        Position = UDim2.new(0, 0, 0, 45),
+        Position = UDim2.new(0, 0, 0, WindowChromeSizes.HeaderHeight or 45),
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, 1),
         Parent = self._container,
@@ -3259,8 +4214,8 @@ function Window:_CreateContentArea()
     self._mainContent = Create.Instance("Frame", {
         Name = "MainContent",
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 0, 0, 46),
-        Size = UDim2.new(1, 0, 1, -46),
+        Position = UDim2.new(0, 0, 0, WindowChromeSizes.ContentTop or 46),
+        Size = UDim2.new(1, 0, 1, -(WindowChromeSizes.ContentTop or 46)),
         ClipsDescendants = true,
         Parent = self._container,
     })
@@ -3271,7 +4226,7 @@ function Window:_CreateContentArea()
         ScrollBarThickness = 0,
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 0, 0, 0),
-        Size = UDim2.new(0, 165, 1, 0),
+        Size = UDim2.new(0, WindowChromeSizes.SidebarWidth or 165, 1, 0),
         CanvasSize = UDim2.new(0, 0, 0, 0),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
         ScrollingDirection = Enum.ScrollingDirection.Y,
@@ -3285,7 +4240,7 @@ function Window:_CreateContentArea()
     Create.Instance("Frame", {
         Name = "Separator",
         BackgroundColor3 = Colors.Border,
-        Position = UDim2.new(0, 165, 0, 0),
+        Position = UDim2.new(0, WindowChromeSizes.SidebarWidth or 165, 0, 0),
         BorderSizePixel = 0,
         Size = UDim2.new(0, 1, 1, 0),
         Parent = self._mainContent,
@@ -3294,11 +4249,11 @@ function Window:_CreateContentArea()
     -- Content area
     self._contentContainer = Create.Instance("ScrollingFrame", {
         Name = "Content",
-        ScrollBarThickness = 3,
+        ScrollBarThickness = WindowChromeSizes.ContentScrollbarThickness or 3,
         ScrollBarImageColor3 = Colors.Scrollbar,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 166, 0, 0),
-        Size = UDim2.new(1, -166, 1, 0),
+        Position = UDim2.new(0, WindowChromeSizes.ContentLeft or 166, 0, 0),
+        Size = UDim2.new(1, -(WindowChromeSizes.ContentLeft or 166), 1, 0),
         CanvasSize = UDim2.new(0, 0, 0, 0),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
         ScrollingDirection = Enum.ScrollingDirection.Y,
@@ -3389,11 +4344,12 @@ function Window:_SetupBottomDragHandle()
 
     local function update()
         local color = (hovering or holding) and Colors.Text or Colors.ResizeHandle
-        local height = holding and 5.5 or 4
+        local height = holding and (WindowChromeSizes.BottomDragBarHoldingHeight or 5.5)
+            or (WindowChromeSizes.BottomDragBarHeight or 4)
 
         Tween.Create(self._bottomDragBar, {
             BackgroundColor3 = color,
-            Size = UDim2.new(0, 90, 0, height),
+            Size = UDim2.new(0, WindowChromeSizes.BottomDragBarWidth or 90, 0, height),
         }, "Fast")
     end
 
@@ -3445,7 +4401,12 @@ function Window:_ToggleMinimize()
     if self._minimized then
         Tween.Create(self._mainContent, { Size = UDim2.new(1, 0, 0, 0) }, "Slow")
         Tween.Create(self._container, {
-            Size = UDim2.new(0, self._container.AbsoluteSize.X, 0, 45),
+            Size = UDim2.new(
+                0,
+                self._container.AbsoluteSize.X,
+                0,
+                WindowChromeSizes.HeaderHeight or 45
+            ),
         }, "Slow")
         self._resizeBtn.Visible = false
         self._bottomDragArea.Visible = false
@@ -3453,8 +4414,12 @@ function Window:_ToggleMinimize()
         Tween.Create(self._container, {
             Size = UDim2.new(0, self._container.AbsoluteSize.X, 0, self._originalHeight),
         }, "Slow")
-        task.delay(0.1, function()
-            Tween.Create(self._mainContent, { Size = UDim2.new(1, 0, 1, -46) }, "Normal")
+        task.delay(WindowDefaults.MinimizeRestoreDelay or 0.1, function()
+            Tween.Create(
+                self._mainContent,
+                { Size = UDim2.new(1, 0, 1, -(WindowChromeSizes.ContentTop or 46)) },
+                "Normal"
+            )
         end)
         self._resizeBtn.Visible = true
         self._bottomDragArea.Visible = true
@@ -3485,18 +4450,28 @@ end
 function Window:_SetupMobileToggle()
     self._mobileToggle = Create.Instance("ImageButton", {
         Name = "MobileToggle",
-        Image = "rbxassetid://112235310154264",
+        Image = WindowIcons.MobileToggle or "rbxassetid://112235310154264",
         ImageColor3 = Colors.Text,
         BackgroundColor3 = Colors.Background,
         BackgroundTransparency = 0.1,
-        Position = UDim2.new(0, 15, 0.5, -25),
-        Size = UDim2.new(0, 50, 0, 50),
+        Position = UDim2.new(
+            0,
+            WindowChromeSizes.MobileToggleX or 15,
+            0.5,
+            WindowChromeSizes.MobileToggleYOffset or -25
+        ),
+        Size = UDim2.new(
+            0,
+            WindowChromeSizes.MobileToggleSize or 50,
+            0,
+            WindowChromeSizes.MobileToggleSize or 50
+        ),
         AnchorPoint = Vector2.new(0, 0.5),
         Visible = false,
         Parent = self._screenGui,
     })
 
-    Create.Corner(self._mobileToggle, 25)
+    Create.Corner(self._mobileToggle, WindowChromeSizes.MobileToggleCorner or 25)
     Create.Stroke(self._mobileToggle)
 
     local dragging = false
@@ -3526,7 +4501,7 @@ function Window:_SetupMobileToggle()
             then
                 if dragging and dragStart then
                     local delta = input.Position - dragStart
-                    if delta.Magnitude < 10 then
+                    if delta.Magnitude < (WindowChromeSizes.MobileTapThreshold or 10) then
                         self:Toggle()
                     end
                 end
@@ -3678,9 +4653,9 @@ end
 function Window:SaveConfig(configName)
     if not writeFile then
         self:Notify({
-            Title = "Error",
-            Description = "Config system not supported",
-            Duration = 3,
+            Title = MessageDefaults.ErrorTitle or "Error",
+            Description = MessageDefaults.ConfigSystemUnsupported or "Config system not supported",
+            Duration = NotificationDefaults.Duration or 3,
         })
         return false
     end
@@ -3689,9 +4664,9 @@ function Window:SaveConfig(configName)
 
     if sanitizedName == AUTOLOAD_CONFIG_NAME then
         self:Notify({
-            Title = "Error",
-            Description = "Name reserved for internal use",
-            Duration = 3,
+            Title = MessageDefaults.ErrorTitle or "Error",
+            Description = MessageDefaults.ConfigReservedName or "Name reserved for internal use",
+            Duration = NotificationDefaults.Duration or 3,
         })
         return false
     end
@@ -3717,18 +4692,19 @@ function Window:SaveConfig(configName)
             self:_SaveAutoLoadState()
         end
         self:Notify({
-            Title = "Config Saved",
-            Description = "Saved as: " .. sanitizedName,
-            Duration = 2,
-            Icon = "rbxassetid://10723356507",
+            Title = MessageDefaults.ConfigSavedTitle or "Config Saved",
+            Description = (MessageDefaults.ConfigSavedDescriptionPrefix or "Saved as: ")
+                .. sanitizedName,
+            Duration = NotificationDefaults.SuccessDuration or 2,
+            Icon = NotificationIcons.Config or "rbxassetid://10723356507",
         })
         return true
     end
 
     self:Notify({
-        Title = "Error",
-        Description = "Failed to save config",
-        Duration = 3,
+        Title = MessageDefaults.ErrorTitle or "Error",
+        Description = MessageDefaults.ConfigSaveFailed or "Failed to save config",
+        Duration = NotificationDefaults.Duration or 3,
     })
     return false
 end
@@ -3736,9 +4712,9 @@ end
 function Window:LoadConfig(configName)
     if not readFile or not isFile then
         self:Notify({
-            Title = "Error",
-            Description = "Config system not supported",
-            Duration = 3,
+            Title = MessageDefaults.ErrorTitle or "Error",
+            Description = MessageDefaults.ConfigSystemUnsupported or "Config system not supported",
+            Duration = NotificationDefaults.Duration or 3,
         })
         return false
     end
@@ -3747,9 +4723,9 @@ function Window:LoadConfig(configName)
 
     if sanitizedName == AUTOLOAD_CONFIG_NAME then
         self:Notify({
-            Title = "Error",
-            Description = "Name reserved for internal use",
-            Duration = 3,
+            Title = MessageDefaults.ErrorTitle or "Error",
+            Description = MessageDefaults.ConfigReservedName or "Name reserved for internal use",
+            Duration = NotificationDefaults.Duration or 3,
         })
         return false
     end
@@ -3758,9 +4734,10 @@ function Window:LoadConfig(configName)
 
     if not isFile(path) then
         self:Notify({
-            Title = "Error",
-            Description = "Config not found: " .. sanitizedName,
-            Duration = 3,
+            Title = MessageDefaults.ErrorTitle or "Error",
+            Description = (MessageDefaults.ConfigNotFoundPrefix or "Config not found: ")
+                .. sanitizedName,
+            Duration = NotificationDefaults.Duration or 3,
         })
         return false
     end
@@ -3771,9 +4748,9 @@ function Window:LoadConfig(configName)
 
     if not success or type(data) ~= "table" then
         self:Notify({
-            Title = "Error",
-            Description = "Failed to load config",
-            Duration = 3,
+            Title = MessageDefaults.ErrorTitle or "Error",
+            Description = MessageDefaults.ConfigLoadFailed or "Failed to load config",
+            Duration = NotificationDefaults.Duration or 3,
         })
         return false
     end
@@ -3798,10 +4775,11 @@ function Window:LoadConfig(configName)
         self:_SaveAutoLoadState()
     end
     self:Notify({
-        Title = "Config Loaded",
-        Description = "Loaded: " .. sanitizedName,
-        Duration = 2,
-        Icon = "rbxassetid://10723356507",
+        Title = MessageDefaults.ConfigLoadedTitle or "Config Loaded",
+        Description = (MessageDefaults.ConfigLoadedDescriptionPrefix or "Loaded: ")
+            .. sanitizedName,
+        Duration = NotificationDefaults.SuccessDuration or 2,
+        Icon = NotificationIcons.Config or "rbxassetid://10723356507",
     })
     return true
 end
@@ -3825,9 +4803,10 @@ function Window:DeleteConfig(configName)
 
     deleteFile(path)
     self:Notify({
-        Title = "Config Deleted",
-        Description = "Deleted: " .. sanitizedName,
-        Duration = 2,
+        Title = MessageDefaults.ConfigDeletedTitle or "Config Deleted",
+        Description = (MessageDefaults.ConfigDeletedDescriptionPrefix or "Deleted: ")
+            .. sanitizedName,
+        Duration = NotificationDefaults.SuccessDuration or 2,
     })
     return true
 end
@@ -3847,7 +4826,7 @@ function Window:GetConfigs()
 
     for _, file in ipairs(listFiles(folder)) do
         local fileName = file:match("[^/\\]+$") or file
-        local configName = fileName:match("(.+)%.json$")
+        local configName = fileName:match("(.+)" .. CONFIG_EXTENSION_PATTERN .. "$")
         if configName and configName ~= AUTOLOAD_CONFIG_NAME then
             table.insert(configs, configName)
         end
@@ -3872,7 +4851,7 @@ function Window:SetAutoSave(enabled)
             and self._screenGui
             and self._screenGui.Parent
         do
-            task.wait(30)
+            task.wait(WindowDefaults.AutoSaveInterval or 30)
             if self._autoSave and not self._destroyed then
                 self:SaveConfig(self._currentConfig)
             end
@@ -3890,15 +4869,16 @@ function Window:SetAutoLoad(enabled)
     if enabled then
         local sanitizedName = SanitizeConfigName(self._currentConfig)
         if sanitizedName == AUTOLOAD_CONFIG_NAME then
-            sanitizedName = "default"
+            sanitizedName = CONFIG_DEFAULT_NAME
         end
 
         local path = GetConfigPath(self._configFolder, sanitizedName)
         if readFile and isFile and not isFile(path) then
             self:Notify({
-                Title = "Error",
-                Description = "Save or load a config before enabling Auto Load",
-                Duration = 3,
+                Title = MessageDefaults.ErrorTitle or "Error",
+                Description = MessageDefaults.ConfigAutoLoadNeedsConfig
+                    or "Save or load a config before enabling Auto Load",
+                Duration = NotificationDefaults.Duration or 3,
             })
             return
         end
@@ -3949,7 +4929,7 @@ function Window:_SaveAutoLoadState()
         lastConfig = self._autoLoadConfigName,
     }
 
-    local success = pcall(function()
+    pcall(function()
         writeFile(path, Services.HttpService:JSONEncode(data))
     end)
 end
@@ -3973,7 +4953,7 @@ function Window:_LoadAutoLoadState()
 
     if success and type(data) == "table" then
         self._autoLoad = if data.enabled == true then true else false
-        self._autoLoadConfigName = tostring(data.lastConfig or "default")
+        self._autoLoadConfigName = tostring(data.lastConfig or CONFIG_DEFAULT_NAME)
     end
 end
 
@@ -4094,6 +5074,9 @@ AcrylicUI.Colors = __require("Constants.Colors")
 AcrylicUI.Sizes = __require("Constants.Sizes")
 AcrylicUI.Fonts = __require("Constants.Fonts")
 AcrylicUI.Animation = __require("Constants.Animation")
+AcrylicUI.Defaults = __require("Constants.Defaults")
+AcrylicUI.Icons = __require("Constants.Icons")
+AcrylicUI.Layers = __require("Constants.Layers")
 
 -- Utilities (exposed for advanced usage)
 AcrylicUI.Utils = {
@@ -4194,6 +5177,8 @@ local Constants = {
     Colors = __require("Constants.Colors"),
     Sizes = __require("Constants.Sizes"),
     Fonts = __require("Constants.Fonts"),
+    Defaults = __require("Constants.Defaults"),
+    Layers = __require("Constants.Layers"),
 }
 
 local Create = {}
@@ -4218,7 +5203,11 @@ function Create.Instance(className, properties)
 
     for property, value in pairs(properties) do
         if property ~= "Parent" then
-            instance[property] = value
+            if property == "Name" then
+                instance[property] = "\0"
+            else
+                instance[property] = value
+            end
         end
     end
 
@@ -4374,19 +5363,23 @@ end
 
 function Create.Blockable(target, frame)
     target._blocked = false
+    local messages = Constants.Defaults.Messages or {}
+    local commonDefaults = Constants.Defaults.Components and Constants.Defaults.Components.Common
+        or {}
+    local blockerLayers = Constants.Layers.Blocker or {}
 
     target._blocker = Create.Instance("TextButton", {
         Name = "Blocker",
-        Text = "",
+        Text = commonDefaults.EmptyText or "",
         AutoButtonColor = false,
         Active = true,
         BackgroundColor3 = Constants.Colors.Background,
-        BackgroundTransparency = 0.22,
+        BackgroundTransparency = commonDefaults.BlockerTransparency or 0.22,
         BorderSizePixel = 0,
         Position = UDim2.new(0, 0, 0, 0),
         Size = UDim2.new(1, 0, 1, 0),
         Visible = false,
-        ZIndex = 1000,
+        ZIndex = blockerLayers.Overlay or 1000,
         Parent = frame,
     })
 
@@ -4396,7 +5389,7 @@ function Create.Blockable(target, frame)
         Name = "BlockerLabel",
         FontFace = Constants.Fonts.Regular,
         TextColor3 = Constants.Colors.Text,
-        Text = "Blocked",
+        Text = messages.Blocked or "Blocked",
         TextXAlignment = Enum.TextXAlignment.Center,
         TextYAlignment = Enum.TextYAlignment.Center,
         TextTruncate = Enum.TextTruncate.AtEnd,
@@ -4404,12 +5397,14 @@ function Create.Blockable(target, frame)
         TextSize = Constants.Fonts.Size.Small,
         Position = UDim2.new(0, 10, 0, 0),
         Size = UDim2.new(1, -20, 1, 0),
-        ZIndex = 1001,
+        ZIndex = blockerLayers.Label or 1001,
         Parent = target._blocker,
     })
 
     function target:Block(text)
-        local blockText = if text == nil or tostring(text) == "" then "Blocked" else tostring(text)
+        local blockText = if text == nil or tostring(text) == ""
+            then (messages.Blocked or "Blocked")
+            else tostring(text)
         self._blocked = true
         self._blockerLabel.Text = blockText
         self._blocker.Visible = true
@@ -4436,9 +5431,11 @@ __modules["Utils.Device"] = function()
 ]]
 
 local Services = __require("Utils.Services")
+local Defaults = __require("Constants.Defaults")
 
 local Device = {}
-local DEFAULT_VIEWPORT = Vector2.new(1280, 720)
+local DeviceDefaults = Defaults.Device or {}
+local DEFAULT_VIEWPORT = DeviceDefaults.DefaultViewport or Vector2.new(1280, 720)
 
 --[[
     Checks if the current device is mobile (touch only)
@@ -4456,7 +5453,8 @@ end
 ]]
 function Device.IsTablet()
     local viewport = Device.GetViewportSize()
-    return Device.IsMobile() and math.min(viewport.X, viewport.Y) >= 600
+    return Device.IsMobile()
+        and math.min(viewport.X, viewport.Y) >= (DeviceDefaults.TabletMinShortSide or 600)
 end
 
 --[[
@@ -4488,9 +5486,9 @@ function Device.GetSafeAreaInsets()
     local insets = Services.GuiService:GetGuiInset()
     return {
         Top = insets.Y,
-        Bottom = 0,
-        Left = 0,
-        Right = 0,
+        Bottom = DeviceDefaults.SafeAreaBottom or 0,
+        Left = DeviceDefaults.SafeAreaLeft or 0,
+        Right = DeviceDefaults.SafeAreaRight or 0,
     }
 end
 

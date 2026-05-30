@@ -2,19 +2,25 @@ local Create = require(script.Parent.Parent.Utils.Create)
 local Colors = require(script.Parent.Parent.Constants.Colors)
 local Sizes = require(script.Parent.Parent.Constants.Sizes)
 local Fonts = require(script.Parent.Parent.Constants.Fonts)
+local Defaults = require(script.Parent.Parent.Constants.Defaults)
 
 local Paragraph = {}
 Paragraph.__index = Paragraph
+local ComponentDefaults = Defaults.Components or {}
+local CommonDefaults = ComponentDefaults.Common or {}
+local ParagraphDefaults = ComponentDefaults.Paragraph or {}
 
 function Paragraph.new(parent: Instance, config)
     local self = setmetatable({}, Paragraph)
-    local title = (config and config.Title) or "Paragraph"
-    local content = (config and config.Content) or "Description text here."
+    local title = (config and config.Title) or ParagraphDefaults.Title or "Paragraph"
+    local content = (config and config.Content)
+        or ParagraphDefaults.Content
+        or "Description text here."
 
     self._frame = Create.Instance("Frame", {
         Name = "Paragraph",
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.4,
+        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
@@ -33,7 +39,7 @@ function Paragraph.new(parent: Instance, config)
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(1, 0, 0, 20),
+        Size = UDim2.new(1, 0, 0, Sizes.Paragraph.TitleHeight or 20),
         Parent = self._frame,
     })
 
@@ -46,7 +52,7 @@ function Paragraph.new(parent: Instance, config)
         TextWrapped = true,
         BackgroundTransparency = 1,
         TextSize = Fonts.Size.Small,
-        Position = UDim2.new(0, 0, 0, 22),
+        Position = UDim2.new(0, 0, 0, Sizes.Paragraph.ContentTop or 22),
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         Parent = self._frame,

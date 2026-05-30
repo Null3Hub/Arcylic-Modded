@@ -8,9 +8,11 @@
 local Services = require(script.Parent.Parent.Utils.Services)
 
 local Create = require(script.Parent.Parent.Utils.Create)
+local Defaults = require(script.Parent.Parent.Constants.Defaults)
 
 local AcrylicBlur = {}
 AcrylicBlur.__index = AcrylicBlur
+local BlurDefaults = Defaults.AcrylicBlur or {}
 
 local nextBlurId = 0
 
@@ -26,9 +28,10 @@ function AcrylicBlur.new(targetFrame: GuiObject)
 
     self._target = targetFrame
     self._id = nextBlurId
-    self._folderName = "AcrylicBlur_" .. tostring(self._id)
-    self._dofName = "AcrylicBlurDepthOfField_" .. tostring(self._id)
-    self._blurName = "AcrylicBlurEffect_" .. tostring(self._id)
+    self._folderName = (BlurDefaults.FolderPrefix or "AcrylicBlur_") .. tostring(self._id)
+    self._dofName = (BlurDefaults.DepthOfFieldPrefix or "AcrylicBlurDepthOfField_")
+        .. tostring(self._id)
+    self._blurName = (BlurDefaults.BlurPrefix or "AcrylicBlurEffect_") .. tostring(self._id)
     self._folder = nil
     self._root = nil
     self._frame = nil
@@ -49,16 +52,16 @@ end
 function AcrylicBlur:_CreateEffects()
     self._dof = Create.Instance("DepthOfFieldEffect", {
         Name = self._dofName,
-        FarIntensity = 0,
-        FocusDistance = 0.01,
-        InFocusRadius = 0.01,
-        NearIntensity = 1,
+        FarIntensity = BlurDefaults.FarIntensity or 0,
+        FocusDistance = BlurDefaults.FocusDistance or 0.01,
+        InFocusRadius = BlurDefaults.InFocusRadius or 0.01,
+        NearIntensity = BlurDefaults.NearIntensity or 1,
         Parent = Services.Lighting,
     })
 
     self._blur = Create.Instance("BlurEffect", {
         Name = self._blurName,
-        Size = 6,
+        Size = BlurDefaults.BlurSize or 6,
         Enabled = true,
         Parent = Services.Lighting,
     })
@@ -85,7 +88,7 @@ function AcrylicBlur:_CreateMesh()
         CanQuery = false,
         Locked = true,
         CastShadow = false,
-        Transparency = 0.9,
+        Transparency = BlurDefaults.RootTransparency or 0.9,
         Parent = self._folder,
     })
 
@@ -120,7 +123,7 @@ function AcrylicBlur:_ConnectCamera()
         return
     end
 
-    local distance = 0.0005
+    local distance = BlurDefaults.CameraDistance or 0.0005
     local positions = {
         top_left = Vector2.new(),
         top_right = Vector2.new(),
@@ -139,10 +142,12 @@ function AcrylicBlur:_ConnectCamera()
     local function GetOffset(): number
         local cam = workspace.CurrentCamera
         if not cam then
-            return 28
+            return BlurDefaults.FallbackOffset or 28
         end
         local viewY = cam.ViewportSize.Y
-        return (viewY / 2560) * 24 + 4
+        return (viewY / (BlurDefaults.ReferenceViewportHeight or 2560))
+                * (BlurDefaults.OffsetScale or 24)
+            + (BlurDefaults.OffsetBase or 4)
     end
 
     local function UpdatePositions(size: Vector2, position: Vector2)
@@ -249,7 +254,9 @@ function AcrylicBlur:SetEnabled(enabled: boolean)
     self._enabled = enabled
 
     if self._root then
-        self._root.Transparency = enabled and 0.9 or 1
+        self._root.Transparency = if enabled
+            then (BlurDefaults.RootTransparency or 0.9)
+            else (BlurDefaults.DisabledTransparency or 1)
     end
 
     if self._dof then

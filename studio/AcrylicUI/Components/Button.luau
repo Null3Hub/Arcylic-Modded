@@ -9,9 +9,15 @@ local Tween = require(script.Parent.Parent.Utils.Tween)
 local Colors = require(script.Parent.Parent.Constants.Colors)
 local Sizes = require(script.Parent.Parent.Constants.Sizes)
 local Fonts = require(script.Parent.Parent.Constants.Fonts)
+local Defaults = require(script.Parent.Parent.Constants.Defaults)
+local Icons = require(script.Parent.Parent.Constants.Icons)
 
 local Button = {}
 Button.__index = Button
+local ComponentDefaults = Defaults.Components or {}
+local CommonDefaults = ComponentDefaults.Common or {}
+local ButtonDefaults = ComponentDefaults.Button or {}
+local ComponentIcons = Icons.Components or {}
 
 export type ButtonConfig = {
     Name: string?,
@@ -49,13 +55,16 @@ export type ButtonObject = {
 ]]
 function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
     local self = setmetatable({}, Button)
+    config = config or {}
 
-    local name = config.Name or "Button"
-    local icon = config.Icon or "rbxassetid://10734898355"
+    local name = config.Name or ButtonDefaults.Name or "Button"
+    local icon = config.Icon or ComponentIcons.Button or "rbxassetid://10734898355"
     local callback = config.Callback or function() end
     local description = Create.GetDescription(config)
     local hasDescription = description ~= nil
-    local height = hasDescription and 50 or Sizes.Button.Height
+    local height = hasDescription
+            and (Sizes.Component.HeightWithDescription or CommonDefaults.HeightWithDescription or 50)
+        or Sizes.Button.Height
 
     self._connections = {}
 
@@ -63,7 +72,7 @@ function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
     self._frame = Create.Instance("Frame", {
         Name = "Button_" .. name,
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.4,
+        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, height),
         Parent = parent,
@@ -80,14 +89,36 @@ function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = hasDescription and UDim2.new(0, 10, 0, 7) or UDim2.new(0, 10, 0.5, -10),
+        Position = hasDescription
+                and UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.LabelTop or 7)
+            or UDim2.new(
+                0,
+                Sizes.Component.LabelLeft or 10,
+                0.5,
+                -(Sizes.Component.LabelCenterOffset or 10)
+            ),
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(1, -50, 0, 20),
+        Size = UDim2.new(
+            1,
+            -(Sizes.Button.LabelRightPadding or 50),
+            0,
+            Sizes.Component.LabelHeight or 20
+        ),
         Parent = self._frame,
     })
 
     -- Description
-    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 27), UDim2.new(1, -50, 0, 14))
+    Create.Description(
+        self._frame,
+        description,
+        UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.DescriptionTop or 27),
+        UDim2.new(
+            1,
+            -(Sizes.Button.LabelRightPadding or 50),
+            0,
+            Sizes.Component.DescriptionHeight or 14
+        )
+    )
 
     -- Icon
     self._icon = Create.Instance("ImageLabel", {
@@ -95,8 +126,13 @@ function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
         BackgroundTransparency = 1,
         Image = icon,
         ImageColor3 = Colors.Text,
-        Position = UDim2.new(1, -30, 0.5, -10),
-        Size = UDim2.new(0, 20, 0, 20),
+        Position = UDim2.new(
+            1,
+            -(Sizes.Button.IconRightOffset or 30),
+            0.5,
+            -((Sizes.Button.IconSize or 20) / 2)
+        ),
+        Size = UDim2.new(0, Sizes.Button.IconSize or 20, 0, Sizes.Button.IconSize or 20),
         Parent = self._frame,
     })
 
@@ -107,7 +143,7 @@ function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
     -- Click button
     self._button = Create.Instance("TextButton", {
         Name = "ClickArea",
-        Text = "",
+        Text = CommonDefaults.EmptyText or "",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
         Parent = self._frame,
@@ -124,9 +160,17 @@ function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
             end
 
             -- Click animation
-            Tween.Create(self._frame, { BackgroundTransparency = 0.2 }, "Fast")
-            task.wait(0.1)
-            Tween.Create(self._frame, { BackgroundTransparency = 0.4 }, "Fast")
+            Tween.Create(
+                self._frame,
+                { BackgroundTransparency = CommonDefaults.PressedTransparency or 0.2 },
+                "Fast"
+            )
+            task.wait(CommonDefaults.ClickFlashDelay or 0.1)
+            Tween.Create(
+                self._frame,
+                { BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4 },
+                "Fast"
+            )
 
             self._callback()
         end)
@@ -139,14 +183,22 @@ function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
                 return
             end
 
-            Tween.Create(self._frame, { BackgroundTransparency = 0.3 }, "Fast")
+            Tween.Create(
+                self._frame,
+                { BackgroundTransparency = CommonDefaults.HoverTransparency or 0.3 },
+                "Fast"
+            )
         end)
     )
 
     table.insert(
         self._connections,
         self._button.MouseLeave:Connect(function()
-            Tween.Create(self._frame, { BackgroundTransparency = 0.4 }, "Fast")
+            Tween.Create(
+                self._frame,
+                { BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4 },
+                "Fast"
+            )
         end)
     )
 

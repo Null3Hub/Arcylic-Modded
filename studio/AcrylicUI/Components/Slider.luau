@@ -11,9 +11,14 @@ local Tween = require(script.Parent.Parent.Utils.Tween)
 local Colors = require(script.Parent.Parent.Constants.Colors)
 local Sizes = require(script.Parent.Parent.Constants.Sizes)
 local Fonts = require(script.Parent.Parent.Constants.Fonts)
+local Defaults = require(script.Parent.Parent.Constants.Defaults)
 
 local Slider = {}
 Slider.__index = Slider
+local SliderDefaults = Defaults.Slider
+local ComponentDefaults = Defaults.Components or {}
+local CommonDefaults = ComponentDefaults.Common or {}
+local SliderComponentDefaults = ComponentDefaults.Slider or {}
 
 export type SliderConfig = {
     Name: string?,
@@ -38,6 +43,51 @@ export type SliderObject = {
     Destroy: (self: SliderObject) -> (),
 }
 
+local function isFiniteNumber(value: any): boolean
+    return type(value) == "number" and value == value and value ~= math.huge and value ~= -math.huge
+end
+
+local function resolveNumber(value: any, fallback: number): number
+    if isFiniteNumber(value) then
+        return value
+    end
+
+    return fallback
+end
+
+local function resolveRange(minValue: any, maxValue: any): (number, number)
+    local min = resolveNumber(minValue, SliderDefaults.Min)
+    local max = resolveNumber(maxValue, SliderDefaults.Max)
+
+    if max < min then
+        min, max = max, min
+    end
+
+    return min, max
+end
+
+local function resolveIncrement(increment: any): number
+    local resolved = resolveNumber(increment, SliderDefaults.Increment)
+    if resolved <= 0 then
+        return SliderDefaults.Increment
+    end
+
+    return resolved
+end
+
+local function normalizeValue(
+    value: any,
+    fallback: number,
+    min: number,
+    max: number,
+    increment: number
+): number
+    local resolved = resolveNumber(value, fallback)
+    local snapped = math.floor(resolved / increment + 0.5) * increment
+
+    return math.clamp(snapped, min, max)
+end
+
 --[[
     Creates a new slider component
 
@@ -48,11 +98,11 @@ export type SliderObject = {
 function Slider.new(parent: Instance, config: SliderConfig, window): SliderObject
     local self = setmetatable({}, Slider)
 
-    local name = config.Name or "Slider"
-    self._min = config.Min or 0
-    self._max = config.Max or 100
-    self._value = config.Default or 50
-    self._increment = config.Increment or 1
+    local name = config.Name or SliderComponentDefaults.Name or "Slider"
+    self._min, self._max = resolveRange(config.Min, config.Max)
+    self._increment = resolveIncrement(config.Increment)
+    self._value =
+        normalizeValue(config.Default, SliderDefaults.Value, self._min, self._max, self._increment)
     self._callback = config.Callback or function() end
     self._dragging = false
     self._flag = config.Flag
@@ -60,13 +110,14 @@ function Slider.new(parent: Instance, config: SliderConfig, window): SliderObjec
     self._connections = {}
     local description = Create.GetDescription(config)
     local hasDescription = description ~= nil
-    local height = hasDescription and 56 or Sizes.Slider.Height
+    local height = hasDescription and (Sizes.Slider.HeightWithDescription or 56)
+        or Sizes.Slider.Height
 
     -- Main container
     self._frame = Create.Instance("Frame", {
         Name = "Slider_" .. name,
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.4,
+        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, height),
         Parent = parent,
@@ -83,14 +134,30 @@ function Slider.new(parent: Instance, config: SliderConfig, window): SliderObjec
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0, hasDescription and 4 or 5),
+        Position = UDim2.new(
+            0,
+            Sizes.Component.LabelLeft or 10,
+            0,
+            hasDescription and (Sizes.Slider.HeaderTopWithDescription or 4)
+                or (Sizes.Slider.HeaderTop or 5)
+        ),
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(0, 200, 0, 20),
+        Size = UDim2.new(0, Sizes.Slider.LabelWidth or 200, 0, Sizes.Component.LabelHeight or 20),
         Parent = self._frame,
     })
 
     -- Description
-    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 22), UDim2.new(1, -80, 0, 14))
+    Create.Description(
+        self._frame,
+        description,
+        UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Slider.DescriptionTop or 22),
+        UDim2.new(
+            1,
+            -(Sizes.Slider.DescriptionRightPadding or 80),
+            0,
+            Sizes.Component.DescriptionHeight or 14
+        )
+    )
 
     -- Value display
     self._valueLabel = Create.Instance("TextLabel", {
@@ -100,9 +167,15 @@ function Slider.new(parent: Instance, config: SliderConfig, window): SliderObjec
         Text = tostring(self._value),
         TextXAlignment = Enum.TextXAlignment.Right,
         BackgroundTransparency = 1,
-        Position = UDim2.new(1, -60, 0, hasDescription and 4 or 5),
+        Position = UDim2.new(
+            1,
+            -(Sizes.Slider.ValueRightOffset or 60),
+            0,
+            hasDescription and (Sizes.Slider.HeaderTopWithDescription or 4)
+                or (Sizes.Slider.HeaderTop or 5)
+        ),
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(0, 50, 0, 20),
+        Size = UDim2.new(0, Sizes.Slider.ValueWidth or 50, 0, Sizes.Component.LabelHeight or 20),
         Parent = self._frame,
     })
 
@@ -110,9 +183,20 @@ function Slider.new(parent: Instance, config: SliderConfig, window): SliderObjec
     self._track = Create.Instance("Frame", {
         Name = "Track",
         BackgroundColor3 = Colors.Background,
-        Position = UDim2.new(0, 10, 0, hasDescription and 39 or 29),
+        Position = UDim2.new(
+            0,
+            Sizes.Slider.TrackHorizontalPadding or 10,
+            0,
+            hasDescription and (Sizes.Slider.TrackTopWithDescription or 39)
+                or (Sizes.Slider.TrackTop or 29)
+        ),
         BorderSizePixel = 0,
-        Size = UDim2.new(1, -20, 0, Sizes.Slider.TrackHeight),
+        Size = UDim2.new(
+            1,
+            -((Sizes.Slider.TrackHorizontalPadding or 10) * 2),
+            0,
+            Sizes.Slider.TrackHeight
+        ),
         Parent = self._frame,
     })
 
@@ -205,8 +289,7 @@ function Slider:_UpdateFromInput(input: InputObject)
     local rawValue = self._min + (self._max - self._min) * relativeX
 
     -- Apply increment
-    self._value = math.floor(rawValue / self._increment + 0.5) * self._increment
-    self._value = math.clamp(self._value, self._min, self._max)
+    self._value = normalizeValue(rawValue, self._value, self._min, self._max, self._increment)
 
     self:_UpdateVisual()
     self._callback(self._value)
@@ -214,13 +297,13 @@ end
 
 function Slider:_UpdateVisual()
     local range = math.max(self._max - self._min, 1)
-    local fillRatio = (self._value - self._min) / range
+    local fillRatio = math.clamp((self._value - self._min) / range, 0, 1)
     Tween.Create(self._fill, { Size = UDim2.new(fillRatio, 0, 1, 0) }, "Instant")
     self._valueLabel.Text = tostring(self._value)
 end
 
 function Slider:SetValue(value: number)
-    self._value = math.clamp(value, self._min, self._max)
+    self._value = normalizeValue(value, self._value, self._min, self._max, self._increment)
     self:_UpdateVisual()
     self._callback(self._value)
 end
@@ -230,14 +313,20 @@ function Slider:GetValue(): number
 end
 
 function Slider:SetMin(min: number)
-    self._min = min
-    self._value = math.clamp(self._value, self._min, self._max)
+    self._min = resolveNumber(min, self._min)
+    if self._max < self._min then
+        self._max = self._min
+    end
+    self._value = normalizeValue(self._value, self._value, self._min, self._max, self._increment)
     self:_UpdateVisual()
 end
 
 function Slider:SetMax(max: number)
-    self._max = max
-    self._value = math.clamp(self._value, self._min, self._max)
+    self._max = resolveNumber(max, self._max)
+    if self._max < self._min then
+        self._min = self._max
+    end
+    self._value = normalizeValue(self._value, self._value, self._min, self._max, self._increment)
     self:_UpdateVisual()
 end
 

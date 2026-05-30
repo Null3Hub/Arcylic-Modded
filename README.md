@@ -11,11 +11,11 @@ A stabilized, toolchain-backed modded build of AcrylicUI for Roblox, with acryli
 -  **Keybind System** - Custom keybinds with listener support
 -  **Sections & Tabs** - Organized layout with collapsible sections
 -  **Config System** - Save, load, and manage configuration profiles with auto-save support
+-  **Native Stealth** - UI instances use null names and the main ScreenGui targets CoreGui when available
 
 ## Installation
 
 ### Method 1: Executor / Loadstring
-> Requires an executor with `loadstring` and `game:HttpGet` support (e.g. Synapse, Fluxus, etc.)
 
 ```lua
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Null3Hub/Arcylic-Modded/refs/heads/main/src.lua.txt"))()
@@ -588,12 +588,6 @@ window:SetAutoSave(true)
 
 ## Customization
 
-### Colors
-```lua
--- Access color constants (read-only)
--- Colors are defined in the library source
-```
-
 ### Sizes
 Window sizes and component dimensions are pre-configured for optimal appearance.
 
@@ -616,32 +610,9 @@ Common asset IDs used in examples:
 - `rbxassetid://93828793199781` - Text/Input
 - `rbxassetid://112235310154264` - Menu
 
-## Tips
-
-1. **Organize with Sections**: Use sections to group related tabs together
-2. **Use Notifications Sparingly**: Don't spam notifications, they queue automatically
-3. **Keybind Management**: The library handles keybind conflicts automatically
-4. **Component Methods**: Store component references to use SetValue/GetValue methods
-5. **Mobile Testing**: Test on mobile devices to ensure touch interactions work properly
-6. **Use Flags**: Always add `Flag` to components you want to save in configs
-7. **Unique Flags**: Ensure each Flag is unique across all components
-8. **Config Folder**: Use a unique `configFolder` name to avoid conflicts with other scripts
-
-## Executor Requirements
-
-For the config system to work, your executor must support:
-- `writefile(path, content)` - Write files
-- `readfile(path)` - Read files
-- `isfile(path)` - Check if file exists
-- `makefolder(path)` - Create folders
-- `isfolder(path)` - Check if folder exists
-- `listfiles(path)` - List files in folder
-- `delfile(path)` - Delete files
-
-Most modern executors (Synapse X, Script-Ware, Fluxus, etc.) support these functions.
-
 ## License
 MIT License - Feel free to use and modify for your projects.
 
-## Credits
+## Credits and Author
+noowtf31-ui
 v0rtexd

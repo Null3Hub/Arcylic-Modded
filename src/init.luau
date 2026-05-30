@@ -42,6 +42,9 @@ AcrylicUI.Colors = require(script.Constants.Colors)
 AcrylicUI.Sizes = require(script.Constants.Sizes)
 AcrylicUI.Fonts = require(script.Constants.Fonts)
 AcrylicUI.Animation = require(script.Constants.Animation)
+AcrylicUI.Defaults = require(script.Constants.Defaults)
+AcrylicUI.Icons = require(script.Constants.Icons)
+AcrylicUI.Layers = require(script.Constants.Layers)
 
 -- Utilities (exposed for advanced usage)
 AcrylicUI.Utils = {

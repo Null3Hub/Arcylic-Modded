@@ -2,23 +2,31 @@ local Create = require(script.Parent.Parent.Utils.Create)
 local Colors = require(script.Parent.Parent.Constants.Colors)
 local Sizes = require(script.Parent.Parent.Constants.Sizes)
 local Fonts = require(script.Parent.Parent.Constants.Fonts)
+local Defaults = require(script.Parent.Parent.Constants.Defaults)
+local Layers = require(script.Parent.Parent.Constants.Layers)
 
 local ColorPicker = {}
 ColorPicker.__index = ColorPicker
+local ComponentDefaults = Defaults.Components or {}
+local CommonDefaults = ComponentDefaults.Common or {}
+local ColorPickerDefaults = ComponentDefaults.ColorPicker or {}
+local ColorPickerLayers = Layers.ColorPicker or {}
+local ColorPickerSizes = Sizes.ColorPicker or {}
 
 -- Minimal color picker: preview + simple palette popup
-local PRESETS = {
-    Color3.fromRGB(255, 255, 255),
-    Color3.fromRGB(255, 0, 0),
-    Color3.fromRGB(0, 255, 0),
-    Color3.fromRGB(0, 128, 255),
-    Color3.fromRGB(255, 128, 0),
-    Color3.fromRGB(255, 0, 255),
-}
+local PRESETS = ColorPickerDefaults.Presets
+    or {
+        Color3.fromRGB(255, 255, 255),
+        Color3.fromRGB(255, 0, 0),
+        Color3.fromRGB(0, 255, 0),
+        Color3.fromRGB(0, 128, 255),
+        Color3.fromRGB(255, 128, 0),
+        Color3.fromRGB(255, 0, 255),
+    }
 
 function ColorPicker.new(parent: Instance, config, window)
     local self = setmetatable({}, ColorPicker)
-    local name = (config and config.Name) or "Color Picker"
+    local name = (config and config.Name) or ColorPickerDefaults.Name or "Color Picker"
     self._callback = (config and config.Callback) or function() end
     self._color = (config and config.Default) or PRESETS[1]
     self._flag = config and config.Flag
@@ -26,12 +34,14 @@ function ColorPicker.new(parent: Instance, config, window)
     self._connections = {}
     local description = Create.GetDescription(config)
     local hasDescription = description ~= nil
-    local height = hasDescription and 50 or Sizes.Button.Height
+    local height = hasDescription
+            and (ColorPickerSizes.HeightWithDescription or CommonDefaults.HeightWithDescription or 50)
+        or Sizes.Button.Height
 
     self._frame = Create.Instance("Frame", {
         Name = "ColorPicker_" .. name,
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.4,
+        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, height),
         Parent = parent,
@@ -47,26 +57,53 @@ function ColorPicker.new(parent: Instance, config, window)
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = hasDescription and UDim2.new(0, 10, 0, 7) or UDim2.new(0, 10, 0, 0),
+        Position = hasDescription
+                and UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.LabelTop or 7)
+            or UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, 0),
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(1, -50, 0, 20),
+        Size = UDim2.new(
+            1,
+            -(ColorPickerSizes.LabelRightPadding or 50),
+            0,
+            Sizes.Component.LabelHeight or 20
+        ),
         Parent = self._frame,
     })
 
-    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 27), UDim2.new(1, -50, 0, 14))
+    Create.Description(
+        self._frame,
+        description,
+        UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.DescriptionTop or 27),
+        UDim2.new(
+            1,
+            -(ColorPickerSizes.LabelRightPadding or 50),
+            0,
+            Sizes.Component.DescriptionHeight or 14
+        )
+    )
 
     self._preview = Create.Instance("Frame", {
         Name = "Preview",
         BackgroundColor3 = self._color,
-        Position = UDim2.new(1, -45, 0.5, -8),
-        Size = UDim2.new(0, 35, 0, 16),
+        Position = UDim2.new(
+            1,
+            -(ColorPickerSizes.PreviewRightOffset or 45),
+            0.5,
+            -(ColorPickerSizes.PreviewVerticalOffset or 8)
+        ),
+        Size = UDim2.new(
+            0,
+            ColorPickerSizes.PreviewWidth or 35,
+            0,
+            ColorPickerSizes.PreviewHeight or 16
+        ),
         Parent = self._frame,
     })
     Create.Corner(self._preview, Sizes.Corner.Small)
     Create.Stroke(self._preview)
 
     local previewBtn = Create.Instance("TextButton", {
-        Text = "",
+        Text = CommonDefaults.EmptyText or "",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
         Parent = self._preview,
@@ -76,28 +113,54 @@ function ColorPicker.new(parent: Instance, config, window)
     self._palette = Create.Instance("Frame", {
         Name = "Palette",
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.04,
+        BackgroundTransparency = CommonDefaults.ControlTransparency or 0.04,
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 160, 0, 70),
+        Size = UDim2.new(
+            0,
+            ColorPickerSizes.PaletteWidth or 160,
+            0,
+            ColorPickerSizes.PaletteHeight or 70
+        ),
         Visible = false,
-        ZIndex = 2000,
+        ZIndex = ColorPickerLayers.Palette or 2000,
         Parent = parent,
     })
     Create.Corner(self._palette, Sizes.Corner.Medium)
     Create.Stroke(self._palette)
-    Create.Padding(self._palette, 8, 8, 8, 8)
+    Create.Padding(
+        self._palette,
+        ColorPickerSizes.PalettePadding or 8,
+        ColorPickerSizes.PalettePadding or 8,
+        ColorPickerSizes.PalettePadding or 8,
+        ColorPickerSizes.PalettePadding or 8
+    )
 
     Create.Instance("UIGridLayout", {
-        CellPadding = UDim2.new(0, 8, 0, 8),
-        CellSize = UDim2.new(0, 24, 0, 24),
+        CellPadding = UDim2.new(
+            0,
+            ColorPickerSizes.PaletteCellPadding or 8,
+            0,
+            ColorPickerSizes.PaletteCellPadding or 8
+        ),
+        CellSize = UDim2.new(
+            0,
+            ColorPickerSizes.PaletteSwatchSize or 24,
+            0,
+            ColorPickerSizes.PaletteSwatchSize or 24
+        ),
         Parent = self._palette,
     })
 
     for _, col in ipairs(PRESETS) do
         local swatch = Create.Instance("TextButton", {
             BackgroundColor3 = col,
-            Text = "",
-            Size = UDim2.new(0, 24, 0, 24),
+            Text = CommonDefaults.EmptyText or "",
+            Size = UDim2.new(
+                0,
+                ColorPickerSizes.PaletteSwatchSize or 24,
+                0,
+                ColorPickerSizes.PaletteSwatchSize or 24
+            ),
             Parent = self._palette,
         })
         Create.Corner(swatch, Sizes.Corner.Small)
@@ -121,7 +184,12 @@ function ColorPicker.new(parent: Instance, config, window)
         end
 
         local p = self._preview.AbsolutePosition
-        self._palette.Position = UDim2.new(0, p.X - 160 + 35, 0, p.Y + 22)
+        self._palette.Position = UDim2.new(
+            0,
+            p.X - (ColorPickerSizes.PaletteWidth or 160) + (ColorPickerSizes.PreviewWidth or 35),
+            0,
+            p.Y + (ColorPickerSizes.PaletteYOffset or 22)
+        )
         self._palette.Visible = true
     end
 

@@ -3,6 +3,8 @@ local Tween = require(script.Parent.Parent.Utils.Tween)
 local Colors = require(script.Parent.Parent.Constants.Colors)
 local Sizes = require(script.Parent.Parent.Constants.Sizes)
 local Fonts = require(script.Parent.Parent.Constants.Fonts)
+local Defaults = require(script.Parent.Parent.Constants.Defaults)
+local Icons = require(script.Parent.Parent.Constants.Icons)
 
 local Button = require(script.Parent.Button)
 local Toggle = require(script.Parent.Toggle)
@@ -12,6 +14,14 @@ local TextBox = require(script.Parent.TextBox)
 
 local Tab = {}
 Tab.__index = Tab
+local ComponentDefaults = Defaults.Components or {}
+local CommonDefaults = ComponentDefaults.Common or {}
+local ConfigUIDefaults = ComponentDefaults.ConfigUI or {}
+local ConfigDefaults = Defaults.Config or {}
+local MessageDefaults = Defaults.Messages or {}
+local NotificationDefaults = Defaults.Notification or {}
+local ComponentIcons = Icons.Components or {}
+local NotificationIcons = Icons.Notification or {}
 
 function Tab.new(window, section, name: string, icon: string?)
     local self = setmetatable({}, Tab)
@@ -37,11 +47,11 @@ function Tab.new(window, section, name: string, icon: string?)
     self._icon = Create.Instance("ImageLabel", {
         Name = "Icon",
         BackgroundTransparency = 1,
-        Image = icon or "rbxassetid://112235310154264",
+        Image = icon or ComponentIcons.Tab or "rbxassetid://112235310154264",
         ImageColor3 = Colors.TextDark,
         AnchorPoint = Vector2.new(0, 0.5),
-        Position = UDim2.new(0, 11, 0.5, 0),
-        Size = UDim2.new(0, 15, 0, 15),
+        Position = UDim2.new(0, Sizes.Tab.IconLeft or 11, 0.5, 0),
+        Size = UDim2.new(0, Sizes.Tab.IconSize or 15, 0, Sizes.Tab.IconSize or 15),
         Parent = self._button,
     })
 
@@ -52,17 +62,20 @@ function Tab.new(window, section, name: string, icon: string?)
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 33, 0, 0),
-        Size = UDim2.new(1, -42, 1, 0),
+        Position = UDim2.new(0, Sizes.Tab.TextLeft or 33, 0, 0),
+        Size = UDim2.new(1, -(Sizes.Tab.TextRightPadding or 42), 1, 0),
         TextSize = Fonts.Size.Small,
         Parent = self._button,
     })
 
-    Create.Instance("UIPadding", { PaddingRight = UDim.new(0, 9), Parent = self._text })
+    Create.Instance(
+        "UIPadding",
+        { PaddingRight = UDim.new(0, Sizes.Tab.TextPaddingRight or 9), Parent = self._text }
+    )
 
     local click = Create.Instance("TextButton", {
         Name = "Click",
-        Text = "",
+        Text = CommonDefaults.EmptyText or "",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
         Parent = self._button,
@@ -78,7 +91,7 @@ function Tab.new(window, section, name: string, icon: string?)
         Parent = window:GetContentContainer(),
     })
 
-    Create.ListLayout(self._content, 8)
+    Create.ListLayout(self._content, Sizes.Tab.ContentPadding or 8)
 
     table.insert(
         self._connections,
@@ -91,7 +104,11 @@ function Tab.new(window, section, name: string, icon: string?)
         self._connections,
         click.MouseEnter:Connect(function()
             if window._currentTab ~= self then
-                Tween.Create(self._button, { BackgroundTransparency = 0.7 }, "Fast")
+                Tween.Create(
+                    self._button,
+                    { BackgroundTransparency = CommonDefaults.HoverFaintTransparency or 0.7 },
+                    "Fast"
+                )
             end
         end)
     )
@@ -100,7 +117,11 @@ function Tab.new(window, section, name: string, icon: string?)
         self._connections,
         click.MouseLeave:Connect(function()
             if window._currentTab ~= self then
-                Tween.Create(self._button, { BackgroundTransparency = 1 }, "Fast")
+                Tween.Create(
+                    self._button,
+                    { BackgroundTransparency = CommonDefaults.Transparent or 1 },
+                    "Fast"
+                )
             end
         end)
     )
@@ -119,7 +140,11 @@ end
 
 function Tab:Select()
     self._content.Visible = true
-    Tween.Create(self._button, { BackgroundTransparency = 0.4 }, "Fast")
+    Tween.Create(
+        self._button,
+        { BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4 },
+        "Fast"
+    )
     Tween.Create(self._text, { TextColor3 = Colors.Text }, "Fast")
     Tween.Create(self._icon, { ImageColor3 = Colors.Text }, "Fast")
     self._stroke.Transparency = 0
@@ -127,7 +152,7 @@ end
 
 function Tab:Deselect()
     self._content.Visible = false
-    Tween.Create(self._button, { BackgroundTransparency = 1 }, "Fast")
+    Tween.Create(self._button, { BackgroundTransparency = CommonDefaults.Transparent or 1 }, "Fast")
     Tween.Create(self._text, { TextColor3 = Colors.TextDark }, "Fast")
     Tween.Create(self._icon, { ImageColor3 = Colors.TextDark }, "Fast")
     self._stroke.Transparency = 1
@@ -143,7 +168,7 @@ function Tab:CreateSection(title: string)
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
         TextSize = Fonts.Size.Section,
-        Size = UDim2.new(1, 0, 0, 25),
+        Size = UDim2.new(1, 0, 0, Sizes.Tab.SectionHeight or 25),
         Parent = self._content,
     })
     return label
@@ -185,20 +210,20 @@ function Tab:CreateTextBox(config)
 end
 
 function Tab:CreateConfigSection()
-    self:CreateSection("Configuration")
+    self:CreateSection(ConfigUIDefaults.SectionTitle or "Configuration")
 
     local function getConfigOptions()
         local configs = self._window:GetConfigs()
         if #configs == 0 then
-            return { "default" }
+            return { ConfigDefaults.DefaultName or "default" }
         end
         return configs
     end
 
     local configNameBox = self:CreateTextBox({
-        Name = "Config Name",
+        Name = ConfigUIDefaults.ConfigName or "Config Name",
         Default = self._window._currentConfig,
-        Placeholder = "Enter config name...",
+        Placeholder = ConfigUIDefaults.ConfigPlaceholder or "Enter config name...",
         Callback = function(text)
             self._window._currentConfig = text
         end,
@@ -206,7 +231,7 @@ function Tab:CreateConfigSection()
 
     local configDropdown
     configDropdown = self:CreateDropdown({
-        Name = "Select Config",
+        Name = ConfigUIDefaults.SelectConfig or "Select Config",
         Options = getConfigOptions(),
         Default = self._window._currentConfig,
         Callback = function(selected)
@@ -218,7 +243,7 @@ function Tab:CreateConfigSection()
     })
 
     self:CreateButton({
-        Name = "Save Config",
+        Name = ConfigUIDefaults.SaveConfig or "Save Config",
         Callback = function()
             local configName = configNameBox:GetText()
             if configName ~= "" and self._window:SaveConfig(configName) then
@@ -228,7 +253,7 @@ function Tab:CreateConfigSection()
     })
 
     self:CreateButton({
-        Name = "Load Config",
+        Name = ConfigUIDefaults.LoadConfig or "Load Config",
         Callback = function()
             local configName = configNameBox:GetText()
             if configName ~= "" then
@@ -238,7 +263,7 @@ function Tab:CreateConfigSection()
     })
 
     self:CreateButton({
-        Name = "Delete Config",
+        Name = ConfigUIDefaults.DeleteConfig or "Delete Config",
         Callback = function()
             local configName = configNameBox:GetText()
             if configName ~= "" and self._window:DeleteConfig(configName) then
@@ -248,20 +273,22 @@ function Tab:CreateConfigSection()
     })
 
     self:CreateButton({
-        Name = "Refresh Configs",
+        Name = ConfigUIDefaults.RefreshConfigs or "Refresh Configs",
         Callback = function()
             configDropdown:Refresh(getConfigOptions())
             self._window:Notify({
-                Title = "Configs Refreshed",
-                Description = "Config list updated",
-                Duration = 2,
-                Icon = "rbxassetid://10723356507",
+                Title = MessageDefaults.ConfigsRefreshedTitle or "Configs Refreshed",
+                Description = MessageDefaults.ConfigsRefreshedDescription or "Config list updated",
+                Duration = NotificationDefaults.SuccessDuration or 2,
+                Icon = NotificationIcons.Config
+                    or ComponentIcons.Config
+                    or "rbxassetid://10723356507",
             })
         end,
     })
 
     self:CreateToggle({
-        Name = "Auto Save",
+        Name = ConfigUIDefaults.AutoSave or "Auto Save",
         Default = false,
         Callback = function(enabled)
             self._window:SetAutoSave(enabled)
@@ -269,7 +296,7 @@ function Tab:CreateConfigSection()
     })
 
     self:CreateToggle({
-        Name = "Auto Load",
+        Name = ConfigUIDefaults.AutoLoad or "Auto Load",
         Default = self._window:GetAutoLoad(),
         Callback = function(enabled)
             self._window:SetAutoLoad(enabled)

@@ -3,9 +3,16 @@ local Tween = require(script.Parent.Parent.Utils.Tween)
 local Colors = require(script.Parent.Parent.Constants.Colors)
 local Sizes = require(script.Parent.Parent.Constants.Sizes)
 local Fonts = require(script.Parent.Parent.Constants.Fonts)
+local Defaults = require(script.Parent.Parent.Constants.Defaults)
+local Icons = require(script.Parent.Parent.Constants.Icons)
 
 local TextBox = {}
 TextBox.__index = TextBox
+local ComponentDefaults = Defaults.Components or {}
+local CommonDefaults = ComponentDefaults.Common or {}
+local TextBoxDefaults = ComponentDefaults.TextBox or {}
+local ComponentIcons = Icons.Components or {}
+local TextBoxSizes = Sizes.TextBox or {}
 
 export type TextBoxConfig = {
     Name: string?,
@@ -23,23 +30,27 @@ function TextBox.new(parent: Instance, config: TextBoxConfig?, window)
     local self = setmetatable({}, TextBox)
     config = config or {}
 
-    local name = config.Name or "TextBox"
-    local placeholder = config.Placeholder or "Enter text..."
+    local name = config.Name or TextBoxDefaults.Name or "TextBox"
+    local placeholder = config.Placeholder or TextBoxDefaults.Placeholder or "Enter text..."
     local description = Create.GetDescription(config)
     local hasDescription = description ~= nil
-    local height = hasDescription and 50 or Sizes.TextBox.Height
+    local height = hasDescription
+            and (TextBoxSizes.HeightWithDescription or CommonDefaults.HeightWithDescription or 50)
+        or Sizes.TextBox.Height
 
     self._callback = config.Callback or function() end
-    self._text = tostring(config.Default or "")
+    self._text = tostring(config.Default or TextBoxDefaults.DefaultText or "")
     self._connections = {}
     self._window = window
     self._flag = config.Flag
-    self._numbersOnly = config.NumbersOnly or false
+    self._numbersOnly = if config.NumbersOnly == nil
+        then (TextBoxDefaults.NumbersOnly or false)
+        else config.NumbersOnly
 
     self._frame = Create.Instance("Frame", {
         Name = "TextBox_" .. name,
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.4,
+        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, height),
         Parent = parent,
@@ -55,33 +66,55 @@ function TextBox.new(parent: Instance, config: TextBoxConfig?, window)
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = hasDescription and UDim2.new(0, 10, 0, 7) or UDim2.new(0, 10, 0.5, -10),
+        Position = hasDescription
+                and UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.LabelTop or 7)
+            or UDim2.new(
+                0,
+                Sizes.Component.LabelLeft or 10,
+                0.5,
+                -(Sizes.Component.LabelCenterOffset or 10)
+            ),
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(1, -190, 0, 20),
+        Size = UDim2.new(
+            1,
+            -(TextBoxSizes.LabelRightPadding or 190),
+            0,
+            Sizes.Component.LabelHeight or 20
+        ),
         Parent = self._frame,
     })
 
-    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 27), UDim2.new(1, -190, 0, 14))
+    Create.Description(
+        self._frame,
+        description,
+        UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.DescriptionTop or 27),
+        UDim2.new(
+            1,
+            -(TextBoxSizes.LabelRightPadding or 190),
+            0,
+            Sizes.Component.DescriptionHeight or 14
+        )
+    )
 
     self._icon = Create.Instance("ImageLabel", {
         Name = "Icon",
         BackgroundTransparency = 1,
-        Image = "rbxassetid://93828793199781",
+        Image = ComponentIcons.TextBox or "rbxassetid://93828793199781",
         ImageColor3 = Colors.TextDark,
         AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, -165, 0.5, 0),
-        Size = UDim2.new(0, 18, 0, 18),
+        Position = UDim2.new(1, -(TextBoxSizes.IconRightOffset or 165), 0.5, 0),
+        Size = UDim2.new(0, TextBoxSizes.IconSize or 18, 0, TextBoxSizes.IconSize or 18),
         Parent = self._frame,
     })
 
     self._container = Create.Instance("Frame", {
         Name = "TextBoxContainer",
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.04,
+        BackgroundTransparency = CommonDefaults.ControlTransparency or 0.04,
         AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, -10, 0.5, 0),
+        Position = UDim2.new(1, -(TextBoxSizes.InputRightOffset or 10), 0.5, 0),
         BorderSizePixel = 0,
-        Size = UDim2.new(0, Sizes.TextBox.InputWidth, 0, 26),
+        Size = UDim2.new(0, Sizes.TextBox.InputWidth, 0, TextBoxSizes.InputHeight or 26),
         Parent = self._frame,
     })
 
@@ -99,9 +132,11 @@ function TextBox.new(parent: Instance, config: TextBoxConfig?, window)
         TextTruncate = Enum.TextTruncate.AtEnd,
         BackgroundTransparency = 1,
         TextSize = Fonts.Size.Small,
-        Size = UDim2.new(1, -16, 1, 0),
-        Position = UDim2.new(0, 8, 0, 0),
-        ClearTextOnFocus = config.ClearOnFocus or false,
+        Size = UDim2.new(1, -(TextBoxSizes.InputTextRightPadding or 16), 1, 0),
+        Position = UDim2.new(0, TextBoxSizes.InputTextPadding or 8, 0, 0),
+        ClearTextOnFocus = if config.ClearOnFocus == nil
+            then (TextBoxDefaults.ClearOnFocus or false)
+            else config.ClearOnFocus,
         Parent = self._container,
     })
 
@@ -122,7 +157,11 @@ function TextBox.new(parent: Instance, config: TextBoxConfig?, window)
     table.insert(
         self._connections,
         self._input.FocusLost:Connect(function(enterPressed)
-            Tween.Create(self._container, { BackgroundTransparency = 0.04 }, "Fast")
+            Tween.Create(
+                self._container,
+                { BackgroundTransparency = CommonDefaults.ControlTransparency or 0.04 },
+                "Fast"
+            )
             Tween.Create(self._stroke, { Color = Colors.Border }, "Fast")
             Tween.Create(self._icon, { ImageColor3 = Colors.TextDark }, "Fast")
 

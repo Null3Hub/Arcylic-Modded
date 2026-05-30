@@ -4,25 +4,32 @@ local Create = require(script.Parent.Parent.Utils.Create)
 local Colors = require(script.Parent.Parent.Constants.Colors)
 local Sizes = require(script.Parent.Parent.Constants.Sizes)
 local Fonts = require(script.Parent.Parent.Constants.Fonts)
+local Defaults = require(script.Parent.Parent.Constants.Defaults)
 
 local Keybind = {}
 Keybind.__index = Keybind
+local ComponentDefaults = Defaults.Components or {}
+local CommonDefaults = ComponentDefaults.Common or {}
+local KeybindDefaults = ComponentDefaults.Keybind or {}
+local KeybindSizes = Sizes.Keybind or {}
 
 function Keybind.new(parent: Instance, config, window)
     local self = setmetatable({}, Keybind)
 
-    local name = (config and config.Name) or "Keybind"
-    local default = (config and config.Default) or Enum.KeyCode.F
+    local name = (config and config.Name) or KeybindDefaults.Name or "Keybind"
+    local default = (config and config.Default) or KeybindDefaults.Key or Enum.KeyCode.F
     local callback = (config and config.Callback) or function() end
     local flag = config and config.Flag
     local description = Create.GetDescription(config)
     local hasDescription = description ~= nil
-    local height = hasDescription and 50 or Sizes.Button.Height
+    local height = hasDescription
+            and (KeybindSizes.HeightWithDescription or CommonDefaults.HeightWithDescription or 50)
+        or Sizes.Button.Height
 
     self._frame = Create.Instance("Frame", {
         Name = "Keybind_" .. name,
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.4,
+        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, height),
         Parent = parent,
@@ -38,22 +45,39 @@ function Keybind.new(parent: Instance, config, window)
         Text = name,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = hasDescription and UDim2.new(0, 10, 0, 7) or UDim2.new(0, 10, 0.5, -10),
+        Position = hasDescription
+                and UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.LabelTop or 7)
+            or UDim2.new(
+                0,
+                Sizes.Component.LabelLeft or 10,
+                0.5,
+                -(Sizes.Component.LabelCenterOffset or 10)
+            ),
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(0, 200, 0, 20),
+        Size = UDim2.new(0, KeybindSizes.LabelWidth or 200, 0, Sizes.Component.LabelHeight or 20),
         Parent = self._frame,
     })
 
-    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 27), UDim2.new(0, 200, 0, 14))
+    Create.Description(
+        self._frame,
+        description,
+        UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.DescriptionTop or 27),
+        UDim2.new(0, KeybindSizes.LabelWidth or 200, 0, Sizes.Component.DescriptionHeight or 14)
+    )
 
     self._box = Create.Instance("Frame", {
         Name = "KeyBox",
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.04,
+        BackgroundTransparency = CommonDefaults.ControlTransparency or 0.04,
         AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, -10, 0.5, 0),
+        Position = UDim2.new(1, -(KeybindSizes.BoxRightOffset or 10), 0.5, 0),
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 30, 0, 26),
+        Size = UDim2.new(
+            0,
+            KeybindSizes.BoxWidth or KeybindDefaults.BoxWidth or 30,
+            0,
+            KeybindSizes.BoxHeight or 26
+        ),
         Parent = self._frame,
     })
 
@@ -73,7 +97,7 @@ function Keybind.new(parent: Instance, config, window)
 
     self._listenBtn = Create.Instance("TextButton", {
         Name = "Listen",
-        Text = "",
+        Text = CommonDefaults.EmptyText or "",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
         Parent = self._box,
@@ -85,7 +109,9 @@ function Keybind.new(parent: Instance, config, window)
     self._window = window
     self._connections = {}
 
-    self._id = name .. "_" .. tostring(math.floor(os.clock() * 1000))
+    self._id = name
+        .. "_"
+        .. tostring(math.floor(os.clock() * (KeybindDefaults.IdClockScale or 1000)))
     window:RegisterKeybind(self._id, self._currentKey, function()
         if self._blocked then
             return
@@ -96,12 +122,21 @@ function Keybind.new(parent: Instance, config, window)
 
     local function refresh()
         if self._listening then
-            self._label.Text = "..."
-            self._box.Size = UDim2.new(0, 43, 0, 26)
+            self._label.Text = KeybindDefaults.ListeningText or "..."
+            self._box.Size = UDim2.new(
+                0,
+                KeybindSizes.ListeningWidth or KeybindDefaults.ListeningWidth or 43,
+                0,
+                KeybindSizes.BoxHeight or 26
+            )
         else
             local keyName = self._currentKey.Name
-            local w = math.max(#keyName * 9 + 10, 24)
-            self._box.Size = UDim2.new(0, w, 0, 26)
+            local w = math.max(
+                #keyName * (KeybindDefaults.TextWidthScale or 9)
+                    + (KeybindDefaults.TextWidthPadding or 10),
+                KeybindDefaults.MinWidth or 24
+            )
+            self._box.Size = UDim2.new(0, w, 0, KeybindSizes.BoxHeight or 26)
             self._label.Text = keyName
         end
     end

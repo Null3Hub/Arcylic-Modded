@@ -9,8 +9,13 @@ local Tween = require(script.Parent.Parent.Utils.Tween)
 local Colors = require(script.Parent.Parent.Constants.Colors)
 local Sizes = require(script.Parent.Parent.Constants.Sizes)
 local Fonts = require(script.Parent.Parent.Constants.Fonts)
+local Defaults = require(script.Parent.Parent.Constants.Defaults)
+local Icons = require(script.Parent.Parent.Constants.Icons)
 
 local Notification = {}
+local NotificationDefaults = Defaults.Notification or {}
+local NotificationIcons = Icons.Notification or {}
+local NotificationSizes = Sizes.Notification or {}
 
 local Containers: { [ScreenGui]: Frame } = {}
 
@@ -35,14 +40,24 @@ function Notification.CreateContainer(screenGui: ScreenGui): Frame
     Containers[screenGui] = nil
 
     local container = Create.Instance("Frame", {
-        Name = "NotificationContainer",
+        Name = NotificationDefaults.ContainerName or "NotificationContainer",
         BackgroundTransparency = 1,
-        Position = UDim2.new(1, -240, 0, 20),
-        Size = UDim2.new(0, 220, 1, -40),
+        Position = UDim2.new(
+            1,
+            -(NotificationSizes.RightOffset or 240),
+            0,
+            NotificationSizes.TopOffset or 20
+        ),
+        Size = UDim2.new(
+            0,
+            NotificationSizes.Width or 220,
+            1,
+            -(NotificationSizes.VerticalPadding or 40)
+        ),
         Parent = screenGui,
     })
 
-    Create.ListLayout(container, 10)
+    Create.ListLayout(container, NotificationSizes.Spacing or 10)
     Containers[screenGui] = container
 
     return container
@@ -74,23 +89,26 @@ end
 ]]
 function Notification.Show(config: NotificationConfig, screenGui: ScreenGui?): Frame?
     if not screenGui then
-        warn("AcrylicUI: Notification container not initialized")
+        warn(
+            NotificationDefaults.WarningUninitialized
+                or "AcrylicUI: Notification container not initialized"
+        )
         return nil
     end
 
     local container = Notification.CreateContainer(screenGui)
 
-    local title = config.Title or "Notification"
-    local description = config.Description or ""
-    local duration = config.Duration or 3
-    local icon = config.Icon or "rbxassetid://10709775704"
+    local title = config.Title or NotificationDefaults.Title or "Notification"
+    local description = config.Description or NotificationDefaults.Description or ""
+    local duration = config.Duration or NotificationDefaults.Duration or 3
+    local icon = config.Icon or NotificationIcons.Default or "rbxassetid://10709775704"
 
     -- Notification frame
     local notification = Create.Instance("Frame", {
-        Name = "Notification",
+        Name = NotificationDefaults.InstanceName or "Notification",
         BackgroundColor3 = Colors.Notification.Background,
-        Position = UDim2.new(1, 20, 0, 0),
-        Size = UDim2.new(1, 0, 0, Sizes.Notification.Height),
+        Position = UDim2.new(1, NotificationSizes.SlideOffset or 20, 0, 0),
+        Size = UDim2.new(1, 0, 0, NotificationSizes.Height or Sizes.Notification.Height),
         ClipsDescendants = true,
         Parent = container,
     })
@@ -100,7 +118,7 @@ function Notification.Show(config: NotificationConfig, screenGui: ScreenGui?): F
     Create.Instance("UIStroke", {
         ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
         Color = Colors.Notification.Border,
-        Thickness = 1.5,
+        Thickness = NotificationSizes.StrokeThickness or 1.5,
         Parent = notification,
     })
 
@@ -112,9 +130,19 @@ function Notification.Show(config: NotificationConfig, screenGui: ScreenGui?): F
         Text = title,
         TextXAlignment = Enum.TextXAlignment.Left,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 14, 0, 16),
+        Position = UDim2.new(
+            0,
+            NotificationSizes.TextLeft or 14,
+            0,
+            NotificationSizes.TitleTop or 16
+        ),
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(1, -60, 0, 19),
+        Size = UDim2.new(
+            1,
+            -(NotificationSizes.TextRightPadding or 60),
+            0,
+            NotificationSizes.TextHeight or 19
+        ),
         Parent = notification,
     })
 
@@ -127,9 +155,19 @@ function Notification.Show(config: NotificationConfig, screenGui: ScreenGui?): F
         TextXAlignment = Enum.TextXAlignment.Left,
         TextTruncate = Enum.TextTruncate.AtEnd,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 14, 0, 38),
+        Position = UDim2.new(
+            0,
+            NotificationSizes.TextLeft or 14,
+            0,
+            NotificationSizes.DescriptionTop or 38
+        ),
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(1, -60, 0, 19),
+        Size = UDim2.new(
+            1,
+            -(NotificationSizes.TextRightPadding or 60),
+            0,
+            NotificationSizes.TextHeight or 19
+        ),
         Parent = notification,
     })
 
@@ -138,8 +176,13 @@ function Notification.Show(config: NotificationConfig, screenGui: ScreenGui?): F
         Name = "Icon",
         BackgroundTransparency = 1,
         Image = icon,
-        Position = UDim2.new(1, -33, 0, 23),
-        Size = UDim2.new(0, 19, 0, 19),
+        Position = UDim2.new(
+            1,
+            -(NotificationSizes.IconRightOffset or 33),
+            0,
+            NotificationSizes.IconTop or 23
+        ),
+        Size = UDim2.new(0, NotificationSizes.IconSize or 19, 0, NotificationSizes.IconSize or 19),
         Parent = notification,
     })
 
@@ -151,8 +194,8 @@ function Notification.Show(config: NotificationConfig, screenGui: ScreenGui?): F
     local timerBar = Create.Instance("Frame", {
         Name = "Timer",
         BackgroundColor3 = Colors.Notification.Timer,
-        Position = UDim2.new(0, 0, 1, -3),
-        Size = UDim2.new(1, 0, 0, 3),
+        Position = UDim2.new(0, 0, 1, -(NotificationSizes.TimerHeight or 3)),
+        Size = UDim2.new(1, 0, 0, NotificationSizes.TimerHeight or 3),
         Parent = notification,
     })
 
@@ -162,20 +205,25 @@ function Notification.Show(config: NotificationConfig, screenGui: ScreenGui?): F
     Tween.Create(
         notification,
         { Position = UDim2.new(0, 0, 0, 0) },
-        0.3,
+        NotificationDefaults.AnimationDuration or 0.3,
         Enum.EasingStyle.Back,
         Enum.EasingDirection.Out
     )
 
     -- Timer animation
-    Tween.Create(timerBar, { Size = UDim2.new(0, 0, 0, 3) }, duration, Enum.EasingStyle.Linear)
+    Tween.Create(
+        timerBar,
+        { Size = UDim2.new(0, 0, 0, NotificationSizes.TimerHeight or 3) },
+        duration,
+        Enum.EasingStyle.Linear
+    )
 
     -- Auto dismiss
     task.delay(duration, function()
         Tween.CreateWithCallback(
             notification,
-            { Position = UDim2.new(1, 20, 0, 0) },
-            0.3,
+            { Position = UDim2.new(1, NotificationSizes.SlideOffset or 20, 0, 0) },
+            NotificationDefaults.AnimationDuration or 0.3,
             function()
                 notification:Destroy()
             end

@@ -12,6 +12,9 @@ local Device = require(script.Parent.Parent.Utils.Device)
 local Colors = require(script.Parent.Parent.Constants.Colors)
 local Sizes = require(script.Parent.Parent.Constants.Sizes)
 local Fonts = require(script.Parent.Parent.Constants.Fonts)
+local Defaults = require(script.Parent.Parent.Constants.Defaults)
+local Icons = require(script.Parent.Parent.Constants.Icons)
+local Layers = require(script.Parent.Parent.Constants.Layers)
 
 local AcrylicBlur = require(script.Parent.AcrylicBlur)
 local Notification = require(script.Parent.Notification)
@@ -71,20 +74,30 @@ export type WindowConfig = {
     ClampToViewport: boolean?,
 }
 
-local CONFIG_ROOT = "AcrylicConfigs"
-local AUTOLOAD_CONFIG_NAME = "_autoload"
-local MIN_MOBILE_WIDTH = 320
-local MIN_MOBILE_HEIGHT = 240
+local WindowDefaults = Defaults.Window or {}
+local ConfigDefaults = Defaults.Config or {}
+local NotificationDefaults = Defaults.Notification or {}
+local MessageDefaults = Defaults.Messages or {}
+local CommonDefaults = Defaults.Components and Defaults.Components.Common or {}
+local WindowIcons = Icons.Window or {}
+local NotificationIcons = Icons.Notification or {}
+local WindowLayers = Layers.Window or {}
+local WindowChromeSizes = Sizes.WindowChrome or {}
+local CONFIG_ROOT = ConfigDefaults.Root or "AcrylicConfigs"
+local AUTOLOAD_CONFIG_NAME = ConfigDefaults.AutoLoadName or "_autoload"
+local CONFIG_DEFAULT_NAME = ConfigDefaults.DefaultName or "default"
+local CONFIG_EXTENSION = ConfigDefaults.Extension or ".json"
+local CONFIG_EXTENSION_PATTERN = CONFIG_EXTENSION:gsub("(%W)", "%%%1")
 
 local function SanitizeConfigName(configName: string?): string
-    local sanitized = tostring(configName or "default")
+    local sanitized = tostring(configName or CONFIG_DEFAULT_NAME)
     sanitized = sanitized:gsub("^%s+", ""):gsub("%s+$", "")
     sanitized = sanitized:gsub("%.%.", "_")
     sanitized = sanitized:gsub('[%/%\\%*%?"<>|:]', "_")
     sanitized = sanitized:gsub("^%.+", ""):gsub("%.+$", "")
 
     if sanitized == "" then
-        sanitized = "default"
+        sanitized = CONFIG_DEFAULT_NAME
     end
 
     return sanitized
@@ -95,11 +108,14 @@ local function GetConfigFolder(configFolder: string): string
 end
 
 local function GetConfigPath(configFolder: string, configName: string): string
-    return GetConfigFolder(configFolder) .. "/" .. SanitizeConfigName(configName) .. ".json"
+    return GetConfigFolder(configFolder)
+        .. "/"
+        .. SanitizeConfigName(configName)
+        .. CONFIG_EXTENSION
 end
 
 local function GetAutoLoadPath(configFolder: string): string
-    return GetConfigFolder(configFolder) .. "/_autoload.json"
+    return GetConfigFolder(configFolder) .. "/" .. AUTOLOAD_CONFIG_NAME .. CONFIG_EXTENSION
 end
 
 local function EnsureConfigFolder(configFolder: string)
@@ -166,9 +182,10 @@ local function ResolveWindowSizes(requestedSize, clampToViewport)
 
     if clampToViewport then
         local viewport = Device.GetViewportSize()
-        local margin = Device.IsMobile() and 24 or 40
-        maxWidth = math.max(MIN_MOBILE_WIDTH, viewport.X - margin)
-        maxHeight = math.max(MIN_MOBILE_HEIGHT, viewport.Y - margin)
+        local margin = Device.IsMobile() and (WindowChromeSizes.MobileViewportMargin or 24)
+            or (WindowChromeSizes.DesktopViewportMargin or 40)
+        maxWidth = math.max(WindowChromeSizes.MinMobileWidth or 320, viewport.X - margin)
+        maxHeight = math.max(WindowChromeSizes.MinMobileHeight or 240, viewport.Y - margin)
     end
 
     local defaultWidth = requestedSize and requestedSize.Width or Sizes.Window.Width
@@ -221,14 +238,16 @@ function Window.new(config: WindowConfig?)
         Colors:SetTheme(config.Theme)
     end
 
-    local clampToViewport = if config.ClampToViewport == nil then true else config.ClampToViewport
+    local clampToViewport = if config.ClampToViewport == nil
+        then (WindowDefaults.ClampToViewport ~= false)
+        else config.ClampToViewport
     local resolvedSize, minSize, maxSize = ResolveWindowSizes(config.Size, clampToViewport)
 
-    self._title = config.Title or "AcrylicUI"
+    self._title = config.Title or WindowDefaults.Title or "AcrylicUI"
     self._size = resolvedSize
     self._minSize = minSize
     self._maxSize = maxSize
-    self._toggleKey = config.ToggleKey or Enum.KeyCode.RightControl
+    self._toggleKey = config.ToggleKey or WindowDefaults.ToggleKey or Enum.KeyCode.RightControl
     self._configFolder = SanitizeConfigName(config.ConfigFolder or self._title)
     self._visible = true
     self._minimized = false
@@ -240,10 +259,10 @@ function Window.new(config: WindowConfig?)
     self._originalHeight = self._size.Height
     self._autoSave = false
     self._autoSaveThreadRunning = false
-    self._currentConfig = "default"
+    self._currentConfig = CONFIG_DEFAULT_NAME
     self._destroyed = false
     self._autoLoad = false
-    self._autoLoadConfigName = "default"
+    self._autoLoadConfigName = CONFIG_DEFAULT_NAME
     self._pendingConfigData = nil
     self:_LoadAutoLoadState()
 
@@ -263,14 +282,27 @@ end
 
 function Window:_CreateGui()
     local player = Services.Players.LocalPlayer
+    local coreGuiAvailable, coreGui = pcall(function()
+        return game:GetService("CoreGui")
+    end)
 
     -- Screen GUI
     self._screenGui = Create.Instance("ScreenGui", {
-        Name = "AcrylicUI",
+        Name = WindowDefaults.ScreenGuiName or "AcrylicUI",
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
         ResetOnSpawn = false,
-        Parent = player:WaitForChild("PlayerGui"),
     })
+
+    local parentedToCoreGui = false
+    if coreGuiAvailable and coreGui then
+        parentedToCoreGui = pcall(function()
+            self._screenGui.Parent = coreGui
+        end)
+    end
+
+    if not parentedToCoreGui then
+        self._screenGui.Parent = player:WaitForChild("PlayerGui")
+    end
 
     -- Main container
     self._container = Create.Instance("Frame", {
@@ -294,10 +326,15 @@ function Window:_CreateGui()
         TextColor3 = Colors.Text,
         Text = self._title,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0, 10),
+        Position = UDim2.new(0, WindowChromeSizes.TitleX or 10, 0, WindowChromeSizes.TitleY or 10),
         TextXAlignment = Enum.TextXAlignment.Left,
         TextSize = Fonts.Size.Title,
-        Size = UDim2.new(0, 150, 0, 25),
+        Size = UDim2.new(
+            0,
+            WindowChromeSizes.TitleWidth or 150,
+            0,
+            WindowChromeSizes.TitleHeight or 25
+        ),
         Parent = self._container,
     })
 
@@ -321,19 +358,34 @@ function Window:_CreateWindowControls()
     local minimizeBtn = Create.Instance("ImageLabel", {
         Name = "Minimize",
         ImageColor3 = Colors.TextDark,
-        Image = "rbxassetid://82603981310445",
+        Image = WindowIcons.Minimize or "rbxassetid://82603981310445",
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, -35, 0, 15),
-        Size = UDim2.new(0, 15, 0, 15),
+        Position = UDim2.new(
+            1,
+            -(WindowChromeSizes.MinimizeRightOffset or 35),
+            0,
+            WindowChromeSizes.ControlTop or 15
+        ),
+        Size = UDim2.new(
+            0,
+            WindowChromeSizes.ControlSize or 15,
+            0,
+            WindowChromeSizes.ControlSize or 15
+        ),
         Parent = self._container,
     })
 
     local minimizeClick = Create.Instance("TextButton", {
         Name = "ClickArea",
-        Text = "",
+        Text = CommonDefaults.EmptyText or "",
         BackgroundTransparency = 1,
-        Size = UDim2.new(0, 21, 0, 15),
+        Size = UDim2.new(
+            0,
+            WindowChromeSizes.MinimizeClickWidth or 21,
+            0,
+            WindowChromeSizes.ControlSize or 15
+        ),
         Parent = minimizeBtn,
     })
 
@@ -353,11 +405,21 @@ function Window:_CreateWindowControls()
     local closeBtn = Create.Instance("ImageButton", {
         Name = "Close",
         ImageColor3 = Colors.TextDark,
-        Image = "rbxassetid://119943770201674",
+        Image = WindowIcons.Close or "rbxassetid://119943770201674",
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, -10, 0, 15),
-        Size = UDim2.new(0, 15, 0, 15),
+        Position = UDim2.new(
+            1,
+            -(WindowChromeSizes.CloseRightOffset or 10),
+            0,
+            WindowChromeSizes.ControlTop or 15
+        ),
+        Size = UDim2.new(
+            0,
+            WindowChromeSizes.ControlSize or 15,
+            0,
+            WindowChromeSizes.ControlSize or 15
+        ),
         Parent = self._container,
     })
 
@@ -378,13 +440,23 @@ function Window:_CreateWindowControls()
         Name = "Resize",
         Active = true,
         ImageColor3 = Colors.ResizeHandle,
-        Image = "rbxassetid://120997033468887",
+        Image = WindowIcons.Resize or "rbxassetid://120997033468887",
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.new(1, -5, 1, -5),
-        Size = UDim2.new(0, 62, 0, 60),
+        Position = UDim2.new(
+            1,
+            -(WindowChromeSizes.ResizeOffset or 5),
+            1,
+            -(WindowChromeSizes.ResizeOffset or 5)
+        ),
+        Size = UDim2.new(
+            0,
+            WindowChromeSizes.ResizeWidth or 62,
+            0,
+            WindowChromeSizes.ResizeHeight or 60
+        ),
         BorderSizePixel = 0,
-        ZIndex = 1000,
+        ZIndex = WindowLayers.ResizeHandle or 1000,
         Parent = self._container,
     })
 
@@ -392,13 +464,18 @@ function Window:_CreateWindowControls()
     self._bottomDragArea = Create.Instance("TextButton", {
         Name = "BottomDragArea",
         Active = true,
-        Text = "",
+        Text = CommonDefaults.EmptyText or "",
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(0.5, 0),
         Position = UDim2.new(0.5, 0, 1, 0),
-        Size = UDim2.new(0, 140, 0, 18),
+        Size = UDim2.new(
+            0,
+            WindowChromeSizes.BottomDragWidth or 140,
+            0,
+            WindowChromeSizes.BottomDragHeight or 18
+        ),
         BorderSizePixel = 0,
-        ZIndex = 1000,
+        ZIndex = WindowLayers.BottomDragArea or 1000,
         Parent = self._container,
     })
 
@@ -406,10 +483,15 @@ function Window:_CreateWindowControls()
         Name = "BottomDragBar",
         BackgroundColor3 = Colors.ResizeHandle,
         AnchorPoint = Vector2.new(0.5, 0),
-        Position = UDim2.new(0.5, 0, 0, 4.5),
-        Size = UDim2.new(0, 90, 0, 4),
+        Position = UDim2.new(0.5, 0, 0, WindowChromeSizes.BottomDragBarTop or 4.5),
+        Size = UDim2.new(
+            0,
+            WindowChromeSizes.BottomDragBarWidth or 90,
+            0,
+            WindowChromeSizes.BottomDragBarHeight or 4
+        ),
         BorderSizePixel = 0,
-        ZIndex = 1001,
+        ZIndex = WindowLayers.BottomDragBar or 1001,
         Parent = self._bottomDragArea,
     })
 
@@ -424,7 +506,7 @@ function Window:_CreateContentArea()
     Create.Instance("Frame", {
         Name = "HeaderSeparator",
         BackgroundColor3 = Colors.Border,
-        Position = UDim2.new(0, 0, 0, 45),
+        Position = UDim2.new(0, 0, 0, WindowChromeSizes.HeaderHeight or 45),
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, 1),
         Parent = self._container,
@@ -434,8 +516,8 @@ function Window:_CreateContentArea()
     self._mainContent = Create.Instance("Frame", {
         Name = "MainContent",
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 0, 0, 46),
-        Size = UDim2.new(1, 0, 1, -46),
+        Position = UDim2.new(0, 0, 0, WindowChromeSizes.ContentTop or 46),
+        Size = UDim2.new(1, 0, 1, -(WindowChromeSizes.ContentTop or 46)),
         ClipsDescendants = true,
         Parent = self._container,
     })
@@ -446,7 +528,7 @@ function Window:_CreateContentArea()
         ScrollBarThickness = 0,
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 0, 0, 0),
-        Size = UDim2.new(0, 165, 1, 0),
+        Size = UDim2.new(0, WindowChromeSizes.SidebarWidth or 165, 1, 0),
         CanvasSize = UDim2.new(0, 0, 0, 0),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
         ScrollingDirection = Enum.ScrollingDirection.Y,
@@ -460,7 +542,7 @@ function Window:_CreateContentArea()
     Create.Instance("Frame", {
         Name = "Separator",
         BackgroundColor3 = Colors.Border,
-        Position = UDim2.new(0, 165, 0, 0),
+        Position = UDim2.new(0, WindowChromeSizes.SidebarWidth or 165, 0, 0),
         BorderSizePixel = 0,
         Size = UDim2.new(0, 1, 1, 0),
         Parent = self._mainContent,
@@ -469,11 +551,11 @@ function Window:_CreateContentArea()
     -- Content area
     self._contentContainer = Create.Instance("ScrollingFrame", {
         Name = "Content",
-        ScrollBarThickness = 3,
+        ScrollBarThickness = WindowChromeSizes.ContentScrollbarThickness or 3,
         ScrollBarImageColor3 = Colors.Scrollbar,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 166, 0, 0),
-        Size = UDim2.new(1, -166, 1, 0),
+        Position = UDim2.new(0, WindowChromeSizes.ContentLeft or 166, 0, 0),
+        Size = UDim2.new(1, -(WindowChromeSizes.ContentLeft or 166), 1, 0),
         CanvasSize = UDim2.new(0, 0, 0, 0),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
         ScrollingDirection = Enum.ScrollingDirection.Y,
@@ -564,11 +646,12 @@ function Window:_SetupBottomDragHandle()
 
     local function update()
         local color = (hovering or holding) and Colors.Text or Colors.ResizeHandle
-        local height = holding and 5.5 or 4
+        local height = holding and (WindowChromeSizes.BottomDragBarHoldingHeight or 5.5)
+            or (WindowChromeSizes.BottomDragBarHeight or 4)
 
         Tween.Create(self._bottomDragBar, {
             BackgroundColor3 = color,
-            Size = UDim2.new(0, 90, 0, height),
+            Size = UDim2.new(0, WindowChromeSizes.BottomDragBarWidth or 90, 0, height),
         }, "Fast")
     end
 
@@ -620,7 +703,12 @@ function Window:_ToggleMinimize()
     if self._minimized then
         Tween.Create(self._mainContent, { Size = UDim2.new(1, 0, 0, 0) }, "Slow")
         Tween.Create(self._container, {
-            Size = UDim2.new(0, self._container.AbsoluteSize.X, 0, 45),
+            Size = UDim2.new(
+                0,
+                self._container.AbsoluteSize.X,
+                0,
+                WindowChromeSizes.HeaderHeight or 45
+            ),
         }, "Slow")
         self._resizeBtn.Visible = false
         self._bottomDragArea.Visible = false
@@ -628,8 +716,12 @@ function Window:_ToggleMinimize()
         Tween.Create(self._container, {
             Size = UDim2.new(0, self._container.AbsoluteSize.X, 0, self._originalHeight),
         }, "Slow")
-        task.delay(0.1, function()
-            Tween.Create(self._mainContent, { Size = UDim2.new(1, 0, 1, -46) }, "Normal")
+        task.delay(WindowDefaults.MinimizeRestoreDelay or 0.1, function()
+            Tween.Create(
+                self._mainContent,
+                { Size = UDim2.new(1, 0, 1, -(WindowChromeSizes.ContentTop or 46)) },
+                "Normal"
+            )
         end)
         self._resizeBtn.Visible = true
         self._bottomDragArea.Visible = true
@@ -660,18 +752,28 @@ end
 function Window:_SetupMobileToggle()
     self._mobileToggle = Create.Instance("ImageButton", {
         Name = "MobileToggle",
-        Image = "rbxassetid://112235310154264",
+        Image = WindowIcons.MobileToggle or "rbxassetid://112235310154264",
         ImageColor3 = Colors.Text,
         BackgroundColor3 = Colors.Background,
         BackgroundTransparency = 0.1,
-        Position = UDim2.new(0, 15, 0.5, -25),
-        Size = UDim2.new(0, 50, 0, 50),
+        Position = UDim2.new(
+            0,
+            WindowChromeSizes.MobileToggleX or 15,
+            0.5,
+            WindowChromeSizes.MobileToggleYOffset or -25
+        ),
+        Size = UDim2.new(
+            0,
+            WindowChromeSizes.MobileToggleSize or 50,
+            0,
+            WindowChromeSizes.MobileToggleSize or 50
+        ),
         AnchorPoint = Vector2.new(0, 0.5),
         Visible = false,
         Parent = self._screenGui,
     })
 
-    Create.Corner(self._mobileToggle, 25)
+    Create.Corner(self._mobileToggle, WindowChromeSizes.MobileToggleCorner or 25)
     Create.Stroke(self._mobileToggle)
 
     local dragging = false
@@ -701,7 +803,7 @@ function Window:_SetupMobileToggle()
             then
                 if dragging and dragStart then
                     local delta = input.Position - dragStart
-                    if delta.Magnitude < 10 then
+                    if delta.Magnitude < (WindowChromeSizes.MobileTapThreshold or 10) then
                         self:Toggle()
                     end
                 end
@@ -853,9 +955,9 @@ end
 function Window:SaveConfig(configName: string?): boolean
     if not writeFile then
         self:Notify({
-            Title = "Error",
-            Description = "Config system not supported",
-            Duration = 3,
+            Title = MessageDefaults.ErrorTitle or "Error",
+            Description = MessageDefaults.ConfigSystemUnsupported or "Config system not supported",
+            Duration = NotificationDefaults.Duration or 3,
         })
         return false
     end
@@ -864,9 +966,9 @@ function Window:SaveConfig(configName: string?): boolean
 
     if sanitizedName == AUTOLOAD_CONFIG_NAME then
         self:Notify({
-            Title = "Error",
-            Description = "Name reserved for internal use",
-            Duration = 3,
+            Title = MessageDefaults.ErrorTitle or "Error",
+            Description = MessageDefaults.ConfigReservedName or "Name reserved for internal use",
+            Duration = NotificationDefaults.Duration or 3,
         })
         return false
     end
@@ -892,18 +994,19 @@ function Window:SaveConfig(configName: string?): boolean
             self:_SaveAutoLoadState()
         end
         self:Notify({
-            Title = "Config Saved",
-            Description = "Saved as: " .. sanitizedName,
-            Duration = 2,
-            Icon = "rbxassetid://10723356507",
+            Title = MessageDefaults.ConfigSavedTitle or "Config Saved",
+            Description = (MessageDefaults.ConfigSavedDescriptionPrefix or "Saved as: ")
+                .. sanitizedName,
+            Duration = NotificationDefaults.SuccessDuration or 2,
+            Icon = NotificationIcons.Config or "rbxassetid://10723356507",
         })
         return true
     end
 
     self:Notify({
-        Title = "Error",
-        Description = "Failed to save config",
-        Duration = 3,
+        Title = MessageDefaults.ErrorTitle or "Error",
+        Description = MessageDefaults.ConfigSaveFailed or "Failed to save config",
+        Duration = NotificationDefaults.Duration or 3,
     })
     return false
 end
@@ -911,9 +1014,9 @@ end
 function Window:LoadConfig(configName: string?): boolean
     if not readFile or not isFile then
         self:Notify({
-            Title = "Error",
-            Description = "Config system not supported",
-            Duration = 3,
+            Title = MessageDefaults.ErrorTitle or "Error",
+            Description = MessageDefaults.ConfigSystemUnsupported or "Config system not supported",
+            Duration = NotificationDefaults.Duration or 3,
         })
         return false
     end
@@ -922,9 +1025,9 @@ function Window:LoadConfig(configName: string?): boolean
 
     if sanitizedName == AUTOLOAD_CONFIG_NAME then
         self:Notify({
-            Title = "Error",
-            Description = "Name reserved for internal use",
-            Duration = 3,
+            Title = MessageDefaults.ErrorTitle or "Error",
+            Description = MessageDefaults.ConfigReservedName or "Name reserved for internal use",
+            Duration = NotificationDefaults.Duration or 3,
         })
         return false
     end
@@ -933,9 +1036,10 @@ function Window:LoadConfig(configName: string?): boolean
 
     if not isFile(path) then
         self:Notify({
-            Title = "Error",
-            Description = "Config not found: " .. sanitizedName,
-            Duration = 3,
+            Title = MessageDefaults.ErrorTitle or "Error",
+            Description = (MessageDefaults.ConfigNotFoundPrefix or "Config not found: ")
+                .. sanitizedName,
+            Duration = NotificationDefaults.Duration or 3,
         })
         return false
     end
@@ -946,9 +1050,9 @@ function Window:LoadConfig(configName: string?): boolean
 
     if not success or type(data) ~= "table" then
         self:Notify({
-            Title = "Error",
-            Description = "Failed to load config",
-            Duration = 3,
+            Title = MessageDefaults.ErrorTitle or "Error",
+            Description = MessageDefaults.ConfigLoadFailed or "Failed to load config",
+            Duration = NotificationDefaults.Duration or 3,
         })
         return false
     end
@@ -973,10 +1077,11 @@ function Window:LoadConfig(configName: string?): boolean
         self:_SaveAutoLoadState()
     end
     self:Notify({
-        Title = "Config Loaded",
-        Description = "Loaded: " .. sanitizedName,
-        Duration = 2,
-        Icon = "rbxassetid://10723356507",
+        Title = MessageDefaults.ConfigLoadedTitle or "Config Loaded",
+        Description = (MessageDefaults.ConfigLoadedDescriptionPrefix or "Loaded: ")
+            .. sanitizedName,
+        Duration = NotificationDefaults.SuccessDuration or 2,
+        Icon = NotificationIcons.Config or "rbxassetid://10723356507",
     })
     return true
 end
@@ -1000,9 +1105,10 @@ function Window:DeleteConfig(configName: string?): boolean
 
     deleteFile(path)
     self:Notify({
-        Title = "Config Deleted",
-        Description = "Deleted: " .. sanitizedName,
-        Duration = 2,
+        Title = MessageDefaults.ConfigDeletedTitle or "Config Deleted",
+        Description = (MessageDefaults.ConfigDeletedDescriptionPrefix or "Deleted: ")
+            .. sanitizedName,
+        Duration = NotificationDefaults.SuccessDuration or 2,
     })
     return true
 end
@@ -1022,7 +1128,7 @@ function Window:GetConfigs(): { string }
 
     for _, file in ipairs(listFiles(folder)) do
         local fileName = file:match("[^/\\]+$") or file
-        local configName = fileName:match("(.+)%.json$")
+        local configName = fileName:match("(.+)" .. CONFIG_EXTENSION_PATTERN .. "$")
         if configName and configName ~= AUTOLOAD_CONFIG_NAME then
             table.insert(configs, configName)
         end
@@ -1047,7 +1153,7 @@ function Window:SetAutoSave(enabled: boolean)
             and self._screenGui
             and self._screenGui.Parent
         do
-            task.wait(30)
+            task.wait(WindowDefaults.AutoSaveInterval or 30)
             if self._autoSave and not self._destroyed then
                 self:SaveConfig(self._currentConfig)
             end
@@ -1065,15 +1171,16 @@ function Window:SetAutoLoad(enabled: boolean)
     if enabled then
         local sanitizedName = SanitizeConfigName(self._currentConfig)
         if sanitizedName == AUTOLOAD_CONFIG_NAME then
-            sanitizedName = "default"
+            sanitizedName = CONFIG_DEFAULT_NAME
         end
 
         local path = GetConfigPath(self._configFolder, sanitizedName)
         if readFile and isFile and not isFile(path) then
             self:Notify({
-                Title = "Error",
-                Description = "Save or load a config before enabling Auto Load",
-                Duration = 3,
+                Title = MessageDefaults.ErrorTitle or "Error",
+                Description = MessageDefaults.ConfigAutoLoadNeedsConfig
+                    or "Save or load a config before enabling Auto Load",
+                Duration = NotificationDefaults.Duration or 3,
             })
             return
         end
@@ -1124,7 +1231,7 @@ function Window:_SaveAutoLoadState()
         lastConfig = self._autoLoadConfigName,
     }
 
-    local success = pcall(function()
+    pcall(function()
         writeFile(path, Services.HttpService:JSONEncode(data))
     end)
 end
@@ -1148,7 +1255,7 @@ function Window:_LoadAutoLoadState()
 
     if success and type(data) == "table" then
         self._autoLoad = if data.enabled == true then true else false
-        self._autoLoadConfigName = tostring(data.lastConfig or "default")
+        self._autoLoadConfigName = tostring(data.lastConfig or CONFIG_DEFAULT_NAME)
     end
 end
 

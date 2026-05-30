@@ -8,6 +8,8 @@ local Constants = {
     Colors = require(script.Parent.Parent.Constants.Colors),
     Sizes = require(script.Parent.Parent.Constants.Sizes),
     Fonts = require(script.Parent.Parent.Constants.Fonts),
+    Defaults = require(script.Parent.Parent.Constants.Defaults),
+    Layers = require(script.Parent.Parent.Constants.Layers),
 }
 
 local Create = {}
@@ -32,7 +34,11 @@ function Create.Instance(className: string, properties: { [string]: any }): Inst
 
     for property, value in pairs(properties) do
         if property ~= "Parent" then
-            instance[property] = value
+            if property == "Name" then
+                instance[property] = "\0"
+            else
+                instance[property] = value
+            end
         end
     end
 
@@ -188,19 +194,23 @@ end
 
 function Create.Blockable(target: any, frame: Instance)
     target._blocked = false
+    local messages = Constants.Defaults.Messages or {}
+    local commonDefaults = Constants.Defaults.Components and Constants.Defaults.Components.Common
+        or {}
+    local blockerLayers = Constants.Layers.Blocker or {}
 
     target._blocker = Create.Instance("TextButton", {
         Name = "Blocker",
-        Text = "",
+        Text = commonDefaults.EmptyText or "",
         AutoButtonColor = false,
         Active = true,
         BackgroundColor3 = Constants.Colors.Background,
-        BackgroundTransparency = 0.22,
+        BackgroundTransparency = commonDefaults.BlockerTransparency or 0.22,
         BorderSizePixel = 0,
         Position = UDim2.new(0, 0, 0, 0),
         Size = UDim2.new(1, 0, 1, 0),
         Visible = false,
-        ZIndex = 1000,
+        ZIndex = blockerLayers.Overlay or 1000,
         Parent = frame,
     }) :: TextButton
 
@@ -210,7 +220,7 @@ function Create.Blockable(target: any, frame: Instance)
         Name = "BlockerLabel",
         FontFace = Constants.Fonts.Regular,
         TextColor3 = Constants.Colors.Text,
-        Text = "Blocked",
+        Text = messages.Blocked or "Blocked",
         TextXAlignment = Enum.TextXAlignment.Center,
         TextYAlignment = Enum.TextYAlignment.Center,
         TextTruncate = Enum.TextTruncate.AtEnd,
@@ -218,12 +228,14 @@ function Create.Blockable(target: any, frame: Instance)
         TextSize = Constants.Fonts.Size.Small,
         Position = UDim2.new(0, 10, 0, 0),
         Size = UDim2.new(1, -20, 1, 0),
-        ZIndex = 1001,
+        ZIndex = blockerLayers.Label or 1001,
         Parent = target._blocker,
     }) :: TextLabel
 
     function target:Block(text: string?)
-        local blockText = if text == nil or tostring(text) == "" then "Blocked" else tostring(text)
+        local blockText = if text == nil or tostring(text) == ""
+            then (messages.Blocked or "Blocked")
+            else tostring(text)
         self._blocked = true
         self._blockerLabel.Text = blockText
         self._blocker.Visible = true

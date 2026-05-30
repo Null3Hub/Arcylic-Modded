@@ -5,9 +5,11 @@
 ]]
 
 local Services = require(script.Parent.Services)
+local Defaults = require(script.Parent.Parent.Constants.Defaults)
 
 local Device = {}
-local DEFAULT_VIEWPORT = Vector2.new(1280, 720)
+local DeviceDefaults = Defaults.Device or {}
+local DEFAULT_VIEWPORT = DeviceDefaults.DefaultViewport or Vector2.new(1280, 720)
 
 --[[
     Checks if the current device is mobile (touch only)
@@ -25,7 +27,8 @@ end
 ]]
 function Device.IsTablet(): boolean
     local viewport = Device.GetViewportSize()
-    return Device.IsMobile() and math.min(viewport.X, viewport.Y) >= 600
+    return Device.IsMobile()
+        and math.min(viewport.X, viewport.Y) >= (DeviceDefaults.TabletMinShortSide or 600)
 end
 
 --[[
@@ -57,9 +60,9 @@ function Device.GetSafeAreaInsets(): { Top: number, Bottom: number, Left: number
     local insets = Services.GuiService:GetGuiInset()
     return {
         Top = insets.Y,
-        Bottom = 0,
-        Left = 0,
-        Right = 0,
+        Bottom = DeviceDefaults.SafeAreaBottom or 0,
+        Left = DeviceDefaults.SafeAreaLeft or 0,
+        Right = DeviceDefaults.SafeAreaRight or 0,
     }
 end
 

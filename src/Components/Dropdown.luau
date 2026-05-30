@@ -9,9 +9,18 @@ local Tween = require(script.Parent.Parent.Utils.Tween)
 local Colors = require(script.Parent.Parent.Constants.Colors)
 local Sizes = require(script.Parent.Parent.Constants.Sizes)
 local Fonts = require(script.Parent.Parent.Constants.Fonts)
+local Defaults = require(script.Parent.Parent.Constants.Defaults)
+local Icons = require(script.Parent.Parent.Constants.Icons)
+local Layers = require(script.Parent.Parent.Constants.Layers)
 
 local Dropdown = {}
 Dropdown.__index = Dropdown
+local ComponentDefaults = Defaults.Components or {}
+local CommonDefaults = ComponentDefaults.Common or {}
+local DropdownDefaults = ComponentDefaults.Dropdown or {}
+local ComponentIcons = Icons.Components or {}
+local DropdownLayers = Layers.Dropdown or {}
+local DropdownSizes = Sizes.Dropdown or {}
 
 export type DropdownConfig = {
     Name: string?,
@@ -45,10 +54,15 @@ export type DropdownObject = {
 ]]
 function Dropdown.new(parent: Instance, config: DropdownConfig, window): DropdownObject
     local self = setmetatable({}, Dropdown)
+    config = config or {}
 
-    local name = config.Name or "Dropdown"
-    self._options = config.Options or { "Option 1", "Option 2", "Option 3" }
-    self._multiSelect = config.MultiSelect or false
+    local name = config.Name or DropdownDefaults.Name or "Dropdown"
+    self._options = config.Options
+        or DropdownDefaults.Options
+        or { "Option 1", "Option 2", "Option 3" }
+    self._multiSelect = if config.MultiSelect == nil
+        then (DropdownDefaults.MultiSelect or false)
+        else config.MultiSelect
     self._callback = config.Callback or function() end
     self._expanded = false
     self._flag = config.Flag
@@ -56,7 +70,9 @@ function Dropdown.new(parent: Instance, config: DropdownConfig, window): Dropdow
     self._connections = {}
     local description = Create.GetDescription(config)
     local hasDescription = description ~= nil
-    local height = hasDescription and 50 or Sizes.Dropdown.Height
+    local height = hasDescription
+            and (DropdownSizes.HeightWithDescription or CommonDefaults.HeightWithDescription or 50)
+        or Sizes.Dropdown.Height
 
     -- Initialize selected value
     if self._multiSelect then
@@ -69,11 +85,11 @@ function Dropdown.new(parent: Instance, config: DropdownConfig, window): Dropdow
     self._frame = Create.Instance("Frame", {
         Name = "Dropdown_" .. name,
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.4,
+        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, height),
         ClipsDescendants = false,
-        ZIndex = 1,
+        ZIndex = DropdownLayers.Base or 1,
         Parent = parent,
     })
 
@@ -90,24 +106,39 @@ function Dropdown.new(parent: Instance, config: DropdownConfig, window): Dropdow
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 10, 0, hasDescription and 6 or 10),
         TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(0, 200, 0, 20),
-        ZIndex = 1,
+        Size = UDim2.new(0, DropdownSizes.LabelWidth or 200, 0, Sizes.Component.LabelHeight or 20),
+        ZIndex = DropdownLayers.Label or 1,
         Parent = self._frame,
     })
 
     -- Description
-    Create.Description(self._frame, description, UDim2.new(0, 10, 0, 25), UDim2.new(1, -155, 0, 14))
+    Create.Description(
+        self._frame,
+        description,
+        UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.SectionHeaderHeight or 25),
+        UDim2.new(
+            1,
+            -(DropdownSizes.DescriptionRightPadding or 155),
+            0,
+            Sizes.Component.DescriptionHeight or 14
+        )
+    )
 
     -- Selected display
     self._display = Create.Instance("Frame", {
         Name = "Display",
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.04,
+        BackgroundTransparency = CommonDefaults.ControlTransparency or 0.04,
         AnchorPoint = Vector2.new(0, 0.5),
-        Position = UDim2.new(1, -145, 0.5, 0),
+        Position = UDim2.new(1, -(DropdownSizes.DisplayRightOffset or 145), 0.5, 0),
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 135, 0, 26),
-        ZIndex = 2,
+        Size = UDim2.new(
+            0,
+            DropdownSizes.DisplayWidth or 135,
+            0,
+            DropdownSizes.DisplayHeight or 26
+        ),
+        ZIndex = DropdownLayers.Display or 2,
         Parent = self._frame,
     })
 
@@ -123,23 +154,28 @@ function Dropdown.new(parent: Instance, config: DropdownConfig, window): Dropdow
         TextTruncate = Enum.TextTruncate.AtEnd,
         BackgroundTransparency = 1,
         TextSize = Fonts.Size.Small,
-        Size = UDim2.new(1, -30, 1, 0),
-        Position = UDim2.new(0, 10, 0, 0),
+        Size = UDim2.new(1, -(DropdownSizes.SelectedLabelRightPadding or 30), 1, 0),
+        Position = UDim2.new(0, DropdownSizes.SelectedLabelPadding or 10, 0, 0),
         TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 2,
+        ZIndex = DropdownLayers.Display or 2,
         Parent = self._display,
     })
 
     -- Arrow indicator
     self._arrow = Create.Instance("ImageLabel", {
         Name = "Arrow",
-        Image = "rbxassetid://105558791071013",
+        Image = ComponentIcons.Arrow or "rbxassetid://105558791071013",
         ImageColor3 = Colors.TextDark,
         BackgroundTransparency = 1,
-        Position = UDim2.new(1, -20, 0.5, -5),
-        Size = UDim2.new(0, 10, 0, 10),
+        Position = UDim2.new(
+            1,
+            -(DropdownSizes.ArrowRightOffset or 20),
+            0.5,
+            -(DropdownSizes.ArrowVerticalOffset or 5)
+        ),
+        Size = UDim2.new(0, DropdownSizes.ArrowSize or 10, 0, DropdownSizes.ArrowSize or 10),
         Rotation = 0,
-        ZIndex = 2,
+        ZIndex = DropdownLayers.Display or 2,
         Parent = self._display,
     })
 
@@ -149,10 +185,10 @@ function Dropdown.new(parent: Instance, config: DropdownConfig, window): Dropdow
     -- Toggle button
     local toggleBtn = Create.Instance("TextButton", {
         Name = "ToggleButton",
-        Text = "",
+        Text = CommonDefaults.EmptyText or "",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 1, 0),
-        ZIndex = 3,
+        ZIndex = DropdownLayers.ToggleButton or 3,
         Parent = self._display,
     })
 
@@ -193,29 +229,34 @@ end
 function Dropdown:_GetDisplayText(): string
     if self._multiSelect then
         if #self._selected == 0 then
-            return "None"
+            return DropdownDefaults.NoneText or "None"
         end
-        return table.concat(self._selected, ", ")
+        return table.concat(self._selected, DropdownDefaults.Separator or ", ")
     end
     return tostring(self._selected)
 end
 
 function Dropdown:_CreateOptionsContainer()
-    local maxVisible = Sizes.Dropdown.MaxVisibleOptions
+    local maxVisible = DropdownSizes.MaxVisibleOptions or Sizes.Dropdown.MaxVisibleOptions
     local totalHeight = math.min(
-        #self._options * Sizes.Dropdown.OptionHeight,
-        maxVisible * Sizes.Dropdown.OptionHeight
+        #self._options * (DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight),
+        maxVisible * (DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight)
     )
 
     self._optionsContainer = Create.Instance("Frame", {
         Name = "OptionsContainer",
         BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 0.04,
-        Position = UDim2.new(1, -145, 0, self._frame.AbsoluteSize.Y - 1),
+        BackgroundTransparency = CommonDefaults.ControlTransparency or 0.04,
+        Position = UDim2.new(
+            1,
+            -(DropdownSizes.DisplayRightOffset or 145),
+            0,
+            self._frame.AbsoluteSize.Y - (DropdownSizes.PopupOverlap or 1)
+        ),
         BorderSizePixel = 0,
-        Size = UDim2.new(0, 135, 0, totalHeight),
+        Size = UDim2.new(0, DropdownSizes.DisplayWidth or 135, 0, totalHeight),
         Visible = false,
-        ZIndex = 100,
+        ZIndex = DropdownLayers.Options or 100,
         ClipsDescendants = true,
         Parent = self._frame,
     })
@@ -228,10 +269,15 @@ function Dropdown:_CreateOptionsContainer()
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 1, 0),
-        CanvasSize = UDim2.new(0, 0, 0, #self._options * Sizes.Dropdown.OptionHeight),
-        ScrollBarThickness = 3,
+        CanvasSize = UDim2.new(
+            0,
+            0,
+            0,
+            #self._options * (DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight)
+        ),
+        ScrollBarThickness = DropdownSizes.ScrollbarThickness or 3,
         ScrollBarImageColor3 = Colors.Scrollbar,
-        ZIndex = 100,
+        ZIndex = DropdownLayers.Options or 100,
         Parent = self._optionsContainer,
     })
 
@@ -254,20 +300,28 @@ function Dropdown:_PopulateOptions()
             TextColor3 = Colors.Text,
             Text = option,
             BackgroundColor3 = Colors.Secondary,
-            BackgroundTransparency = 1,
+            BackgroundTransparency = CommonDefaults.Transparent or 1,
             BorderSizePixel = 0,
             TextSize = Fonts.Size.Small,
-            Size = UDim2.new(1, 0, 0, Sizes.Dropdown.OptionHeight),
-            ZIndex = 100,
+            Size = UDim2.new(1, 0, 0, DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight),
+            ZIndex = DropdownLayers.Options or 100,
             Parent = self._optionsScroll,
         })
 
         optionBtn.MouseEnter:Connect(function()
-            Tween.Create(optionBtn, { BackgroundTransparency = 0.5 }, "Fast")
+            Tween.Create(
+                optionBtn,
+                { BackgroundTransparency = CommonDefaults.OptionHoverTransparency or 0.5 },
+                "Fast"
+            )
         end)
 
         optionBtn.MouseLeave:Connect(function()
-            Tween.Create(optionBtn, { BackgroundTransparency = 1 }, "Fast")
+            Tween.Create(
+                optionBtn,
+                { BackgroundTransparency = CommonDefaults.Transparent or 1 },
+                "Fast"
+            )
         end)
 
         optionBtn.MouseButton1Click:Connect(function()
@@ -306,14 +360,14 @@ function Dropdown:Open()
     self._expanded = true
     self._optionsContainer.Visible = true
     Tween.Create(self._arrow, { Rotation = 180 }, "Normal")
-    self._frame.ZIndex = 10
+    self._frame.ZIndex = DropdownLayers.Open or 10
 end
 
 function Dropdown:Close()
     self._expanded = false
     self._optionsContainer.Visible = false
     Tween.Create(self._arrow, { Rotation = 0 }, "Normal")
-    self._frame.ZIndex = 1
+    self._frame.ZIndex = DropdownLayers.Base or 1
 end
 
 function Dropdown:SetValue(value: string | { string })
@@ -334,12 +388,15 @@ end
 
 function Dropdown:Refresh(options: { string })
     self._options = options
-    self._optionsScroll.CanvasSize = UDim2.new(0, 0, 0, #options * Sizes.Dropdown.OptionHeight)
+    self._optionsScroll.CanvasSize =
+        UDim2.new(0, 0, 0, #options * (DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight))
 
-    local maxVisible = Sizes.Dropdown.MaxVisibleOptions
-    local totalHeight =
-        math.min(#options * Sizes.Dropdown.OptionHeight, maxVisible * Sizes.Dropdown.OptionHeight)
-    self._optionsContainer.Size = UDim2.new(0, 135, 0, totalHeight)
+    local maxVisible = DropdownSizes.MaxVisibleOptions or Sizes.Dropdown.MaxVisibleOptions
+    local totalHeight = math.min(
+        #options * (DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight),
+        maxVisible * (DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight)
+    )
+    self._optionsContainer.Size = UDim2.new(0, DropdownSizes.DisplayWidth or 135, 0, totalHeight)
 
     self:_PopulateOptions()
 end
