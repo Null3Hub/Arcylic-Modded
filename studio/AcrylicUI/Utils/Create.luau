@@ -34,11 +34,7 @@ function Create.Instance(className: string, properties: { [string]: any }): Inst
 
     for property, value in pairs(properties) do
         if property ~= "Parent" then
-            if property == "Name" then
-                instance[property] = "\0"
-            else
-                instance[property] = value
-            end
+            instance[property] = value
         end
     end
 

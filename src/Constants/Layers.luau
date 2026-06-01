@@ -6,6 +6,9 @@
 
 local Layers = {
     Window = {
+        TopBarDragArea = 5,
+        TopBarControls = 6,
+        PopupLayer = 900,
         ResizeHandle = 1000,
         BottomDragArea = 1000,
         BottomDragBar = 1001,

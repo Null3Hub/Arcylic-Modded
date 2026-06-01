@@ -17,11 +17,7 @@ Tab.__index = Tab
 local ComponentDefaults = Defaults.Components or {}
 local CommonDefaults = ComponentDefaults.Common or {}
 local ConfigUIDefaults = ComponentDefaults.ConfigUI or {}
-local ConfigDefaults = Defaults.Config or {}
-local MessageDefaults = Defaults.Messages or {}
-local NotificationDefaults = Defaults.Notification or {}
 local ComponentIcons = Icons.Components or {}
-local NotificationIcons = Icons.Notification or {}
 
 function Tab.new(window, section, name: string, icon: string?)
     local self = setmetatable({}, Tab)
@@ -159,155 +155,49 @@ function Tab:Deselect()
 end
 
 -- Content helpers
-function Tab:CreateSection(title: string)
-    local label = Create.Instance("TextLabel", {
-        Name = "Section" .. title,
-        FontFace = Fonts.Regular,
-        TextColor3 = Colors.TextDark,
-        Text = title,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        TextSize = Fonts.Size.Section,
-        Size = UDim2.new(1, 0, 0, Sizes.Tab.SectionHeight or 25),
-        Parent = self._content,
-    })
-    return label
+function Tab:CreateSection(config)
+    local ContentSection = require(script.Parent.ContentSection)
+    return self:_AddElement(ContentSection.new(self, config))
 end
 
-function Tab:CreateParagraph(config)
+function Tab:Paragraph(config)
     local Paragraph = require(script.Parent.Paragraph)
     return self:_AddElement(Paragraph.new(self._content, config))
 end
 
-function Tab:CreateButton(config)
+function Tab:Button(config)
     return self:_AddElement(Button.new(self._content, config, self._window))
 end
 
-function Tab:CreateToggle(config)
+function Tab:Toggle(config)
     return self:_AddElement(Toggle.new(self._content, config, self._window))
 end
 
-function Tab:CreateSlider(config)
+function Tab:Slider(config)
     return self:_AddElement(Slider.new(self._content, config, self._window))
 end
 
-function Tab:CreateDropdown(config)
+function Tab:Dropdown(config)
     return self:_AddElement(Dropdown.new(self._content, config, self._window))
 end
 
-function Tab:CreateKeybind(config)
+function Tab:Keybind(config)
     local Keybind = require(script.Parent.Keybind)
     return self:_AddElement(Keybind.new(self._content, config, self._window))
 end
 
-function Tab:CreateColorPicker(config)
+function Tab:ColorPicker(config)
     local ColorPicker = require(script.Parent.ColorPicker)
     return self:_AddElement(ColorPicker.new(self._content, config, self._window))
 end
 
-function Tab:CreateTextBox(config)
+function Tab:TextBox(config)
     return self:_AddElement(TextBox.new(self._content, config, self._window))
 end
 
 function Tab:CreateConfigSection()
-    self:CreateSection(ConfigUIDefaults.SectionTitle or "Configuration")
-
-    local function getConfigOptions()
-        local configs = self._window:GetConfigs()
-        if #configs == 0 then
-            return { ConfigDefaults.DefaultName or "default" }
-        end
-        return configs
-    end
-
-    local configNameBox = self:CreateTextBox({
-        Name = ConfigUIDefaults.ConfigName or "Config Name",
-        Default = self._window._currentConfig,
-        Placeholder = ConfigUIDefaults.ConfigPlaceholder or "Enter config name...",
-        Callback = function(text)
-            self._window._currentConfig = text
-        end,
-    })
-
-    local configDropdown
-    configDropdown = self:CreateDropdown({
-        Name = ConfigUIDefaults.SelectConfig or "Select Config",
-        Options = getConfigOptions(),
-        Default = self._window._currentConfig,
-        Callback = function(selected)
-            if type(selected) == "string" then
-                configNameBox:SetText(selected)
-                self._window._currentConfig = selected
-            end
-        end,
-    })
-
-    self:CreateButton({
-        Name = ConfigUIDefaults.SaveConfig or "Save Config",
-        Callback = function()
-            local configName = configNameBox:GetText()
-            if configName ~= "" and self._window:SaveConfig(configName) then
-                configDropdown:Refresh(getConfigOptions())
-            end
-        end,
-    })
-
-    self:CreateButton({
-        Name = ConfigUIDefaults.LoadConfig or "Load Config",
-        Callback = function()
-            local configName = configNameBox:GetText()
-            if configName ~= "" then
-                self._window:LoadConfig(configName)
-            end
-        end,
-    })
-
-    self:CreateButton({
-        Name = ConfigUIDefaults.DeleteConfig or "Delete Config",
-        Callback = function()
-            local configName = configNameBox:GetText()
-            if configName ~= "" and self._window:DeleteConfig(configName) then
-                configDropdown:Refresh(getConfigOptions())
-            end
-        end,
-    })
-
-    self:CreateButton({
-        Name = ConfigUIDefaults.RefreshConfigs or "Refresh Configs",
-        Callback = function()
-            configDropdown:Refresh(getConfigOptions())
-            self._window:Notify({
-                Title = MessageDefaults.ConfigsRefreshedTitle or "Configs Refreshed",
-                Description = MessageDefaults.ConfigsRefreshedDescription or "Config list updated",
-                Duration = NotificationDefaults.SuccessDuration or 2,
-                Icon = NotificationIcons.Config
-                    or ComponentIcons.Config
-                    or "rbxassetid://10723356507",
-            })
-        end,
-    })
-
-    self:CreateToggle({
-        Name = ConfigUIDefaults.AutoSave or "Auto Save",
-        Default = false,
-        Callback = function(enabled)
-            self._window:SetAutoSave(enabled)
-        end,
-    })
-
-    self:CreateToggle({
-        Name = ConfigUIDefaults.AutoLoad or "Auto Load",
-        Default = self._window:GetAutoLoad(),
-        Callback = function(enabled)
-            self._window:SetAutoLoad(enabled)
-        end,
-    })
-
-    return {
-        RefreshConfigs = function()
-            configDropdown:Refresh(getConfigOptions())
-        end,
-    }
+    local section = self:CreateSection(ConfigUIDefaults.SectionTitle or "Configuration")
+    return section:CreateConfigSection()
 end
 
 function Tab:Destroy()

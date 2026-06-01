@@ -21,6 +21,26 @@ local DropdownDefaults = ComponentDefaults.Dropdown or {}
 local ComponentIcons = Icons.Components or {}
 local DropdownLayers = Layers.Dropdown or {}
 local DropdownSizes = Sizes.Dropdown or {}
+local SELECTED_ICON = ComponentIcons.DropdownSelected or "rbxassetid://16898669433"
+local SEARCH_ICON = ComponentIcons.DropdownSearch or "rbxassetid://16898734242"
+
+local function ResolveSearchConfig(searchConfig, name: string): (boolean, string)
+    if searchConfig == true then
+        return true, "Search " .. name .. "..."
+    end
+
+    if type(searchConfig) == "string" then
+        return true, searchConfig
+    end
+
+    if type(searchConfig) == "table" then
+        local enabled = if searchConfig.Enabled == nil then true else searchConfig.Enabled == true
+        local placeholder = searchConfig.Placeholder or "Search " .. name .. "..."
+        return enabled, tostring(placeholder)
+    end
+
+    return false, ""
+end
 
 export type DropdownConfig = {
     Name: string?,
@@ -29,6 +49,7 @@ export type DropdownConfig = {
     Options: { string }?,
     Default: string | { string }?,
     MultiSelect: boolean?,
+    Search: boolean | string | { Enabled: boolean?, Placeholder: string? }?,
     Flag: string?,
     Callback: ((selected: string | { string }) -> ())?,
 }
@@ -68,6 +89,8 @@ function Dropdown.new(parent: Instance, config: DropdownConfig, window): Dropdow
     self._flag = config.Flag
     self._window = window
     self._connections = {}
+    self._searchEnabled, self._searchPlaceholder = ResolveSearchConfig(config.Search, name)
+    self._searchText = ""
     local description = Create.GetDescription(config)
     local hasDescription = description ~= nil
     local height = hasDescription
@@ -207,6 +230,46 @@ function Dropdown.new(parent: Instance, config: DropdownConfig, window): Dropdow
         end)
     )
 
+    local contentContainer = self:_GetContentContainer()
+    if contentContainer then
+        table.insert(
+            self._connections,
+            contentContainer:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+                if self._expanded then
+                    self:Close()
+                end
+            end)
+        )
+    end
+
+    local popupParent = self:_GetPopupParent()
+    table.insert(
+        self._connections,
+        popupParent:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+            if self._expanded then
+                self:_PositionOptionsContainer(#self:_GetFilteredOptions())
+            end
+        end)
+    )
+
+    table.insert(
+        self._connections,
+        self._display:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
+            if self._expanded then
+                self:_PositionOptionsContainer(#self:_GetFilteredOptions())
+            end
+        end)
+    )
+
+    table.insert(
+        self._connections,
+        self._display:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+            if self._expanded then
+                self:_PositionOptionsContainer(#self:_GetFilteredOptions())
+            end
+        end)
+    )
+
     Create.Blockable(self, self._frame)
 
     local baseBlock = self.Block
@@ -236,12 +299,136 @@ function Dropdown:_GetDisplayText(): string
     return tostring(self._selected)
 end
 
-function Dropdown:_CreateOptionsContainer()
+function Dropdown:_GetSearchAreaHeight(): number
+    if not self._searchEnabled then
+        return 0
+    end
+
+    return (DropdownSizes.SearchHeight or 34) + (DropdownSizes.SearchSeparatorHeight or 1)
+end
+
+function Dropdown:_GetFilteredOptions(): { string }
+    local searchText = string.lower(tostring(self._searchText or ""))
+    if not self._searchEnabled or searchText == "" then
+        return self._options
+    end
+
+    local filtered = {}
+    for _, option in ipairs(self._options) do
+        if string.find(string.lower(tostring(option)), searchText, 1, true) then
+            table.insert(filtered, option)
+        end
+    end
+
+    return filtered
+end
+
+function Dropdown:_IsSelected(option: string): boolean
+    if self._multiSelect then
+        return table.find(self._selected, option) ~= nil
+    end
+
+    return self._selected == option
+end
+
+function Dropdown:_GetPopupHeight(visibleCount: number): number
     local maxVisible = DropdownSizes.MaxVisibleOptions or Sizes.Dropdown.MaxVisibleOptions
-    local totalHeight = math.min(
-        #self._options * (DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight),
-        maxVisible * (DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight)
-    )
+    local optionHeight = DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight
+    local searchAreaHeight = self:_GetSearchAreaHeight()
+    local contentHeight = if visibleCount == 0
+        then (DropdownSizes.EmptyHeight or 42)
+        else math.min(visibleCount, maxVisible) * optionHeight
+
+    return searchAreaHeight + contentHeight
+end
+
+function Dropdown:_GetPopupParent(): Instance
+    if self._window and self._window.GetPopupLayer then
+        local ok, popupLayer = pcall(function()
+            return self._window:GetPopupLayer()
+        end)
+
+        if ok and popupLayer then
+            return popupLayer
+        end
+    end
+
+    return self._frame
+end
+
+function Dropdown:_GetContentContainer(): ScrollingFrame?
+    if self._window and self._window.GetContentContainer then
+        local ok, contentContainer = pcall(function()
+            return self._window:GetContentContainer()
+        end)
+
+        if ok and contentContainer then
+            return contentContainer
+        end
+    end
+
+    return nil
+end
+
+function Dropdown:_UpdateOptionsLayout(visibleCount: number, popupHeight: number?)
+    local width = DropdownSizes.DisplayWidth or 135
+    local searchAreaHeight = self:_GetSearchAreaHeight()
+    local resolvedPopupHeight = popupHeight or self:_GetPopupHeight(visibleCount)
+    local scrollHeight = math.max(0, resolvedPopupHeight - searchAreaHeight)
+    local optionHeight = DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight
+
+    self._optionsContainer.Size = UDim2.new(0, width, 0, resolvedPopupHeight)
+    self._optionsScroll.Position = UDim2.new(0, 0, 0, searchAreaHeight)
+    self._optionsScroll.Size = UDim2.new(1, 0, 0, scrollHeight)
+    self._optionsScroll.CanvasSize = UDim2.new(0, 0, 0, visibleCount * optionHeight)
+
+    if self._emptyState then
+        self._emptyState.Position = UDim2.new(0, 0, 0, searchAreaHeight)
+        self._emptyState.Size = UDim2.new(1, 0, 0, scrollHeight)
+    end
+end
+
+function Dropdown:_PositionOptionsContainer(visibleCount: number)
+    local popupParent = self:_GetPopupParent()
+    if self._optionsContainer.Parent ~= popupParent then
+        self._optionsContainer.Parent = popupParent
+    end
+
+    local margin = DropdownSizes.PopupMargin or 4
+    local width = DropdownSizes.DisplayWidth or self._display.AbsoluteSize.X
+    local desiredHeight = self:_GetPopupHeight(visibleCount)
+    local parentPosition = popupParent.AbsolutePosition
+    local parentSize = popupParent.AbsoluteSize
+    local displayPosition = self._display.AbsolutePosition
+    local displaySize = self._display.AbsoluteSize
+
+    local relativeX = displayPosition.X - parentPosition.X
+    local belowY = displayPosition.Y
+        - parentPosition.Y
+        + displaySize.Y
+        - (DropdownSizes.PopupOverlap or 1)
+    local aboveBottomY = displayPosition.Y - parentPosition.Y + (DropdownSizes.PopupOverlap or 1)
+    local availableBelow = parentSize.Y - belowY - margin
+    local availableAbove = aboveBottomY - margin
+    local openUp = desiredHeight > availableBelow and availableAbove > availableBelow
+    local availableHeight = math.max(0, if openUp then availableAbove else availableBelow)
+    local resolvedHeight = math.min(desiredHeight, availableHeight)
+
+    if resolvedHeight <= 0 then
+        resolvedHeight = math.min(desiredHeight, parentSize.Y)
+    end
+
+    local maxX = math.max(margin, parentSize.X - width - margin)
+    local relativeY = if openUp then aboveBottomY - resolvedHeight else belowY
+    local maxY = math.max(margin, parentSize.Y - resolvedHeight - margin)
+
+    self._optionsContainer.Position =
+        UDim2.new(0, math.clamp(relativeX, margin, maxX), 0, math.clamp(relativeY, margin, maxY))
+    self:_UpdateOptionsLayout(visibleCount, resolvedHeight)
+end
+
+function Dropdown:_CreateOptionsContainer()
+    local totalHeight = self:_GetPopupHeight(#self._options)
 
     self._optionsContainer = Create.Instance("Frame", {
         Name = "OptionsContainer",
@@ -258,30 +445,110 @@ function Dropdown:_CreateOptionsContainer()
         Visible = false,
         ZIndex = DropdownLayers.Options or 100,
         ClipsDescendants = true,
-        Parent = self._frame,
+        Parent = self:_GetPopupParent(),
     })
 
     Create.Corner(self._optionsContainer, Sizes.Corner.Medium)
     Create.Stroke(self._optionsContainer)
 
+    if self._searchEnabled then
+        self._searchContainer = Create.Instance("Frame", {
+            Name = "Search",
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 0, DropdownSizes.SearchHeight or 34),
+            ZIndex = (DropdownLayers.Options or 100) + 1,
+            Parent = self._optionsContainer,
+        })
+
+        Create.Instance("ImageLabel", {
+            Name = "SearchIcon",
+            Image = SEARCH_ICON,
+            ImageColor3 = Colors.TextDark,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(
+                0,
+                DropdownSizes.SearchIconLeft or 10,
+                0.5,
+                -((DropdownSizes.SearchIconSize or 16) / 2)
+            ),
+            Size = UDim2.new(
+                0,
+                DropdownSizes.SearchIconSize or 16,
+                0,
+                DropdownSizes.SearchIconSize or 16
+            ),
+            ZIndex = (DropdownLayers.Options or 100) + 2,
+            Parent = self._searchContainer,
+        })
+
+        self._searchInput = Create.Instance("TextBox", {
+            Name = "SearchInput",
+            FontFace = Fonts.Regular,
+            TextColor3 = Colors.Text,
+            PlaceholderText = self._searchPlaceholder,
+            PlaceholderColor3 = Colors.TextDark,
+            Text = "",
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            BackgroundTransparency = 1,
+            ClearTextOnFocus = false,
+            TextSize = Fonts.Size.Small,
+            Position = UDim2.new(0, DropdownSizes.SearchTextLeft or 34, 0, 0),
+            Size = UDim2.new(1, -((DropdownSizes.SearchTextLeft or 34) + 10), 1, 0),
+            ZIndex = (DropdownLayers.Options or 100) + 2,
+            Parent = self._searchContainer,
+        })
+
+        table.insert(
+            self._connections,
+            self._searchInput:GetPropertyChangedSignal("Text"):Connect(function()
+                self._searchText = self._searchInput.Text
+                self:_PopulateOptions()
+            end)
+        )
+
+        Create.Instance("Frame", {
+            Name = "SearchSeparator",
+            BackgroundColor3 = Colors.Border,
+            BorderSizePixel = 0,
+            Position = UDim2.new(0, 10, 0, DropdownSizes.SearchHeight or 34),
+            Size = UDim2.new(1, -20, 0, DropdownSizes.SearchSeparatorHeight or 1),
+            ZIndex = (DropdownLayers.Options or 100) + 1,
+            Parent = self._optionsContainer,
+        })
+    end
+
     self._optionsScroll = Create.Instance("ScrollingFrame", {
         Name = "Scroll",
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 1, 0),
-        CanvasSize = UDim2.new(
-            0,
-            0,
-            0,
-            #self._options * (DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight)
-        ),
+        Position = UDim2.new(0, 0, 0, self:_GetSearchAreaHeight()),
+        Size = UDim2.new(1, 0, 1, -self:_GetSearchAreaHeight()),
+        CanvasSize = UDim2.new(0, 0, 0, #self._options * (DropdownSizes.OptionHeight or 30)),
         ScrollBarThickness = DropdownSizes.ScrollbarThickness or 3,
         ScrollBarImageColor3 = Colors.Scrollbar,
+        ScrollBarImageTransparency = 0.7,
         ZIndex = DropdownLayers.Options or 100,
         Parent = self._optionsContainer,
     })
 
     Create.ListLayout(self._optionsScroll, 0)
+
+    self._emptyState = Create.Instance("TextLabel", {
+        Name = "EmptyState",
+        FontFace = Fonts.Regular,
+        TextColor3 = Colors.TextDark,
+        Text = "Not found any",
+        BackgroundTransparency = 1,
+        TextSize = Fonts.Size.Small,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        Position = UDim2.new(0, 0, 0, self:_GetSearchAreaHeight()),
+        Size = UDim2.new(1, 0, 1, -self:_GetSearchAreaHeight()),
+        Visible = false,
+        ZIndex = (DropdownLayers.Options or 100) + 1,
+        Parent = self._optionsContainer,
+    })
 
     self:_PopulateOptions()
 end
@@ -293,35 +560,96 @@ function Dropdown:_PopulateOptions()
         end
     end
 
-    for _, option in ipairs(self._options) do
+    local filteredOptions = self:_GetFilteredOptions()
+    local hasOptions = #filteredOptions > 0
+    if self._expanded then
+        self:_PositionOptionsContainer(#filteredOptions)
+    else
+        self:_UpdateOptionsLayout(#filteredOptions)
+    end
+    self._optionsScroll.Visible = hasOptions
+    if self._emptyState then
+        self._emptyState.Visible = not hasOptions
+    end
+
+    for _, option in ipairs(filteredOptions) do
+        local selected = self:_IsSelected(option)
         local optionBtn = Create.Instance("TextButton", {
-            Name = option,
-            FontFace = Fonts.Regular,
-            TextColor3 = Colors.Text,
-            Text = option,
+            Name = "Option_" .. option,
+            Text = CommonDefaults.EmptyText or "",
+            AutoButtonColor = false,
             BackgroundColor3 = Colors.Secondary,
-            BackgroundTransparency = CommonDefaults.Transparent or 1,
+            BackgroundTransparency = selected and 0.9 or (CommonDefaults.Transparent or 1),
             BorderSizePixel = 0,
-            TextSize = Fonts.Size.Small,
             Size = UDim2.new(1, 0, 0, DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight),
             ZIndex = DropdownLayers.Options or 100,
             Parent = self._optionsScroll,
         })
 
+        local selectedIcon = Create.Instance("ImageLabel", {
+            Name = "SelectedIcon",
+            Image = SELECTED_ICON,
+            ImageColor3 = Colors.Text,
+            BackgroundTransparency = 1,
+            Position = UDim2.new(
+                0,
+                DropdownSizes.OptionIconLeft or 12,
+                0.5,
+                -((DropdownSizes.OptionIconSize or 14) / 2)
+            ),
+            Size = UDim2.new(
+                0,
+                DropdownSizes.OptionIconSize or 14,
+                0,
+                DropdownSizes.OptionIconSize or 14
+            ),
+            Visible = selected,
+            ZIndex = (DropdownLayers.Options or 100) + 1,
+            Parent = optionBtn,
+        })
+
+        local optionText = Create.Instance("TextLabel", {
+            Name = "OptionText",
+            FontFace = Fonts.Regular,
+            TextColor3 = selected and Colors.Text or Colors.TextDark,
+            Text = option,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            BackgroundTransparency = 1,
+            TextSize = Fonts.Size.Small,
+            Position = UDim2.new(0, DropdownSizes.OptionTextLeft or 36, 0, 0),
+            Size = UDim2.new(
+                1,
+                -(
+                        (DropdownSizes.OptionTextLeft or 36)
+                        + (DropdownSizes.OptionTextRightPadding or 10)
+                    ),
+                1,
+                0
+            ),
+            ZIndex = (DropdownLayers.Options or 100) + 1,
+            Parent = optionBtn,
+        })
+
+        local function setHoverVisual(hovering: boolean)
+            local backgroundTransparency = if hovering
+                then (if selected then 0.68 else 0.78)
+                else (if selected then 0.9 else (CommonDefaults.Transparent or 1))
+            local textColor = if hovering or selected then Colors.Text else Colors.TextDark
+
+            Tween.Create(optionBtn, { BackgroundTransparency = backgroundTransparency }, "Fast")
+            Tween.Create(optionText, { TextColor3 = textColor }, "Fast")
+            if selectedIcon.Visible then
+                Tween.Create(selectedIcon, { ImageColor3 = textColor }, "Fast")
+            end
+        end
+
         optionBtn.MouseEnter:Connect(function()
-            Tween.Create(
-                optionBtn,
-                { BackgroundTransparency = CommonDefaults.OptionHoverTransparency or 0.5 },
-                "Fast"
-            )
+            setHoverVisual(true)
         end)
 
         optionBtn.MouseLeave:Connect(function()
-            Tween.Create(
-                optionBtn,
-                { BackgroundTransparency = CommonDefaults.Transparent or 1 },
-                "Fast"
-            )
+            setHoverVisual(false)
         end)
 
         optionBtn.MouseButton1Click:Connect(function()
@@ -337,10 +665,12 @@ function Dropdown:_PopulateOptions()
                     table.insert(self._selected, option)
                 end
                 self:_UpdateDisplay()
+                self:_PopulateOptions()
                 self._callback(self._selected)
             else
                 self._selected = option
                 self:_UpdateDisplay()
+                self:_PopulateOptions()
                 self._callback(self._selected)
                 self:Close()
             end
@@ -358,6 +688,7 @@ function Dropdown:Open()
     end
 
     self._expanded = true
+    self:_PopulateOptions()
     self._optionsContainer.Visible = true
     Tween.Create(self._arrow, { Rotation = 180 }, "Normal")
     self._frame.ZIndex = DropdownLayers.Open or 10
@@ -379,6 +710,9 @@ function Dropdown:SetValue(value: string | { string })
         self._selected = value
     end
     self:_UpdateDisplay()
+    if self._optionsScroll then
+        self:_PopulateOptions()
+    end
     self._callback(self._selected)
 end
 
@@ -388,16 +722,6 @@ end
 
 function Dropdown:Refresh(options: { string })
     self._options = options
-    self._optionsScroll.CanvasSize =
-        UDim2.new(0, 0, 0, #options * (DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight))
-
-    local maxVisible = DropdownSizes.MaxVisibleOptions or Sizes.Dropdown.MaxVisibleOptions
-    local totalHeight = math.min(
-        #options * (DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight),
-        maxVisible * (DropdownSizes.OptionHeight or Sizes.Dropdown.OptionHeight)
-    )
-    self._optionsContainer.Size = UDim2.new(0, DropdownSizes.DisplayWidth or 135, 0, totalHeight)
-
     self:_PopulateOptions()
 end
 
@@ -409,6 +733,10 @@ function Dropdown:Destroy()
 
     if self._flag and self._window and self._window.UnregisterConfigElement then
         self._window:UnregisterConfigElement(self._flag)
+    end
+
+    if self._optionsContainer then
+        self._optionsContainer:Destroy()
     end
 
     self._frame:Destroy()

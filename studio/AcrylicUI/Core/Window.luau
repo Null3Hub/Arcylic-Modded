@@ -282,27 +282,15 @@ end
 
 function Window:_CreateGui()
     local player = Services.Players.LocalPlayer
-    local coreGuiAvailable, coreGui = pcall(function()
-        return game:GetService("CoreGui")
-    end)
 
-    -- Screen GUI
+    -- Screen GUI (Studio: always visible in PlayerGui)
     self._screenGui = Create.Instance("ScreenGui", {
         Name = WindowDefaults.ScreenGuiName or "AcrylicUI",
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
         ResetOnSpawn = false,
     })
 
-    local parentedToCoreGui = false
-    if coreGuiAvailable and coreGui then
-        parentedToCoreGui = pcall(function()
-            self._screenGui.Parent = coreGui
-        end)
-    end
-
-    if not parentedToCoreGui then
-        self._screenGui.Parent = player:WaitForChild("PlayerGui")
-    end
+    self._screenGui.Parent = player:WaitForChild("PlayerGui")
 
     -- Main container
     self._container = Create.Instance("Frame", {
@@ -335,6 +323,23 @@ function Window:_CreateGui()
             0,
             WindowChromeSizes.TitleHeight or 25
         ),
+        ZIndex = 1,
+        Parent = self._container,
+    })
+
+    -- Topbar drag area (covers full topbar minus the controls frame).
+    self._topBarDragArea = Create.Instance("Frame", {
+        Name = "TopBarDragArea",
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0, 0),
+        Size = UDim2.new(
+            1,
+            -(WindowChromeSizes.TopBarControlsWidth or 80),
+            0,
+            WindowChromeSizes.HeaderHeight or 45
+        ),
+        ZIndex = WindowLayers.TopBarDragArea or 5,
         Parent = self._container,
     })
 
@@ -343,7 +348,7 @@ function Window:_CreateGui()
     self:_CreateWindowControls()
 
     -- Make draggable
-    self._dragConnection = Draggable.Enable(self._container, self._titleLabel)
+    self._dragConnection = Draggable.Enable(self._container, self._topBarDragArea)
     self._bottomDragConnection = Draggable.Enable(self._container, self._bottomDragArea)
 
     -- Acrylic blur effect
@@ -354,6 +359,23 @@ function Window:_CreateGui()
 end
 
 function Window:_CreateWindowControls()
+    -- Topbar controls frame (excluded from the topbar drag area).
+    self._topBarControls = Create.Instance("Frame", {
+        Name = "TopBarControls",
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, 0, 0, 0),
+        Size = UDim2.new(
+            0,
+            WindowChromeSizes.TopBarControlsWidth or 80,
+            0,
+            WindowChromeSizes.HeaderHeight or 45
+        ),
+        ZIndex = WindowLayers.TopBarControls or 6,
+        Parent = self._container,
+    })
+
     -- Minimize button
     local minimizeBtn = Create.Instance("ImageLabel", {
         Name = "Minimize",
@@ -373,7 +395,7 @@ function Window:_CreateWindowControls()
             0,
             WindowChromeSizes.ControlSize or 15
         ),
-        Parent = self._container,
+        Parent = self._topBarControls,
     })
 
     local minimizeClick = Create.Instance("TextButton", {
@@ -420,7 +442,7 @@ function Window:_CreateWindowControls()
             0,
             WindowChromeSizes.ControlSize or 15
         ),
-        Parent = self._container,
+        Parent = self._topBarControls,
     })
 
     closeBtn.MouseButton1Click:Connect(function()
@@ -564,6 +586,17 @@ function Window:_CreateContentArea()
 
     Create.ListLayout(self._contentContainer, 8)
     Create.Padding(self._contentContainer, 10, 10, 15, 15)
+
+    self._popupLayer = Create.Instance("Frame", {
+        Name = "PopupLayer",
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        Position = UDim2.new(0, 0, 0, 0),
+        Size = UDim2.new(1, 0, 1, 0),
+        ZIndex = WindowLayers.PopupLayer or 900,
+        Parent = self._mainContent,
+    })
 end
 
 function Window:_SetupResize()
@@ -1275,6 +1308,10 @@ end
 ]]
 function Window:GetSectionsContainer(): ScrollingFrame
     return self._sectionsContainer
+end
+
+function Window:GetPopupLayer(): Frame
+    return self._popupLayer
 end
 
 --[[

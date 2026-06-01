@@ -18,6 +18,8 @@ local Icons = {
         Tab = "rbxassetid://112235310154264",
         TextBox = "rbxassetid://93828793199781",
         Config = "rbxassetid://10723356507",
+        DropdownSelected = "rbxassetid://16898669433",
+        DropdownSearch = "rbxassetid://16898734242",
     },
 
     Notification = {

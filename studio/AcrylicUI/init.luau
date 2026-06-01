@@ -18,7 +18,7 @@
     local section = window:CreateSection("Combat")
     local tab = section:CreateTab("Aimbot", "rbxassetid://10723407389")
 
-    tab:CreateToggle({
+    tab:Toggle({
         Name = "Enable Aimbot",
         Default = false,
         Callback = function(enabled)

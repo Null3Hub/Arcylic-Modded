@@ -269,11 +269,11 @@ tab:CreateSection("Settings")
 
 ---
 
-#### `tab:CreateToggle(config)`
+#### `tab:Toggle(config)`
 Creates a toggle switch.
 
 ```lua
-local toggle = tab:CreateToggle({
+local toggle = tab:Toggle({
     Name = "Enable Feature",
     Default = false,
     Flag = "FeatureEnabled", -- Optional: for config saving
@@ -295,11 +295,11 @@ local toggle = tab:CreateToggle({
 
 ---
 
-#### `tab:CreateSlider(config)`
+#### `tab:Slider(config)`
 Creates a slider.
 
 ```lua
-local slider = tab:CreateSlider({
+local slider = tab:Slider({
     Name = "Speed",
     Min = 0,
     Max = 100,
@@ -325,11 +325,11 @@ local slider = tab:CreateSlider({
 
 ---
 
-#### `tab:CreateDropdown(config)`
+#### `tab:Dropdown(config)`
 Creates a dropdown menu.
 
 ```lua
-local dropdown = tab:CreateDropdown({
+local dropdown = tab:Dropdown({
     Name = "Select Option",
     Options = {"Option 1", "Option 2", "Option 3"},
     Default = "Option 1",
@@ -356,11 +356,11 @@ local dropdown = tab:CreateDropdown({
 
 ---
 
-#### `tab:CreateKeybind(config)`
+#### `tab:Keybind(config)`
 Creates a keybind selector.
 
 ```lua
-local keybind = tab:CreateKeybind({
+local keybind = tab:Keybind({
     Name = "Fly Toggle",
     Default = Enum.KeyCode.F,
     Flag = "FlyKeybind",
@@ -382,11 +382,11 @@ local keybind = tab:CreateKeybind({
 
 ---
 
-#### `tab:CreateColorPicker(config)`
+#### `tab:ColorPicker(config)`
 Creates a color picker.
 
 ```lua
-local colorPicker = tab:CreateColorPicker({
+local colorPicker = tab:ColorPicker({
     Name = "Team Color",
     Default = Color3.fromRGB(255, 255, 255),
     Flag = "TeamColor",
@@ -408,11 +408,11 @@ local colorPicker = tab:CreateColorPicker({
 
 ---
 
-#### `tab:CreateButton(config)`
+#### `tab:Button(config)`
 Creates a button.
 
 ```lua
-local button = tab:CreateButton({
+local button = tab:Button({
     Name = "Click Me",
     Callback = function()
         print("Button clicked!")
@@ -429,11 +429,11 @@ local button = tab:CreateButton({
 
 ---
 
-#### `tab:CreateTextBox(config)`
+#### `tab:TextBox(config)`
 Creates a text input box.
 
 ```lua
-local textBox = tab:CreateTextBox({
+local textBox = tab:TextBox({
     Name = "Player Name",
     Default = "",
     Placeholder = "Enter name...",
@@ -463,11 +463,11 @@ local textBox = tab:CreateTextBox({
 
 ---
 
-#### `tab:CreateParagraph(config)`
+#### `tab:Paragraph(config)`
 Creates an informational text block.
 
 ```lua
-local paragraph = tab:CreateParagraph({
+local paragraph = tab:Paragraph({
     Title = "Information",
     Content = "This is some informational text that explains features or provides details."
 })
@@ -488,7 +488,7 @@ local paragraph = tab:CreateParagraph({
 Interactive components support a shared blocking API:
 
 ```lua
-local farmToggle = tab:CreateToggle({
+local farmToggle = tab:Toggle({
     Name = "Auto Farm",
     Default = true,
     Callback = function(enabled)
@@ -572,7 +572,7 @@ ConfigTab:CreateConfigSection() -- Creates full config management UI
 **Method 2: Manual Control**
 ```lua
 -- Make sure to add Flag to components you want to save
-AimbotTab:CreateToggle({
+AimbotTab:Toggle({
     Name = "Enable Aimbot",
     Flag = "AimbotEnabled", -- This flag is used as the save key
     Callback = function(enabled) end

@@ -61,10 +61,13 @@ local controlsTab = mainSection:CreateTab("Controls", "rbxassetid://10734898355"
 local visualTab = mainSection:CreateTab("Visual", "rbxassetid://10723407389")
 local infoTab = mainSection:CreateTab("Info", "rbxassetid://10709775704")
 
-controlsTab:CreateSection("Interaction")
+local interactionSection = controlsTab:CreateSection({
+    Title = "Interaction",
+    Description = "Primary demo controls grouped inside a content section.",
+})
 
 local featureEnabled = false
-controlsTab:CreateToggle({
+interactionSection:Toggle({
     Name = "Enable Feature",
     Default = false,
     Flag = "StudioFeatureEnabled",
@@ -78,7 +81,7 @@ controlsTab:CreateToggle({
     end,
 })
 
-controlsTab:CreateSlider({
+interactionSection:Slider({
     Name = "Intensity",
     Min = 0,
     Max = 100,
@@ -90,17 +93,22 @@ controlsTab:CreateSlider({
     end,
 })
 
-controlsTab:CreateDropdown({
-    Name = "Mode",
-    Options = { "Safe", "Balanced", "Fast" },
-    Default = "Balanced",
-    Flag = "StudioMode",
+interactionSection:Dropdown({
+    Name = "Search Views",
+    Options = { "Pixel Grid", "Layout Grids", "Rulers", "Slices", "Comments", "Outlines" },
+    Default = { "Layout Grids", "Slices" },
+    MultiSelect = true,
+    Search = {
+        Enabled = true,
+        Placeholder = "Search Views...",
+    },
+    Flag = "StudioSearchViews",
     Callback = function(selected)
-        print("AcrylicUI Studio mode:", selected)
+        print("AcrylicUI Studio views:", selected)
     end,
 })
 
-controlsTab:CreateTextBox({
+interactionSection:TextBox({
     Name = "Label",
     Default = "Studio",
     Placeholder = "Type a label...",
@@ -110,7 +118,7 @@ controlsTab:CreateTextBox({
     end,
 })
 
-controlsTab:CreateButton({
+interactionSection:Button({
     Name = "Show State",
     Callback = function()
         window:Notify({
@@ -121,7 +129,7 @@ controlsTab:CreateButton({
     end,
 })
 
-controlsTab:CreateKeybind({
+interactionSection:Keybind({
     Name = "Notify",
     Default = Enum.KeyCode.F,
     Flag = "StudioNotifyKey",
@@ -134,9 +142,12 @@ controlsTab:CreateKeybind({
     end,
 })
 
-visualTab:CreateSection("Visual")
+local visualSection = visualTab:CreateSection({
+    Title = "Visual",
+    Description = "Preview colors and resize behavior.",
+})
 
-visualTab:CreateColorPicker({
+visualSection:ColorPicker({
     Name = "Preview Color",
     Default = Color3.fromRGB(115, 170, 255),
     Flag = "StudioPreviewColor",
@@ -145,19 +156,22 @@ visualTab:CreateColorPicker({
     end,
 })
 
-visualTab:CreateParagraph({
+visualSection:Paragraph({
     Title = "Resize Test",
     Content = "Drag the bottom-right handle to test resize. This Studio project is intentionally served from the mirrored studio/AcrylicUI tree.",
 })
 
-infoTab:CreateSection("Notes")
+local notesSection = infoTab:CreateSection({
+    Title = "Notes",
+    Description = "Studio-specific testing details.",
+})
 
-infoTab:CreateParagraph({
+notesSection:Paragraph({
     Title = "Source Mirror",
     Content = "Edit src/, then run scripts/sync-studio-source.ps1 to update studio/AcrylicUI before testing with Rojo.",
 })
 
-infoTab:CreateParagraph({
+notesSection:Paragraph({
     Title = "Config System",
     Content = "Flags register normally, but SaveConfig and LoadConfig require executor file APIs and are not expected to save files in normal Studio.",
 })
