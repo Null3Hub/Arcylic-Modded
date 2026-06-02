@@ -4,9 +4,10 @@ A stabilized, toolchain-backed modded build of AcrylicUI for Roblox, with acryli
 ## Highlights
 -  **Modern Design** - Acrylic blur backdrop with smooth animations
 -  **Mobile Support** - Built-in draggable mobile toggle button for touch devices
--  **Drag & Resize** - Fully draggable window with smart resizing
+-  **Drag & Resize** - Fully draggable topbar and window with smart resizing
 -  **Notifications** - Beautiful notification system with icons and timers
--  **Components** - Button, Toggle, Slider, Dropdown, Keybind, ColorPicker, TextBox, Paragraph
+-  **Components** - Button, Toggle, Slider, Dropdown (with search), Keybind, ColorPicker, TextBox, Paragraph
+-  **Content Sections** - Grouped content areas with header, description, and separator inside tabs
 -  **Customizable** - Theme colors, sizes, fonts, and animation speeds
 -  **Keybind System** - Custom keybinds with listener support
 -  **Sections & Tabs** - Organized layout with collapsible sections
@@ -257,15 +258,31 @@ local tab = section:CreateTab("Aimbot", "rbxassetid://10723407389")
 
 ### Tab Methods
 
-#### `tab:CreateSection(name)`
-Creates a section header/divider within the tab content.
+#### `tab:CreateSection(config)`
+Creates a content section within the tab. Returns a ContentSection handler.
 
 ```lua
-tab:CreateSection("Settings")
+-- String shorthand
+local section = tab:CreateSection("Settings")
+
+-- Table config with description
+local section = tab:CreateSection({
+    Title = "Settings",
+    Description = "Adjust your settings below.",
+})
+
+-- Use the handler to add elements inside the section
+local toggle = section:Toggle({
+    Name = "Enable",
+    Default = false,
+    Callback = function(enabled) end,
+})
 ```
 
 **Parameters:**
-- `name` (string): Section header text
+- `config` (string or table): Section title string, or table with `Title` and `Description`/`Desc`
+
+**Returns:** ContentSection handler with element methods (see [ContentSection Methods](#contentsection-methods))
 
 ---
 
@@ -326,7 +343,7 @@ local slider = tab:Slider({
 ---
 
 #### `tab:Dropdown(config)`
-Creates a dropdown menu.
+Creates a dropdown menu with optional search.
 
 ```lua
 local dropdown = tab:Dropdown({
@@ -334,6 +351,7 @@ local dropdown = tab:Dropdown({
     Options = {"Option 1", "Option 2", "Option 3"},
     Default = "Option 1",
     MultiSelect = false,
+    Search = true,
     Flag = "SelectedOption",
     Callback = function(selected)
         print("Selected:", selected)
@@ -346,6 +364,7 @@ local dropdown = tab:Dropdown({
 - `Options` (table): Array of option strings
 - `Default` (string or table): Initial selection
 - `MultiSelect` (boolean, optional): Allow multiple selections (default: false)
+- `Search` (boolean, string, or table, optional): Enable search filtering. `true` for default placeholder, a string for custom placeholder, or `{ Enabled = true, Placeholder = "..." }` for full control.
 - `Flag` (string, optional): Unique identifier for config system
 - `Callback` (function): Function called when selection changes
 
@@ -480,6 +499,22 @@ local paragraph = tab:Paragraph({
 **Methods:**
 - `paragraph:SetTitle(title)` - Update title
 - `paragraph:SetContent(content)` - Update content
+
+---
+
+### ContentSection Methods
+
+The ContentSection handler returned by `tab:CreateSection(config)` supports the same element methods as Tab:
+
+- `section:Paragraph(config)` - Creates a paragraph
+- `section:Button(config)` - Creates a button
+- `section:Toggle(config)` - Creates a toggle
+- `section:Slider(config)` - Creates a slider
+- `section:Dropdown(config)` - Creates a dropdown
+- `section:Keybind(config)` - Creates a keybind
+- `section:ColorPicker(config)` - Creates a color picker
+- `section:TextBox(config)` - Creates a text box
+- `section:CreateConfigSection()` - Creates a pre-built config management UI
 
 ---
 

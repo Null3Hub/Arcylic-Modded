@@ -69,7 +69,10 @@ local uiSection = window:CreateSection("UI")
 local settingsSection = window:CreateSection("Settings")
 
 local combatTab = combatSection:CreateTab("Combat", "rbxassetid://10723407389")
-combatTab:CreateSection("Actions")
+local actionsSection = combatTab:CreateSection({
+    Title = "Actions",
+    Description = "Core combat actions and configuration.",
+})
 
 local autoFarmEnabled = false
 local autoFarmToggle = combatTab:Toggle({
@@ -115,9 +118,10 @@ local damageSlider = combatTab:Slider({
 
 local targetDropdown = combatTab:Dropdown({
     Name = "Target Priority",
-    Description = "Single-select dropdown.",
+    Description = "Single-select dropdown with search enabled.",
     Options = { "Closest", "Lowest HP", "Highest Threat" },
     Default = "Closest",
+    Search = true,
     Flag = "TargetPriority",
     Callback = function(selected)
         print("Target priority:", selected)
@@ -137,7 +141,10 @@ local weaponsDropdown = combatTab:Dropdown({
 })
 
 local movementTab = playerSection:CreateTab("Movement", "rbxassetid://10734898355")
-movementTab:CreateSection("Movement Controls")
+local movementControls = movementTab:CreateSection({
+    Title = "Movement Controls",
+    Description = "Speed, flight, and teleport settings.",
+})
 
 local walkSpeedSlider = movementTab:Slider({
     Name = "Walk Speed",
@@ -188,7 +195,10 @@ local teleportBox = movementTab:TextBox({
 })
 
 local appearanceTab = uiSection:CreateTab("Appearance", "rbxassetid://10734898355")
-appearanceTab:CreateSection("Theme and Text")
+local themeSection = appearanceTab:CreateSection({
+    Title = "Theme and Text",
+    Description = "Customize accent colors and display text.",
+})
 
 local accentPicker = appearanceTab:ColorPicker({
     Name = "Accent Color",
@@ -234,7 +244,10 @@ local infoParagraph = appearanceTab:Paragraph({
 })
 
 local runtimeTab = uiSection:CreateTab("Runtime API", "rbxassetid://10723356507")
-runtimeTab:CreateSection("Programmatic Methods")
+runtimeTab:CreateSection({
+    Title = "Programmatic Methods",
+    Description = "Set values, block/unblock controls, and manage window state at runtime.",
+})
 
 runtimeTab:Button({
     Name = "Set Example Values",
@@ -333,7 +346,10 @@ runtimeTab:Button({
 local configTab = settingsSection:CreateTab("Config", "rbxassetid://10723356507")
 local configSection = configTab:CreateConfigSection()
 
-configTab:CreateSection("Manual Config API")
+configTab:CreateSection({
+    Title = "Manual Config API",
+    Description = "Direct config save/load/delete via window methods.",
+})
 
 configTab:Button({
     Name = "Save ExampleManual",
