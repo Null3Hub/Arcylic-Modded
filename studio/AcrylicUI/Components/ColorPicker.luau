@@ -1,13 +1,14 @@
 local Create = require(script.Parent.Parent.Utils.Create)
+local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
 local Colors = require(script.Parent.Parent.Constants.Colors)
 local Sizes = require(script.Parent.Parent.Constants.Sizes)
-local Fonts = require(script.Parent.Parent.Constants.Fonts)
 local Defaults = require(script.Parent.Parent.Constants.Defaults)
 local Layers = require(script.Parent.Parent.Constants.Layers)
 local Services = require(script.Parent.Parent.Utils.Services)
 
 local ColorPicker = {}
 ColorPicker.__index = ColorPicker
+setmetatable(ColorPicker, { __index = BaseComponent })
 local ComponentDefaults = Defaults.Components or {}
 local CommonDefaults = ComponentDefaults.Common or {}
 local ColorPickerDefaults = ComponentDefaults.ColorPicker or {}
@@ -26,50 +27,32 @@ local PRESETS = ColorPickerDefaults.Presets
     }
 
 function ColorPicker.new(parent: Instance, config, window)
-    local self = setmetatable({}, ColorPicker)
-    local name = (config and config.Name) or ColorPickerDefaults.Name or "Color Picker"
-    self._callback = (config and config.Callback) or function() end
-    self._color = (config and config.Default) or PRESETS[1]
-    self._flag = config and config.Flag
-    self._window = window
-    self._connections = {}
+    config = config or {}
+
+    local name = config.Name or ColorPickerDefaults.Name or "Color Picker"
     local description = Create.GetDescription(config)
     local hasDescription = description ~= nil
     local height = hasDescription
             and (ColorPickerSizes.HeightWithDescription or CommonDefaults.HeightWithDescription or 50)
         or Sizes.Button.Height
 
-    self._frame = Create.Instance("Frame", {
-        Name = "ColorPicker_" .. name,
-        BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, height),
+    local self = BaseComponent.new(ColorPicker, {
         Parent = parent,
+        Size = UDim2.new(1, 0, 0, height),
+        Blockable = true,
+        Flag = config.Flag,
+        Window = window,
     })
 
-    Create.Corner(self._frame, Sizes.Corner.Medium)
-    Create.Stroke(self._frame)
+    self._callback = config.Callback or function() end
+    self._color = config.Default or PRESETS[1]
 
-    Create.Instance("TextLabel", {
-        Name = "Name",
-        FontFace = Fonts.Regular,
-        TextColor3 = Colors.Text,
-        Text = name,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        Position = hasDescription
-                and UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.LabelTop or 7)
-            or UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, 0),
-        TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(
-            1,
-            -(ColorPickerSizes.LabelRightPadding or 50),
-            0,
-            Sizes.Component.LabelHeight or 20
-        ),
-        Parent = self._frame,
-    })
+    Create.ComponentLabel(
+        self._frame,
+        name,
+        hasDescription,
+        ColorPickerSizes.LabelRightPadding or 50
+    )
 
     Create.Description(
         self._frame,
@@ -177,17 +160,14 @@ function ColorPicker.new(parent: Instance, config, window)
         })
         Create.Corner(swatch, Sizes.Corner.Small)
         Create.Stroke(swatch)
-        table.insert(
-            self._connections,
-            swatch.MouseButton1Click:Connect(function()
-                if self._blocked then
-                    return
-                end
+        self:Connect(swatch.MouseButton1Click, function()
+            if self._blocked then
+                return
+            end
 
-                self:SetColor(col)
-                close()
-            end)
-        )
+            self:SetColor(col)
+            close()
+        end)
     end
 
     local function open()
@@ -207,7 +187,8 @@ function ColorPicker.new(parent: Instance, config, window)
 
         -- Connect outside-click handler
         if not self._outsideClickConn then
-            self._outsideClickConn = Services.UserInputService.InputBegan:Connect(
+            self._outsideClickConn = self:Connect(
+                Services.UserInputService.InputBegan,
                 function(input, gameProcessed)
                     if gameProcessed then
                         return
@@ -252,26 +233,20 @@ function ColorPicker.new(parent: Instance, config, window)
                     close()
                 end
             )
-            table.insert(self._connections, self._outsideClickConn)
         end
     end
 
-    table.insert(
-        self._connections,
-        previewBtn.MouseButton1Click:Connect(function()
-            if self._blocked then
-                return
-            end
+    self:Connect(previewBtn.MouseButton1Click, function()
+        if self._blocked then
+            return
+        end
 
-            if self._isOpen then
-                close()
-            else
-                open()
-            end
-        end)
-    )
-
-    Create.Blockable(self, self._frame)
+        if self._isOpen then
+            close()
+        else
+            open()
+        end
+    end)
 
     local baseBlock = self.Block
     self.Block = function(component, text: string?)
@@ -279,15 +254,24 @@ function ColorPicker.new(parent: Instance, config, window)
         baseBlock(component, text)
     end
 
-    if self._flag and self._window and self._window.RegisterConfigElement then
-        self._window:RegisterConfigElement(self._flag, "ColorPicker", function()
-            return self._color
-        end, function(value)
-            if typeof(value) == "Color3" then
-                self:SetColor(value)
-            end
-        end)
-    end
+    Create.Configurable(self, self._flag, "ColorPicker", function()
+        return {
+            R = self._color.R,
+            G = self._color.G,
+            B = self._color.B,
+        }
+    end, function(value)
+        if
+            type(value) == "table"
+            and type(value.R) == "number"
+            and type(value.G) == "number"
+            and type(value.B) == "number"
+        then
+            self:SetColor(Color3.new(value.R, value.G, value.B))
+        elseif typeof(value) == "Color3" then
+            self:SetColor(value)
+        end
+    end)
 
     return self
 end
@@ -303,19 +287,12 @@ function ColorPicker:GetColor(): Color3
 end
 
 function ColorPicker:Destroy()
-    for _, connection in ipairs(self._connections) do
-        connection:Disconnect()
-    end
-    table.clear(self._connections)
-
-    if self._flag and self._window and self._window.UnregisterConfigElement then
-        self._window:UnregisterConfigElement(self._flag)
-    end
-
     if self._palette then
         self._palette:Destroy()
+        self._palette = nil
     end
-    self._frame:Destroy()
+
+    BaseComponent.Destroy(self)
 end
 
 return ColorPicker

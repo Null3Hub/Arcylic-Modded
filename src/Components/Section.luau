@@ -5,27 +5,30 @@ local Fonts = require(script.Parent.Parent.Constants.Fonts)
 local Sizes = require(script.Parent.Parent.Constants.Sizes)
 local Defaults = require(script.Parent.Parent.Constants.Defaults)
 local Icons = require(script.Parent.Parent.Constants.Icons)
+local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
 
 local Section = {}
 Section.__index = Section
+setmetatable(Section, { __index = BaseComponent })
 local ComponentIcons = Icons.Components or {}
 local CommonDefaults = Defaults.Components and Defaults.Components.Common or {}
 
 function Section.new(window, name: string)
-    local self = setmetatable({}, Section)
+    local self = BaseComponent.new(Section, {
+        Parent = window:GetSectionsContainer(),
+        Size = UDim2.new(1, -(Sizes.Section.FrameRightPadding or 10), 0, 0),
+        BackgroundTransparency = 1,
+        Corner = false,
+        Stroke = false,
+        Blockable = false,
+        Window = window,
+        Properties = {
+            AutomaticSize = Enum.AutomaticSize.Y,
+        },
+    })
     self._window = window
     self._name = name
     self._tabs = {}
-    self._connections = {}
-
-    -- Sidebar section frame
-    self._frame = Create.Instance("Frame", {
-        Name = "Section_" .. name,
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, -(Sizes.Section.FrameRightPadding or 10), 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
-        Parent = window:GetSectionsContainer(),
-    })
 
     Create.ListLayout(self._frame, Sizes.Section.LayoutPadding or 2)
 
@@ -101,8 +104,8 @@ function Section.new(window, name: string)
         self._tabsContainer.Visible = expanded
     end
 
-    table.insert(self._connections, headerBtn.MouseButton1Click:Connect(toggle))
-    table.insert(self._connections, arrow.MouseButton1Click:Connect(toggle))
+    self:Connect(headerBtn.MouseButton1Click, toggle)
+    self:Connect(arrow.MouseButton1Click, toggle)
 
     self._label = label
     self._arrow = arrow
@@ -118,11 +121,6 @@ function Section:CreateTab(name: string, icon: string?)
 end
 
 function Section:Destroy()
-    for _, connection in ipairs(self._connections) do
-        connection:Disconnect()
-    end
-    table.clear(self._connections)
-
     for _, tab in ipairs(self._tabs) do
         if tab.Destroy then
             tab:Destroy()
@@ -130,9 +128,7 @@ function Section:Destroy()
     end
     table.clear(self._tabs)
 
-    if self._frame then
-        self._frame:Destroy()
-    end
+    BaseComponent.Destroy(self)
 end
 
 return Section

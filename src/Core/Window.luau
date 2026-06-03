@@ -72,6 +72,7 @@ export type WindowConfig = {
     ToggleKey: Enum.KeyCode?,
     ConfigFolder: string?,
     ClampToViewport: boolean?,
+    Parent: Instance?,
 }
 
 local WindowDefaults = Defaults.Window or {}
@@ -248,6 +249,7 @@ function Window.new(config: WindowConfig?)
     self._minSize = minSize
     self._maxSize = maxSize
     self._toggleKey = config.ToggleKey or WindowDefaults.ToggleKey or Enum.KeyCode.RightControl
+    self._parent = config.Parent
     self._configFolder = SanitizeConfigName(config.ConfigFolder or self._title)
     self._visible = true
     self._minimized = false
@@ -293,14 +295,21 @@ function Window:_CreateGui()
         ResetOnSpawn = false,
     })
 
+    local parentedToExplicit = false
+    if self._parent then
+        parentedToExplicit = pcall(function()
+            self._screenGui.Parent = self._parent
+        end)
+    end
+
     local parentedToCoreGui = false
-    if coreGuiAvailable and coreGui then
+    if not parentedToExplicit and coreGuiAvailable and coreGui then
         parentedToCoreGui = pcall(function()
             self._screenGui.Parent = coreGui
         end)
     end
 
-    if not parentedToCoreGui then
+    if not parentedToExplicit and not parentedToCoreGui then
         self._screenGui.Parent = player:WaitForChild("PlayerGui")
     end
 

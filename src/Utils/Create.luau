@@ -13,6 +13,7 @@ local Constants = {
 }
 
 local IconResolver = require(script.Parent.IconResolver)
+local Tween = require(script.Parent.Tween)
 
 local Create = {}
 
@@ -191,6 +192,72 @@ function Create.GetDescription(config: { [string]: any }?): string?
     end
 
     return tostring(description)
+end
+
+function Create.ComponentLabel(
+    parent: Instance,
+    text: string,
+    hasDescription: boolean,
+    rightPadding: number?
+): TextLabel
+    return Create.Instance("TextLabel", {
+        Name = "Label",
+        FontFace = Constants.Fonts.Regular,
+        TextColor3 = Constants.Colors.Text,
+        Text = text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        Position = if hasDescription
+            then UDim2.new(
+                0,
+                Constants.Sizes.Component.LabelLeft or 10,
+                0,
+                Constants.Sizes.Component.LabelTop or 7
+            )
+            else UDim2.new(
+                0,
+                Constants.Sizes.Component.LabelLeft or 10,
+                0.5,
+                -(Constants.Sizes.Component.LabelCenterOffset or 10)
+            ),
+        TextSize = Constants.Fonts.Size.Normal,
+        Size = UDim2.new(1, -(rightPadding or 50), 0, Constants.Sizes.Component.LabelHeight or 20),
+        Parent = parent,
+    }) :: TextLabel
+end
+
+function Create.HoverEffect(
+    trigger: GuiObject,
+    target: Instance,
+    hoverTransparency: number,
+    normalTransparency: number,
+    canHover: (() -> boolean)?
+): (RBXScriptConnection, RBXScriptConnection)
+    local enter = trigger.MouseEnter:Connect(function()
+        if canHover and not canHover() then
+            return
+        end
+
+        Tween.Create(target, { BackgroundTransparency = hoverTransparency }, "Fast")
+    end)
+
+    local leave = trigger.MouseLeave:Connect(function()
+        Tween.Create(target, { BackgroundTransparency = normalTransparency }, "Fast")
+    end)
+
+    return enter, leave
+end
+
+function Create.Configurable(
+    target: any,
+    flag: string?,
+    typeName: string,
+    getter: () -> any,
+    setter: (value: any) -> ()
+)
+    if flag and target._window and target._window.RegisterConfigElement then
+        target._window:RegisterConfigElement(flag, typeName, getter, setter)
+    end
 end
 
 --[[

@@ -25,15 +25,16 @@ __modules["Components.Button"] = function()
 ]]
 
 local Create = __require("Utils.Create")
+local BaseComponent = __require("Core.BaseComponent")
 local Tween = __require("Utils.Tween")
 local Colors = __require("Constants.Colors")
 local Sizes = __require("Constants.Sizes")
-local Fonts = __require("Constants.Fonts")
 local Defaults = __require("Constants.Defaults")
 local Icons = __require("Constants.Icons")
 
 local Button = {}
 Button.__index = Button
+setmetatable(Button, { __index = BaseComponent })
 local ComponentDefaults = Defaults.Components or {}
 local CommonDefaults = ComponentDefaults.Common or {}
 local ButtonDefaults = ComponentDefaults.Button or {}
@@ -58,7 +59,7 @@ local ComponentIcons = Icons.Components or {}
     })
 ]]
 function Button.new(parent, config)
-    local self = setmetatable({}, Button)
+    local self
     config = config or {}
 
     local name = config.Name or ButtonDefaults.Name or "Button"
@@ -70,46 +71,19 @@ function Button.new(parent, config)
             and (Sizes.Component.HeightWithDescription or CommonDefaults.HeightWithDescription or 50)
         or Sizes.Button.Height
 
-    self._connections = {}
-
-    -- Main container
-    self._frame = Create.Instance("Frame", {
-        Name = "Button_" .. name,
-        BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, height),
+    self = BaseComponent.new(Button, {
         Parent = parent,
+        Size = UDim2.new(1, 0, 0, height),
+        Blockable = true,
     })
-
-    Create.Corner(self._frame, Sizes.Corner.Medium)
-    Create.Stroke(self._frame)
 
     -- Button label
-    self._label = Create.Instance("TextLabel", {
-        Name = "Label",
-        FontFace = Fonts.Regular,
-        TextColor3 = Colors.Text,
-        Text = name,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        Position = hasDescription
-                and UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.LabelTop or 7)
-            or UDim2.new(
-                0,
-                Sizes.Component.LabelLeft or 10,
-                0.5,
-                -(Sizes.Component.LabelCenterOffset or 10)
-            ),
-        TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(
-            1,
-            -(Sizes.Button.LabelRightPadding or 50),
-            0,
-            Sizes.Component.LabelHeight or 20
-        ),
-        Parent = self._frame,
-    })
+    self._label = Create.ComponentLabel(
+        self._frame,
+        name,
+        hasDescription,
+        Sizes.Button.LabelRightPadding or 50
+    )
 
     -- Description
     Create.Description(
@@ -156,57 +130,38 @@ function Button.new(parent, config)
     self._callback = callback
 
     -- Event handlers
-    table.insert(
-        self._connections,
-        self._button.MouseButton1Click:Connect(function()
-            if self._blocked then
-                return
-            end
+    self:Connect(self._button.MouseButton1Click, function()
+        if self._blocked then
+            return
+        end
 
-            -- Click animation
-            Tween.Create(
-                self._frame,
-                { BackgroundTransparency = CommonDefaults.PressedTransparency or 0.2 },
-                "Fast"
-            )
-            task.wait(CommonDefaults.ClickFlashDelay or 0.1)
-            Tween.Create(
-                self._frame,
-                { BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4 },
-                "Fast"
-            )
+        -- Click animation
+        Tween.Create(
+            self._frame,
+            { BackgroundTransparency = CommonDefaults.PressedTransparency or 0.2 },
+            "Fast"
+        )
+        task.wait(CommonDefaults.ClickFlashDelay or 0.1)
+        Tween.Create(
+            self._frame,
+            { BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4 },
+            "Fast"
+        )
 
-            self._callback()
-        end)
+        self._callback()
+    end)
+
+    local enter, leave = Create.HoverEffect(
+        self._button,
+        self._frame,
+        CommonDefaults.HoverTransparency or 0.3,
+        CommonDefaults.SurfaceTransparency or 0.4,
+        function()
+            return not self._blocked
+        end
     )
-
-    table.insert(
-        self._connections,
-        self._button.MouseEnter:Connect(function()
-            if self._blocked then
-                return
-            end
-
-            Tween.Create(
-                self._frame,
-                { BackgroundTransparency = CommonDefaults.HoverTransparency or 0.3 },
-                "Fast"
-            )
-        end)
-    )
-
-    table.insert(
-        self._connections,
-        self._button.MouseLeave:Connect(function()
-            Tween.Create(
-                self._frame,
-                { BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4 },
-                "Fast"
-            )
-        end)
-    )
-
-    Create.Blockable(self, self._frame)
+    table.insert(self._connections, enter)
+    table.insert(self._connections, leave)
 
     return self
 end
@@ -223,29 +178,21 @@ function Button:SetCallback(callback)
     self._callback = callback
 end
 
-function Button:Destroy()
-    for _, connection in ipairs(self._connections) do
-        connection:Disconnect()
-    end
-    table.clear(self._connections)
-
-    self._frame:Destroy()
-end
-
 return Button
 end
 
 __modules["Components.ColorPicker"] = function()
 local Create = __require("Utils.Create")
+local BaseComponent = __require("Core.BaseComponent")
 local Colors = __require("Constants.Colors")
 local Sizes = __require("Constants.Sizes")
-local Fonts = __require("Constants.Fonts")
 local Defaults = __require("Constants.Defaults")
 local Layers = __require("Constants.Layers")
 local Services = __require("Utils.Services")
 
 local ColorPicker = {}
 ColorPicker.__index = ColorPicker
+setmetatable(ColorPicker, { __index = BaseComponent })
 local ComponentDefaults = Defaults.Components or {}
 local CommonDefaults = ComponentDefaults.Common or {}
 local ColorPickerDefaults = ComponentDefaults.ColorPicker or {}
@@ -264,50 +211,32 @@ local PRESETS = ColorPickerDefaults.Presets
     }
 
 function ColorPicker.new(parent, config, window)
-    local self = setmetatable({}, ColorPicker)
-    local name = (config and config.Name) or ColorPickerDefaults.Name or "Color Picker"
-    self._callback = (config and config.Callback) or function() end
-    self._color = (config and config.Default) or PRESETS[1]
-    self._flag = config and config.Flag
-    self._window = window
-    self._connections = {}
+    config = config or {}
+
+    local name = config.Name or ColorPickerDefaults.Name or "Color Picker"
     local description = Create.GetDescription(config)
     local hasDescription = description ~= nil
     local height = hasDescription
             and (ColorPickerSizes.HeightWithDescription or CommonDefaults.HeightWithDescription or 50)
         or Sizes.Button.Height
 
-    self._frame = Create.Instance("Frame", {
-        Name = "ColorPicker_" .. name,
-        BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, height),
+    local self = BaseComponent.new(ColorPicker, {
         Parent = parent,
+        Size = UDim2.new(1, 0, 0, height),
+        Blockable = true,
+        Flag = config.Flag,
+        Window = window,
     })
 
-    Create.Corner(self._frame, Sizes.Corner.Medium)
-    Create.Stroke(self._frame)
+    self._callback = config.Callback or function() end
+    self._color = config.Default or PRESETS[1]
 
-    Create.Instance("TextLabel", {
-        Name = "Name",
-        FontFace = Fonts.Regular,
-        TextColor3 = Colors.Text,
-        Text = name,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        Position = hasDescription
-                and UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.LabelTop or 7)
-            or UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, 0),
-        TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(
-            1,
-            -(ColorPickerSizes.LabelRightPadding or 50),
-            0,
-            Sizes.Component.LabelHeight or 20
-        ),
-        Parent = self._frame,
-    })
+    Create.ComponentLabel(
+        self._frame,
+        name,
+        hasDescription,
+        ColorPickerSizes.LabelRightPadding or 50
+    )
 
     Create.Description(
         self._frame,
@@ -415,17 +344,14 @@ function ColorPicker.new(parent, config, window)
         })
         Create.Corner(swatch, Sizes.Corner.Small)
         Create.Stroke(swatch)
-        table.insert(
-            self._connections,
-            swatch.MouseButton1Click:Connect(function()
-                if self._blocked then
-                    return
-                end
+        self:Connect(swatch.MouseButton1Click, function()
+            if self._blocked then
+                return
+            end
 
-                self:SetColor(col)
-                close()
-            end)
-        )
+            self:SetColor(col)
+            close()
+        end)
     end
 
     local function open()
@@ -445,7 +371,8 @@ function ColorPicker.new(parent, config, window)
 
         -- Connect outside-click handler
         if not self._outsideClickConn then
-            self._outsideClickConn = Services.UserInputService.InputBegan:Connect(
+            self._outsideClickConn = self:Connect(
+                Services.UserInputService.InputBegan,
                 function(input, gameProcessed)
                     if gameProcessed then
                         return
@@ -463,7 +390,7 @@ function ColorPicker.new(parent, config, window)
 
                     local clickPos = input.Position
 
-                    -- Click on palette → let swatch handle it
+                    -- Click on palette â†’ let swatch handle it
                     local palPos = self._palette.AbsolutePosition
                     local palSize = self._palette.AbsoluteSize
                     if
@@ -475,7 +402,7 @@ function ColorPicker.new(parent, config, window)
                         return
                     end
 
-                    -- Click on preview → let toggle handle it
+                    -- Click on preview â†’ let toggle handle it
                     local prevPos = self._preview.AbsolutePosition
                     local prevSize = self._preview.AbsoluteSize
                     if
@@ -490,26 +417,20 @@ function ColorPicker.new(parent, config, window)
                     close()
                 end
             )
-            table.insert(self._connections, self._outsideClickConn)
         end
     end
 
-    table.insert(
-        self._connections,
-        previewBtn.MouseButton1Click:Connect(function()
-            if self._blocked then
-                return
-            end
+    self:Connect(previewBtn.MouseButton1Click, function()
+        if self._blocked then
+            return
+        end
 
-            if self._isOpen then
-                close()
-            else
-                open()
-            end
-        end)
-    )
-
-    Create.Blockable(self, self._frame)
+        if self._isOpen then
+            close()
+        else
+            open()
+        end
+    end)
 
     local baseBlock = self.Block
     self.Block = function(component, text)
@@ -517,15 +438,24 @@ function ColorPicker.new(parent, config, window)
         baseBlock(component, text)
     end
 
-    if self._flag and self._window and self._window.RegisterConfigElement then
-        self._window:RegisterConfigElement(self._flag, "ColorPicker", function()
-            return self._color
-        end, function(value)
-            if typeof(value) == "Color3" then
-                self:SetColor(value)
-            end
-        end)
-    end
+    Create.Configurable(self, self._flag, "ColorPicker", function()
+        return {
+            R = self._color.R,
+            G = self._color.G,
+            B = self._color.B,
+        }
+    end, function(value)
+        if
+            type(value) == "table"
+            and type(value.R) == "number"
+            and type(value.G) == "number"
+            and type(value.B) == "number"
+        then
+            self:SetColor(Color3.new(value.R, value.G, value.B))
+        elseif typeof(value) == "Color3" then
+            self:SetColor(value)
+        end
+    end)
 
     return self
 end
@@ -541,19 +471,12 @@ function ColorPicker:GetColor()
 end
 
 function ColorPicker:Destroy()
-    for _, connection in ipairs(self._connections) do
-        connection:Disconnect()
-    end
-    table.clear(self._connections)
-
-    if self._flag and self._window and self._window.UnregisterConfigElement then
-        self._window:UnregisterConfigElement(self._flag)
-    end
-
     if self._palette then
         self._palette:Destroy()
+        self._palette = nil
     end
-    self._frame:Destroy()
+
+    BaseComponent.Destroy(self)
 end
 
 return ColorPicker
@@ -566,6 +489,7 @@ local Sizes = __require("Constants.Sizes")
 local Fonts = __require("Constants.Fonts")
 local Defaults = __require("Constants.Defaults")
 local Icons = __require("Constants.Icons")
+local BaseComponent = __require("Core.BaseComponent")
 
 local Button = __require("Components.Button")
 local Toggle = __require("Components.Toggle")
@@ -575,6 +499,7 @@ local TextBox = __require("Components.TextBox")
 
 local ContentSection = {}
 ContentSection.__index = ContentSection
+setmetatable(ContentSection, { __index = BaseComponent })
 
 local ComponentDefaults = Defaults.Components or {}
 local CommonDefaults = ComponentDefaults.Common or {}
@@ -586,30 +511,26 @@ local ComponentIcons = Icons.Components or {}
 local NotificationIcons = Icons.Notification or {}
 
 function ContentSection.new(tab, config)
-    local self = setmetatable({}, ContentSection)
     local sectionConfig = if type(config) == "table" then config else { Title = config }
     local title = tostring(sectionConfig.Title or sectionConfig.Name or "Section")
     local description = Create.GetDescription(sectionConfig)
     local hasDescription = description ~= nil
     local headerHeight = hasDescription and 54 or 42
 
+    local self = BaseComponent.new(ContentSection, {
+        Parent = tab._content,
+        Size = UDim2.new(1, 0, 0, 0),
+        Blockable = false,
+        Window = tab._window,
+        Properties = {
+            AutomaticSize = Enum.AutomaticSize.Y,
+        },
+    })
+
     self._tab = tab
     self._window = tab._window
     self._title = title
     self._elements = {}
-
-    self._frame = Create.Instance("Frame", {
-        Name = "ContentSection_" .. title,
-        BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
-        Parent = tab._content,
-    })
-
-    Create.Corner(self._frame, Sizes.Corner.Medium)
-    Create.Stroke(self._frame)
     Create.ListLayout(self._frame, 0)
 
     self._header = Create.Instance("Frame", {
@@ -821,9 +742,7 @@ function ContentSection:Destroy()
     end
     table.clear(self._elements)
 
-    if self._frame then
-        self._frame:Destroy()
-    end
+    BaseComponent.Destroy(self)
 end
 
 return ContentSection
@@ -837,6 +756,7 @@ __modules["Components.Dropdown"] = function()
 ]]
 
 local Create = __require("Utils.Create")
+local BaseComponent = __require("Core.BaseComponent")
 local Tween = __require("Utils.Tween")
 local Colors = __require("Constants.Colors")
 local Sizes = __require("Constants.Sizes")
@@ -847,6 +767,7 @@ local Layers = __require("Constants.Layers")
 
 local Dropdown = {}
 Dropdown.__index = Dropdown
+setmetatable(Dropdown, { __index = BaseComponent })
 local ComponentDefaults = Defaults.Components or {}
 local CommonDefaults = ComponentDefaults.Common or {}
 local DropdownDefaults = ComponentDefaults.Dropdown or {}
@@ -884,65 +805,51 @@ end
     @return DropdownObject - Dropdown control object
 ]]
 function Dropdown.new(parent, config, window)
-    local self = setmetatable({}, Dropdown)
+    local self
     config = config or {}
 
     local name = config.Name or DropdownDefaults.Name or "Dropdown"
-    self._options = config.Options
+    local options = config.Options
         or DropdownDefaults.Options
         or { "Option 1", "Option 2", "Option 3" }
-    self._multiSelect = if config.MultiSelect == nil
+    local multiSelect = if config.MultiSelect == nil
         then (DropdownDefaults.MultiSelect or false)
         else config.MultiSelect
-    self._callback = config.Callback or function() end
-    self._expanded = false
-    self._flag = config.Flag
-    self._window = window
-    self._connections = {}
-    self._searchEnabled, self._searchPlaceholder = ResolveSearchConfig(config.Search, name)
-    self._searchText = ""
+    local callback = config.Callback or function() end
+    local searchEnabled, searchPlaceholder = ResolveSearchConfig(config.Search, name)
     local description = Create.GetDescription(config)
     local hasDescription = description ~= nil
     local height = hasDescription
             and (DropdownSizes.HeightWithDescription or CommonDefaults.HeightWithDescription or 50)
         or Sizes.Dropdown.Height
 
-    -- Initialize selected value
-    if self._multiSelect then
-        self._selected = if type(config.Default) == "table" then config.Default else {}
-    else
-        self._selected = config.Default or self._options[1]
-    end
+    local selected = if multiSelect
+        then (if type(config.Default) == "table" then config.Default else {})
+        else config.Default or options[1]
 
-    -- Main container
-    self._frame = Create.Instance("Frame", {
-        Name = "Dropdown_" .. name,
-        BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, height),
-        ClipsDescendants = false,
-        ZIndex = DropdownLayers.Base or 1,
+    self = BaseComponent.new(Dropdown, {
         Parent = parent,
+        Size = UDim2.new(1, 0, 0, height),
+        Blockable = true,
+        Flag = config.Flag,
+        Window = window,
     })
 
-    Create.Corner(self._frame, Sizes.Corner.Medium)
-    Create.Stroke(self._frame)
+    self._options = options
+    self._multiSelect = multiSelect
+    self._callback = callback
+    self._expanded = false
+    self._selected = selected
+    self._searchEnabled = searchEnabled
+    self._searchPlaceholder = searchPlaceholder
+    self._searchText = ""
 
-    -- Label
-    Create.Instance("TextLabel", {
-        Name = "Label",
-        FontFace = Fonts.Regular,
-        TextColor3 = Colors.Text,
-        Text = name,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0, hasDescription and 6 or 10),
-        TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(0, DropdownSizes.LabelWidth or 200, 0, Sizes.Component.LabelHeight or 20),
-        ZIndex = DropdownLayers.Label or 1,
-        Parent = self._frame,
-    })
+    self._label = Create.ComponentLabel(
+        self._frame,
+        name,
+        hasDescription,
+        DropdownSizes.LabelRightPadding or 120
+    )
 
     -- Description
     Create.Description(
@@ -1025,62 +932,45 @@ function Dropdown.new(parent, config, window)
         Parent = self._display,
     })
 
-    table.insert(
-        self._connections,
-        toggleBtn.MouseButton1Click:Connect(function()
-            if self._blocked then
-                return
-            end
+    self:Connect(toggleBtn.MouseButton1Click, function()
+        if self._blocked then
+            return
+        end
 
-            if self._expanded then
-                self:Close()
-            else
-                self:Open()
-            end
-        end)
-    )
+        if self._expanded then
+            self:Close()
+        else
+            self:Open()
+        end
+    end)
 
     local contentContainer = self:_GetContentContainer()
     if contentContainer then
-        table.insert(
-            self._connections,
-            contentContainer:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
-                if self._expanded then
-                    self:Close()
-                end
-            end)
-        )
+        self:Connect(contentContainer:GetPropertyChangedSignal("CanvasPosition"), function()
+            if self._expanded then
+                self:Close()
+            end
+        end)
     end
 
     local popupParent = self:_GetPopupParent()
-    table.insert(
-        self._connections,
-        popupParent:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-            if self._expanded then
-                self:_PositionOptionsContainer(#self:_GetFilteredOptions())
-            end
-        end)
-    )
+    self:Connect(popupParent:GetPropertyChangedSignal("AbsoluteSize"), function()
+        if self._expanded then
+            self:_PositionOptionsContainer(#self:_GetFilteredOptions())
+        end
+    end)
 
-    table.insert(
-        self._connections,
-        self._display:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
-            if self._expanded then
-                self:_PositionOptionsContainer(#self:_GetFilteredOptions())
-            end
-        end)
-    )
+    self:Connect(self._display:GetPropertyChangedSignal("AbsolutePosition"), function()
+        if self._expanded then
+            self:_PositionOptionsContainer(#self:_GetFilteredOptions())
+        end
+    end)
 
-    table.insert(
-        self._connections,
-        self._display:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-            if self._expanded then
-                self:_PositionOptionsContainer(#self:_GetFilteredOptions())
-            end
-        end)
-    )
-
-    Create.Blockable(self, self._frame)
+    self:Connect(self._display:GetPropertyChangedSignal("AbsoluteSize"), function()
+        if self._expanded then
+            self:_PositionOptionsContainer(#self:_GetFilteredOptions())
+        end
+    end)
 
     local baseBlock = self.Block
     self.Block = function(component, text)
@@ -1088,15 +978,17 @@ function Dropdown.new(parent, config, window)
         baseBlock(component, text)
     end
 
-    if self._flag and self._window and self._window.RegisterConfigElement then
-        self._window:RegisterConfigElement(self._flag, "Dropdown", function()
-            return self._selected
-        end, function(value)
-            if type(value) == "string" or type(value) == "table" then
-                self:SetValue(value)
+    Create.Configurable(self, self._flag, "Dropdown", function()
+        return self._selected
+    end, function(value)
+        if self._multiSelect then
+            if type(value) == "table" then
+                self:SetValue(value, true)
             end
-        end)
-    end
+        elseif type(value) == "string" then
+            self:SetValue(value, true)
+        end
+    end)
 
     return self
 end
@@ -1311,13 +1203,10 @@ function Dropdown:_CreateOptionsContainer()
             Parent = self._searchContainer,
         })
 
-        table.insert(
-            self._connections,
-            self._searchInput:GetPropertyChangedSignal("Text"):Connect(function()
-                self._searchText = self._searchInput.Text
-                self:_PopulateOptions()
-            end)
-        )
+        self:Connect(self._searchInput:GetPropertyChangedSignal("Text"), function()
+            self._searchText = self._searchInput.Text
+            self:_PopulateOptions()
+        end)
 
         Create.Instance("Frame", {
             Name = "SearchSeparator",
@@ -1513,7 +1402,7 @@ function Dropdown:Close()
     self._frame.ZIndex = DropdownLayers.Base or 1
 end
 
-function Dropdown:SetValue(value)
+function Dropdown:SetValue(value, silent)
     if self._multiSelect then
         if type(value) == "table" then
             self._selected = value
@@ -1525,7 +1414,9 @@ function Dropdown:SetValue(value)
     if self._optionsScroll then
         self:_PopulateOptions()
     end
-    self._callback(self._selected)
+    if not silent then
+        self._callback(self._selected)
+    end
 end
 
 function Dropdown:GetValue()
@@ -1538,20 +1429,12 @@ function Dropdown:Refresh(options)
 end
 
 function Dropdown:Destroy()
-    for _, connection in ipairs(self._connections) do
-        connection:Disconnect()
-    end
-    table.clear(self._connections)
-
-    if self._flag and self._window and self._window.UnregisterConfigElement then
-        self._window:UnregisterConfigElement(self._flag)
-    end
-
     if self._optionsContainer then
         self._optionsContainer:Destroy()
+        self._optionsContainer = nil
     end
 
-    self._frame:Destroy()
+    BaseComponent.Destroy(self)
 end
 
 return Dropdown
@@ -1561,6 +1444,7 @@ __modules["Components.Keybind"] = function()
 local Services = __require("Utils.Services")
 
 local Create = __require("Utils.Create")
+local BaseComponent = __require("Core.BaseComponent")
 local Colors = __require("Constants.Colors")
 local Sizes = __require("Constants.Sizes")
 local Fonts = __require("Constants.Fonts")
@@ -1568,55 +1452,33 @@ local Defaults = __require("Constants.Defaults")
 
 local Keybind = {}
 Keybind.__index = Keybind
+setmetatable(Keybind, { __index = BaseComponent })
 local ComponentDefaults = Defaults.Components or {}
 local CommonDefaults = ComponentDefaults.Common or {}
 local KeybindDefaults = ComponentDefaults.Keybind or {}
 local KeybindSizes = Sizes.Keybind or {}
 
 function Keybind.new(parent, config, window)
-    local self = setmetatable({}, Keybind)
+    config = config or {}
 
-    local name = (config and config.Name) or KeybindDefaults.Name or "Keybind"
-    local default = (config and config.Default) or KeybindDefaults.Key or Enum.KeyCode.F
-    local callback = (config and config.Callback) or function() end
-    local flag = config and config.Flag
+    local name = config.Name or KeybindDefaults.Name or "Keybind"
+    local default = config.Default or KeybindDefaults.Key or Enum.KeyCode.F
+    local callback = config.Callback or function() end
     local description = Create.GetDescription(config)
     local hasDescription = description ~= nil
     local height = hasDescription
             and (KeybindSizes.HeightWithDescription or CommonDefaults.HeightWithDescription or 50)
         or Sizes.Button.Height
 
-    self._frame = Create.Instance("Frame", {
-        Name = "Keybind_" .. name,
-        BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, height),
+    local self = BaseComponent.new(Keybind, {
         Parent = parent,
+        Size = UDim2.new(1, 0, 0, height),
+        Blockable = true,
+        Flag = config.Flag,
+        Window = window,
     })
 
-    Create.Corner(self._frame, Sizes.Corner.Medium)
-    Create.Stroke(self._frame)
-
-    Create.Instance("TextLabel", {
-        Name = "Name",
-        FontFace = Fonts.Regular,
-        TextColor3 = Colors.Text,
-        Text = name,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        Position = hasDescription
-                and UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.LabelTop or 7)
-            or UDim2.new(
-                0,
-                Sizes.Component.LabelLeft or 10,
-                0.5,
-                -(Sizes.Component.LabelCenterOffset or 10)
-            ),
-        TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(0, KeybindSizes.LabelWidth or 200, 0, Sizes.Component.LabelHeight or 20),
-        Parent = self._frame,
-    })
+    Create.ComponentLabel(self._frame, name, hasDescription)
 
     Create.Description(
         self._frame,
@@ -1665,9 +1527,6 @@ function Keybind.new(parent, config, window)
 
     self._currentKey = default
     self._listening = false
-    self._flag = flag
-    self._window = window
-    self._connections = {}
 
     self._id = name
         .. "_"
@@ -1701,40 +1560,32 @@ function Keybind.new(parent, config, window)
         end
     end
 
-    table.insert(
-        self._connections,
-        self._listenBtn.MouseButton1Click:Connect(function()
-            if self._blocked then
-                return
-            end
+    self:Connect(self._listenBtn.MouseButton1Click, function()
+        if self._blocked then
+            return
+        end
 
-            self._listening = true
+        self._listening = true
+        refresh()
+    end)
+
+    self:Connect(Services.UserInputService.InputBegan, function(input, _gameProcessed)
+        if self._blocked then
+            return
+        end
+
+        if not self._listening then
+            return
+        end
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            self._currentKey = input.KeyCode
+            self._listening = false
+            window:UpdateKeybind(self._id, self._currentKey)
             refresh()
-        end)
-    )
-
-    table.insert(
-        self._connections,
-        Services.UserInputService.InputBegan:Connect(function(input, _gameProcessed)
-            if self._blocked then
-                return
-            end
-
-            if not self._listening then
-                return
-            end
-            if input.UserInputType == Enum.UserInputType.Keyboard then
-                self._currentKey = input.KeyCode
-                self._listening = false
-                window:UpdateKeybind(self._id, self._currentKey)
-                refresh()
-            end
-        end)
-    )
+        end
+    end)
 
     self._refresh = refresh
-
-    Create.Blockable(self, self._frame)
 
     local baseBlock = self.Block
     self.Block = function(component, text)
@@ -1743,15 +1594,15 @@ function Keybind.new(parent, config, window)
         baseBlock(component, text)
     end
 
-    if self._flag and self._window and self._window.RegisterConfigElement then
-        self._window:RegisterConfigElement(self._flag, "Keybind", function()
-            return self._currentKey
-        end, function(value)
-            if typeof(value) == "EnumItem" then
-                self:SetKey(value)
-            end
-        end)
-    end
+    Create.Configurable(self, self._flag, "Keybind", function()
+        return self._currentKey.Name
+    end, function(value)
+        if type(value) == "string" and Enum.KeyCode[value] then
+            self:SetKey(Enum.KeyCode[value])
+        elseif typeof(value) == "EnumItem" then
+            self:SetKey(value)
+        end
+    end)
 
     refresh()
     return self
@@ -1767,23 +1618,6 @@ function Keybind:GetKey()
     return self._currentKey
 end
 
-function Keybind:Destroy()
-    for _, connection in ipairs(self._connections) do
-        connection:Disconnect()
-    end
-    table.clear(self._connections)
-
-    if self._window then
-        self._window:UnregisterKeybind(self._id)
-    end
-
-    if self._flag and self._window and self._window.UnregisterConfigElement then
-        self._window:UnregisterConfigElement(self._flag)
-    end
-
-    self._frame:Destroy()
-end
-
 return Keybind
 end
 
@@ -1793,32 +1627,29 @@ local Colors = __require("Constants.Colors")
 local Sizes = __require("Constants.Sizes")
 local Fonts = __require("Constants.Fonts")
 local Defaults = __require("Constants.Defaults")
+local BaseComponent = __require("Core.BaseComponent")
 
 local Paragraph = {}
 Paragraph.__index = Paragraph
+setmetatable(Paragraph, { __index = BaseComponent })
 local ComponentDefaults = Defaults.Components or {}
 local CommonDefaults = ComponentDefaults.Common or {}
 local ParagraphDefaults = ComponentDefaults.Paragraph or {}
 
 function Paragraph.new(parent, config)
-    local self = setmetatable({}, Paragraph)
+    local self = BaseComponent.new(Paragraph, {
+        Parent = parent,
+        Size = UDim2.new(1, 0, 0, 0),
+        Blockable = false,
+        Properties = {
+            AutomaticSize = Enum.AutomaticSize.Y,
+        },
+    })
     local title = (config and config.Title) or ParagraphDefaults.Title or "Paragraph"
     local content = (config and config.Content)
         or ParagraphDefaults.Content
         or "Description text here."
 
-    self._frame = Create.Instance("Frame", {
-        Name = "Paragraph",
-        BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
-        Parent = parent,
-    })
-
-    Create.Corner(self._frame, Sizes.Corner.Medium)
-    Create.Stroke(self._frame)
     Create.Padding(self._frame, 10, 10, 10, 10)
 
     self._title = Create.Instance("TextLabel", {
@@ -1870,27 +1701,30 @@ local Fonts = __require("Constants.Fonts")
 local Sizes = __require("Constants.Sizes")
 local Defaults = __require("Constants.Defaults")
 local Icons = __require("Constants.Icons")
+local BaseComponent = __require("Core.BaseComponent")
 
 local Section = {}
 Section.__index = Section
+setmetatable(Section, { __index = BaseComponent })
 local ComponentIcons = Icons.Components or {}
 local CommonDefaults = Defaults.Components and Defaults.Components.Common or {}
 
 function Section.new(window, name)
-    local self = setmetatable({}, Section)
+    local self = BaseComponent.new(Section, {
+        Parent = window:GetSectionsContainer(),
+        Size = UDim2.new(1, -(Sizes.Section.FrameRightPadding or 10), 0, 0),
+        BackgroundTransparency = 1,
+        Corner = false,
+        Stroke = false,
+        Blockable = false,
+        Window = window,
+        Properties = {
+            AutomaticSize = Enum.AutomaticSize.Y,
+        },
+    })
     self._window = window
     self._name = name
     self._tabs = {}
-    self._connections = {}
-
-    -- Sidebar section frame
-    self._frame = Create.Instance("Frame", {
-        Name = "Section_" .. name,
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, -(Sizes.Section.FrameRightPadding or 10), 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
-        Parent = window:GetSectionsContainer(),
-    })
 
     Create.ListLayout(self._frame, Sizes.Section.LayoutPadding or 2)
 
@@ -1966,8 +1800,8 @@ function Section.new(window, name)
         self._tabsContainer.Visible = expanded
     end
 
-    table.insert(self._connections, headerBtn.MouseButton1Click:Connect(toggle))
-    table.insert(self._connections, arrow.MouseButton1Click:Connect(toggle))
+    self:Connect(headerBtn.MouseButton1Click, toggle)
+    self:Connect(arrow.MouseButton1Click, toggle)
 
     self._label = label
     self._arrow = arrow
@@ -1983,11 +1817,6 @@ function Section:CreateTab(name, icon)
 end
 
 function Section:Destroy()
-    for _, connection in ipairs(self._connections) do
-        connection:Disconnect()
-    end
-    table.clear(self._connections)
-
     for _, tab in ipairs(self._tabs) do
         if tab.Destroy then
             tab:Destroy()
@@ -1995,9 +1824,7 @@ function Section:Destroy()
     end
     table.clear(self._tabs)
 
-    if self._frame then
-        self._frame:Destroy()
-    end
+    BaseComponent.Destroy(self)
 end
 
 return Section
@@ -2013,6 +1840,7 @@ __modules["Components.Slider"] = function()
 local Services = __require("Utils.Services")
 
 local Create = __require("Utils.Create")
+local BaseComponent = __require("Core.BaseComponent")
 local Tween = __require("Utils.Tween")
 local Colors = __require("Constants.Colors")
 local Sizes = __require("Constants.Sizes")
@@ -2021,6 +1849,7 @@ local Defaults = __require("Constants.Defaults")
 
 local Slider = {}
 Slider.__index = Slider
+setmetatable(Slider, { __index = BaseComponent })
 local SliderDefaults = Defaults.Slider
 local ComponentDefaults = Defaults.Components or {}
 local CommonDefaults = ComponentDefaults.Common or {}
@@ -2081,55 +1910,39 @@ end
     @return SliderObject - Slider control object
 ]]
 function Slider.new(parent, config, window)
-    local self = setmetatable({}, Slider)
+    config = config or {}
 
     local name = config.Name or SliderComponentDefaults.Name or "Slider"
-    self._min, self._max = resolveRange(config.Min, config.Max)
-    self._increment = resolveIncrement(config.Increment)
-    self._value =
-        normalizeValue(config.Default, SliderDefaults.Value, self._min, self._max, self._increment)
-    self._callback = config.Callback or function() end
-    self._dragging = false
-    self._flag = config.Flag
-    self._window = window
-    self._connections = {}
+    local min, max = resolveRange(config.Min, config.Max)
+    local increment = resolveIncrement(config.Increment)
+    local value = normalizeValue(config.Default, SliderDefaults.Value, min, max, increment)
     local description = Create.GetDescription(config)
     local hasDescription = description ~= nil
     local height = hasDescription and (Sizes.Slider.HeightWithDescription or 56)
         or Sizes.Slider.Height
 
-    -- Main container
-    self._frame = Create.Instance("Frame", {
-        Name = "Slider_" .. name,
-        BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, height),
+    local self = BaseComponent.new(Slider, {
         Parent = parent,
+        Size = UDim2.new(1, 0, 0, height),
+        Blockable = true,
+        Flag = config.Flag,
+        Window = window,
     })
 
-    Create.Corner(self._frame, Sizes.Corner.Medium)
-    Create.Stroke(self._frame)
+    self._min = min
+    self._max = max
+    self._increment = increment
+    self._value = value
+    self._callback = config.Callback or function() end
+    self._dragging = false
 
     -- Label
-    Create.Instance("TextLabel", {
-        Name = "Label",
-        FontFace = Fonts.Regular,
-        TextColor3 = Colors.Text,
-        Text = name,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        Position = UDim2.new(
-            0,
-            Sizes.Component.LabelLeft or 10,
-            0,
-            hasDescription and (Sizes.Slider.HeaderTopWithDescription or 4)
-                or (Sizes.Slider.HeaderTop or 5)
-        ),
-        TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(0, Sizes.Slider.LabelWidth or 200, 0, Sizes.Component.LabelHeight or 20),
-        Parent = self._frame,
-    })
+    Create.ComponentLabel(
+        self._frame,
+        name,
+        hasDescription,
+        Sizes.Slider.DescriptionRightPadding or 80
+    )
 
     -- Description
     Create.Description(
@@ -2201,52 +2014,41 @@ function Slider.new(parent, config, window)
     Create.Corner(self._fill, Sizes.Corner.Full)
 
     -- Input handling
-    table.insert(
-        self._connections,
-        self._track.InputBegan:Connect(function(input)
-            if self._blocked then
-                return
-            end
+    self:Connect(self._track.InputBegan, function(input)
+        if self._blocked then
+            return
+        end
 
-            if
-                input.UserInputType == Enum.UserInputType.MouseButton1
+        if
+            input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch
+        then
+            self._dragging = true
+            self:_UpdateFromInput(input)
+        end
+    end)
+
+    self:Connect(self._track.InputEnded, function(input)
+        if
+            input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch
+        then
+            self._dragging = false
+        end
+    end)
+
+    self:Connect(Services.UserInputService.InputChanged, function(input)
+        if
+            self._dragging
+            and not self._blocked
+            and (
+                input.UserInputType == Enum.UserInputType.MouseMovement
                 or input.UserInputType == Enum.UserInputType.Touch
-            then
-                self._dragging = true
-                self:_UpdateFromInput(input)
-            end
-        end)
-    )
-
-    table.insert(
-        self._connections,
-        self._track.InputEnded:Connect(function(input)
-            if
-                input.UserInputType == Enum.UserInputType.MouseButton1
-                or input.UserInputType == Enum.UserInputType.Touch
-            then
-                self._dragging = false
-            end
-        end)
-    )
-
-    table.insert(
-        self._connections,
-        Services.UserInputService.InputChanged:Connect(function(input)
-            if
-                self._dragging
-                and not self._blocked
-                and (
-                    input.UserInputType == Enum.UserInputType.MouseMovement
-                    or input.UserInputType == Enum.UserInputType.Touch
-                )
-            then
-                self:_UpdateFromInput(input)
-            end
-        end)
-    )
-
-    Create.Blockable(self, self._frame)
+            )
+        then
+            self:_UpdateFromInput(input)
+        end
+    end)
 
     local baseBlock = self.Block
     self.Block = function(component, text)
@@ -2254,15 +2056,13 @@ function Slider.new(parent, config, window)
         baseBlock(component, text)
     end
 
-    if self._flag and self._window and self._window.RegisterConfigElement then
-        self._window:RegisterConfigElement(self._flag, "Slider", function()
-            return self._value
-        end, function(value)
-            if type(value) == "number" then
-                self:SetValue(value)
-            end
-        end)
-    end
+    Create.Configurable(self, self._flag, "Slider", function()
+        return self._value
+    end, function(value)
+        if type(value) == "number" then
+            self:SetValue(value)
+        end
+    end)
 
     return self
 end
@@ -2317,19 +2117,6 @@ function Slider:SetMax(max)
     self:_UpdateVisual()
 end
 
-function Slider:Destroy()
-    for _, connection in ipairs(self._connections) do
-        connection:Disconnect()
-    end
-    table.clear(self._connections)
-
-    if self._flag and self._window and self._window.UnregisterConfigElement then
-        self._window:UnregisterConfigElement(self._flag)
-    end
-
-    self._frame:Destroy()
-end
-
 return Slider
 end
 
@@ -2341,6 +2128,7 @@ local Sizes = __require("Constants.Sizes")
 local Fonts = __require("Constants.Fonts")
 local Defaults = __require("Constants.Defaults")
 local Icons = __require("Constants.Icons")
+local BaseComponent = __require("Core.BaseComponent")
 
 local Button = __require("Components.Button")
 local Toggle = __require("Components.Toggle")
@@ -2350,6 +2138,7 @@ local TextBox = __require("Components.TextBox")
 
 local Tab = {}
 Tab.__index = Tab
+setmetatable(Tab, { __index = BaseComponent })
 local ComponentDefaults = Defaults.Components or {}
 local CommonDefaults = ComponentDefaults.Common or {}
 local ConfigUIDefaults = ComponentDefaults.ConfigUI or {}
@@ -2368,25 +2157,22 @@ local function closePopupsInElements(elements)
 end
 
 function Tab.new(window, section, name, icon)
-    local self = setmetatable({}, Tab)
+    local self = BaseComponent.new(Tab, {
+        Parent = section._tabsContainer,
+        Size = UDim2.new(1, -15, 0, Sizes.Tab.Height),
+        BackgroundColor3 = Colors.Secondary,
+        BackgroundTransparency = 1,
+        StrokeColor = Colors.Border,
+        StrokeTransparency = 1,
+        Blockable = false,
+    })
+
     self._window = window
     self._section = section
     self._name = name
     self._elements = {}
-    self._connections = {}
 
-    -- Button in sidebar
-    self._button = Create.Instance("Frame", {
-        Name = name,
-        BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, -15, 0, Sizes.Tab.Height),
-        Parent = section._tabsContainer,
-    })
-
-    Create.Corner(self._button, Sizes.Corner.Medium)
-    self._stroke = Create.Stroke(self._button, Colors.Border, 1)
+    self._button = self._frame
     self._stroke.LineJoinMode = Enum.LineJoinMode.Round
 
     self._icon = Create.Instance("ImageLabel", {
@@ -2438,38 +2224,29 @@ function Tab.new(window, section, name, icon)
 
     Create.ListLayout(self._content, Sizes.Tab.ContentPadding or 8)
 
-    table.insert(
-        self._connections,
-        click.MouseButton1Click:Connect(function()
-            window:SelectTab(self)
-        end)
-    )
+    self:Connect(click.MouseButton1Click, function()
+        window:SelectTab(self)
+    end)
 
-    table.insert(
-        self._connections,
-        click.MouseEnter:Connect(function()
-            if window._currentTab ~= self then
-                Tween.Create(
-                    self._button,
-                    { BackgroundTransparency = CommonDefaults.HoverFaintTransparency or 0.7 },
-                    "Fast"
-                )
-            end
-        end)
-    )
+    self:Connect(click.MouseEnter, function()
+        if window._currentTab ~= self then
+            Tween.Create(
+                self._button,
+                { BackgroundTransparency = CommonDefaults.HoverFaintTransparency or 0.7 },
+                "Fast"
+            )
+        end
+    end)
 
-    table.insert(
-        self._connections,
-        click.MouseLeave:Connect(function()
-            if window._currentTab ~= self then
-                Tween.Create(
-                    self._button,
-                    { BackgroundTransparency = CommonDefaults.Transparent or 1 },
-                    "Fast"
-                )
-            end
-        end)
-    )
+    self:Connect(click.MouseLeave, function()
+        if window._currentTab ~= self then
+            Tween.Create(
+                self._button,
+                { BackgroundTransparency = CommonDefaults.Transparent or 1 },
+                "Fast"
+            )
+        end
+    end)
 
     if not window._currentTab then
         window:SelectTab(self)
@@ -2547,11 +2324,6 @@ function Tab:CreateConfigSection()
 end
 
 function Tab:Destroy()
-    for _, connection in ipairs(self._connections) do
-        connection:Disconnect()
-    end
-    table.clear(self._connections)
-
     for _, element in ipairs(self._elements) do
         if element.Destroy then
             element:Destroy()
@@ -2563,9 +2335,7 @@ function Tab:Destroy()
         self._content:Destroy()
     end
 
-    if self._button then
-        self._button:Destroy()
-    end
+    BaseComponent.Destroy(self)
 end
 
 return Tab
@@ -2573,6 +2343,7 @@ end
 
 __modules["Components.TextBox"] = function()
 local Create = __require("Utils.Create")
+local BaseComponent = __require("Core.BaseComponent")
 local Tween = __require("Utils.Tween")
 local Colors = __require("Constants.Colors")
 local Sizes = __require("Constants.Sizes")
@@ -2582,6 +2353,7 @@ local Icons = __require("Constants.Icons")
 
 local TextBox = {}
 TextBox.__index = TextBox
+setmetatable(TextBox, { __index = BaseComponent })
 local ComponentDefaults = Defaults.Components or {}
 local CommonDefaults = ComponentDefaults.Common or {}
 local TextBoxDefaults = ComponentDefaults.TextBox or {}
@@ -2590,7 +2362,6 @@ local TextBoxSizes = Sizes.TextBox or {}
 
 
 function TextBox.new(parent, config, window)
-    local self = setmetatable({}, TextBox)
     config = config or {}
 
     local name = config.Name or TextBoxDefaults.Name or "TextBox"
@@ -2601,51 +2372,26 @@ function TextBox.new(parent, config, window)
             and (TextBoxSizes.HeightWithDescription or CommonDefaults.HeightWithDescription or 50)
         or Sizes.TextBox.Height
 
+    local self = BaseComponent.new(TextBox, {
+        Parent = parent,
+        Size = UDim2.new(1, 0, 0, height),
+        Blockable = true,
+        Flag = config.Flag,
+        Window = window,
+    })
+
     self._callback = config.Callback or function() end
     self._text = tostring(config.Default or TextBoxDefaults.DefaultText or "")
-    self._connections = {}
-    self._window = window
-    self._flag = config.Flag
     self._numbersOnly = if config.NumbersOnly == nil
         then (TextBoxDefaults.NumbersOnly or false)
         else config.NumbersOnly
 
-    self._frame = Create.Instance("Frame", {
-        Name = "TextBox_" .. name,
-        BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, height),
-        Parent = parent,
-    })
-
-    Create.Corner(self._frame, Sizes.Corner.Medium)
-    Create.Stroke(self._frame)
-
-    self._label = Create.Instance("TextLabel", {
-        Name = "Name",
-        FontFace = Fonts.Regular,
-        TextColor3 = Colors.Text,
-        Text = name,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        Position = hasDescription
-                and UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.LabelTop or 7)
-            or UDim2.new(
-                0,
-                Sizes.Component.LabelLeft or 10,
-                0.5,
-                -(Sizes.Component.LabelCenterOffset or 10)
-            ),
-        TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(
-            1,
-            -(TextBoxSizes.LabelRightPadding or 190),
-            0,
-            Sizes.Component.LabelHeight or 20
-        ),
-        Parent = self._frame,
-    })
+    self._label = Create.ComponentLabel(
+        self._frame,
+        name,
+        hasDescription,
+        TextBoxSizes.LabelRightPadding or 190
+    )
 
     Create.Description(
         self._frame,
@@ -2703,58 +2449,47 @@ function TextBox.new(parent, config, window)
         Parent = self._container,
     })
 
-    table.insert(
-        self._connections,
-        self._input.Focused:Connect(function()
-            if self._blocked then
-                self._input:ReleaseFocus()
-                return
+    self:Connect(self._input.Focused, function()
+        if self._blocked then
+            self._input:ReleaseFocus()
+            return
+        end
+
+        Tween.Create(self._container, { BackgroundTransparency = 0 }, "Fast")
+        Tween.Create(self._stroke, { Color = Colors.Accent }, "Fast")
+        Tween.Create(self._icon, { ImageColor3 = Colors.Text }, "Fast")
+    end)
+
+    self:Connect(self._input.FocusLost, function(enterPressed)
+        Tween.Create(
+            self._container,
+            { BackgroundTransparency = CommonDefaults.ControlTransparency or 0.04 },
+            "Fast"
+        )
+        Tween.Create(self._stroke, { Color = Colors.Border }, "Fast")
+        Tween.Create(self._icon, { ImageColor3 = Colors.TextDark }, "Fast")
+
+        if self._numbersOnly then
+            local numberValue = tonumber(self._input.Text)
+            if numberValue then
+                self._text = tostring(numberValue)
             end
+            self._input.Text = self._text
+        else
+            self._text = self._input.Text
+        end
 
-            Tween.Create(self._container, { BackgroundTransparency = 0 }, "Fast")
-            Tween.Create(self._stroke, { Color = Colors.Accent }, "Fast")
-            Tween.Create(self._icon, { ImageColor3 = Colors.Text }, "Fast")
-        end)
-    )
-
-    table.insert(
-        self._connections,
-        self._input.FocusLost:Connect(function(enterPressed)
-            Tween.Create(
-                self._container,
-                { BackgroundTransparency = CommonDefaults.ControlTransparency or 0.04 },
-                "Fast"
-            )
-            Tween.Create(self._stroke, { Color = Colors.Border }, "Fast")
-            Tween.Create(self._icon, { ImageColor3 = Colors.TextDark }, "Fast")
-
-            if self._numbersOnly then
-                local numberValue = tonumber(self._input.Text)
-                if numberValue then
-                    self._text = tostring(numberValue)
-                end
-                self._input.Text = self._text
-            else
-                self._text = self._input.Text
-            end
-
-            self._callback(self._text, enterPressed)
-        end)
-    )
+        self._callback(self._text, enterPressed)
+    end)
 
     if self._numbersOnly then
-        table.insert(
-            self._connections,
-            self._input:GetPropertyChangedSignal("Text"):Connect(function()
-                local filtered = self._input.Text:gsub("[^%d%.%-]", "")
-                if self._input.Text ~= filtered then
-                    self._input.Text = filtered
-                end
-            end)
-        )
+        self:Connect(self._input:GetPropertyChangedSignal("Text"), function()
+            local filtered = self._input.Text:gsub("[^%d%.%-]", "")
+            if self._input.Text ~= filtered then
+                self._input.Text = filtered
+            end
+        end)
     end
-
-    Create.Blockable(self, self._frame)
 
     local baseBlock = self.Block
     self.Block = function(component, text)
@@ -2762,15 +2497,13 @@ function TextBox.new(parent, config, window)
         baseBlock(component, text)
     end
 
-    if self._flag and self._window and self._window.RegisterConfigElement then
-        self._window:RegisterConfigElement(self._flag, "TextBox", function()
-            return self._text
-        end, function(value)
-            if type(value) == "string" then
-                self:SetText(value)
-            end
-        end)
-    end
+    Create.Configurable(self, self._flag, "TextBox", function()
+        return self._text
+    end, function(value)
+        if type(value) == "string" then
+            self:SetText(value)
+        end
+    end)
 
     return self
 end
@@ -2796,19 +2529,6 @@ function TextBox:Focus()
     self._input:CaptureFocus()
 end
 
-function TextBox:Destroy()
-    for _, connection in ipairs(self._connections) do
-        connection:Disconnect()
-    end
-    table.clear(self._connections)
-
-    if self._flag and self._window and self._window.UnregisterConfigElement then
-        self._window:UnregisterConfigElement(self._flag)
-    end
-
-    self._frame:Destroy()
-end
-
 return TextBox
 end
 
@@ -2820,14 +2540,15 @@ __modules["Components.Toggle"] = function()
 ]]
 
 local Create = __require("Utils.Create")
+local BaseComponent = __require("Core.BaseComponent")
 local Tween = __require("Utils.Tween")
 local Colors = __require("Constants.Colors")
 local Sizes = __require("Constants.Sizes")
-local Fonts = __require("Constants.Fonts")
 local Defaults = __require("Constants.Defaults")
 
 local Toggle = {}
 Toggle.__index = Toggle
+setmetatable(Toggle, { __index = BaseComponent })
 local ComponentDefaults = Defaults.Components or {}
 local CommonDefaults = ComponentDefaults.Common or {}
 local ToggleDefaults = ComponentDefaults.Toggle or {}
@@ -2842,7 +2563,6 @@ local ToggleDefaults = ComponentDefaults.Toggle or {}
     @return ToggleObject - Toggle control object
 ]]
 function Toggle.new(parent, config, window)
-    local self = setmetatable({}, Toggle)
     config = config or {}
 
     local name = config.Name or ToggleDefaults.Name or "Toggle"
@@ -2858,50 +2578,24 @@ function Toggle.new(parent, config, window)
     local knobPadding = Sizes.Toggle.Padding or 4
     local knobEnabledX = Sizes.Toggle.Width - Sizes.Toggle.Circle - knobPadding
 
+    local self = BaseComponent.new(Toggle, {
+        Parent = parent,
+        Size = UDim2.new(1, 0, 0, height),
+        Blockable = true,
+        Flag = config.Flag,
+        Window = window,
+    })
+
     self._enabled = default
     self._callback = callback
-    self._flag = config.Flag
-    self._window = window
-    self._connections = {}
-
-    -- Main container
-    self._frame = Create.Instance("Frame", {
-        Name = "Toggle_" .. name,
-        BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, height),
-        Parent = parent,
-    })
-
-    Create.Corner(self._frame, Sizes.Corner.Medium)
-    Create.Stroke(self._frame)
 
     -- Label
-    self._label = Create.Instance("TextLabel", {
-        Name = "Label",
-        FontFace = Fonts.Regular,
-        TextColor3 = Colors.Text,
-        Text = name,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        Position = hasDescription
-                and UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.LabelTop or 7)
-            or UDim2.new(
-                0,
-                Sizes.Component.LabelLeft or 10,
-                0.5,
-                -(Sizes.Component.LabelCenterOffset or 10)
-            ),
-        TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(
-            1,
-            -(Sizes.Toggle.LabelRightPadding or 60),
-            0,
-            Sizes.Component.LabelHeight or 20
-        ),
-        Parent = self._frame,
-    })
+    self._label = Create.ComponentLabel(
+        self._frame,
+        name,
+        hasDescription,
+        Sizes.Toggle.LabelRightPadding or 60
+    )
 
     -- Description
     Create.Description(
@@ -2957,18 +2651,13 @@ function Toggle.new(parent, config, window)
         Parent = self._frame,
     })
 
-    table.insert(
-        self._connections,
-        button.MouseButton1Click:Connect(function()
-            if self._blocked then
-                return
-            end
+    self:Connect(button.MouseButton1Click, function()
+        if self._blocked then
+            return
+        end
 
-            self:SetValue(not self._enabled)
-        end)
-    )
-
-    Create.Blockable(self, self._frame)
+        self:SetValue(not self._enabled)
+    end)
 
     local baseBlock = self.Block
     self.Block = function(component, text)
@@ -2979,15 +2668,13 @@ function Toggle.new(parent, config, window)
         baseBlock(component, text)
     end
 
-    if self._flag and self._window and self._window.RegisterConfigElement then
-        self._window:RegisterConfigElement(self._flag, "Toggle", function()
-            return self._enabled
-        end, function(value)
-            if type(value) == "boolean" then
-                self:SetValue(value)
-            end
-        end)
-    end
+    Create.Configurable(self, self._flag, "Toggle", function()
+        return self._enabled
+    end, function(value)
+        if type(value) == "boolean" then
+            self:SetValue(value, true)
+        end
+    end)
 
     return self
 end
@@ -3023,19 +2710,6 @@ end
 
 function Toggle:GetValue()
     return self._enabled
-end
-
-function Toggle:Destroy()
-    for _, connection in ipairs(self._connections) do
-        connection:Disconnect()
-    end
-    table.clear(self._connections)
-
-    if self._flag and self._window and self._window.UnregisterConfigElement then
-        self._window:UnregisterConfigElement(self._flag)
-    end
-
-    self._frame:Destroy()
 end
 
 return Toggle
@@ -4063,6 +3737,117 @@ end
 return AcrylicBlur
 end
 
+__modules["Core.BaseComponent"] = function()
+--[[
+    AcrylicUI - Base Component
+
+    Shared lifecycle helpers for UI components.
+]]
+
+local Create = __require("Utils.Create")
+local Colors = __require("Constants.Colors")
+local Sizes = __require("Constants.Sizes")
+local Defaults = __require("Constants.Defaults")
+
+local BaseComponent = {}
+BaseComponent.__index = BaseComponent
+
+local ComponentDefaults = Defaults.Components or {}
+local CommonDefaults = ComponentDefaults.Common or {}
+
+
+local function buildFrameProperties(config)
+    local frameProperties = {
+        Name = "\0",
+        PreserveName = true,
+        BackgroundColor3 = config.BackgroundColor3 or Colors.Secondary,
+        BackgroundTransparency = if config.BackgroundTransparency ~= nil
+            then config.BackgroundTransparency
+            else CommonDefaults.SurfaceTransparency or 0.4,
+        BorderSizePixel = 0,
+        Size = config.Size or UDim2.new(1, 0, 0, 40),
+        Parent = config.Parent,
+    }
+
+    for property, value in pairs(config.Properties or {}) do
+        frameProperties[property] = value
+    end
+
+    return frameProperties
+end
+
+function BaseComponent.new(classTable, config)
+    config = config or {}
+
+    if classTable and classTable.__index == nil then
+        classTable.__index = classTable
+    end
+
+    if classTable and getmetatable(classTable) == nil then
+        setmetatable(classTable, { __index = BaseComponent })
+    end
+
+    local self = setmetatable({}, classTable or BaseComponent)
+    self._connections = {}
+    self._blocked = false
+    self._flag = config.Flag
+    self._window = config.Window
+
+    self._frame = Create.Instance(config.Class or "Frame", buildFrameProperties(config))
+
+    if config.Corner ~= false then
+        Create.Corner(self._frame, config.CornerRadius or Sizes.Corner.Medium)
+    end
+
+    if config.Stroke ~= false then
+        self._stroke = Create.Stroke(
+            self._frame,
+            config.StrokeColor,
+            config.StrokeTransparency,
+            config.StrokeThickness
+        )
+    end
+
+    if config.Blockable == true then
+        Create.Blockable(self, self._frame)
+    end
+
+    return self
+end
+
+function BaseComponent:Connect(signal, callback)
+    local connection = signal:Connect(callback)
+    table.insert(self._connections, connection)
+    return connection
+end
+
+function BaseComponent:DisconnectAll()
+    for _, connection in ipairs(self._connections) do
+        connection:Disconnect()
+    end
+    table.clear(self._connections)
+end
+
+function BaseComponent:Destroy()
+    self:DisconnectAll()
+
+    if self._id and self._window and self._window.UnregisterKeybind then
+        self._window:UnregisterKeybind(self._id)
+    end
+
+    if self._flag and self._window and self._window.UnregisterConfigElement then
+        self._window:UnregisterConfigElement(self._flag)
+    end
+
+    if self._frame then
+        self._frame:Destroy()
+        self._frame = nil
+    end
+end
+
+return BaseComponent
+end
+
 __modules["Core.Notification"] = function()
 --[[
     AcrylicUI - Notification System
@@ -4540,6 +4325,7 @@ function Window.new(config)
     self._minSize = minSize
     self._maxSize = maxSize
     self._toggleKey = config.ToggleKey or WindowDefaults.ToggleKey or Enum.KeyCode.RightControl
+    self._parent = config.Parent
     self._configFolder = SanitizeConfigName(config.ConfigFolder or self._title)
     self._visible = true
     self._minimized = false
@@ -4585,14 +4371,21 @@ function Window:_CreateGui()
         ResetOnSpawn = false,
     })
 
+    local parentedToExplicit = false
+    if self._parent then
+        parentedToExplicit = pcall(function()
+            self._screenGui.Parent = self._parent
+        end)
+    end
+
     local parentedToCoreGui = false
-    if coreGuiAvailable and coreGui then
+    if not parentedToExplicit and coreGuiAvailable and coreGui then
         parentedToCoreGui = pcall(function()
             self._screenGui.Parent = coreGui
         end)
     end
 
-    if not parentedToCoreGui then
+    if not parentedToExplicit and not parentedToCoreGui then
         self._screenGui.Parent = player:WaitForChild("PlayerGui")
     end
 
@@ -5848,6 +5641,7 @@ local Constants = {
 }
 
 local IconResolver = __require("Utils.IconResolver")
+local Tween = __require("Utils.Tween")
 
 local Create = {}
 
@@ -6026,6 +5820,72 @@ function Create.GetDescription(config)
     end
 
     return tostring(description)
+end
+
+function Create.ComponentLabel(
+    parent,
+    text,
+    hasDescription,
+    rightPadding
+)
+    return Create.Instance("TextLabel", {
+        Name = "Label",
+        FontFace = Constants.Fonts.Regular,
+        TextColor3 = Constants.Colors.Text,
+        Text = text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        BackgroundTransparency = 1,
+        Position = if hasDescription
+            then UDim2.new(
+                0,
+                Constants.Sizes.Component.LabelLeft or 10,
+                0,
+                Constants.Sizes.Component.LabelTop or 7
+            )
+            else UDim2.new(
+                0,
+                Constants.Sizes.Component.LabelLeft or 10,
+                0.5,
+                -(Constants.Sizes.Component.LabelCenterOffset or 10)
+            ),
+        TextSize = Constants.Fonts.Size.Normal,
+        Size = UDim2.new(1, -(rightPadding or 50), 0, Constants.Sizes.Component.LabelHeight or 20),
+        Parent = parent,
+    })
+end
+
+function Create.HoverEffect(
+    trigger,
+    target,
+    hoverTransparency,
+    normalTransparency,
+    canHover
+)
+    local enter = trigger.MouseEnter:Connect(function()
+        if canHover and not canHover() then
+            return
+        end
+
+        Tween.Create(target, { BackgroundTransparency = hoverTransparency }, "Fast")
+    end)
+
+    local leave = trigger.MouseLeave:Connect(function()
+        Tween.Create(target, { BackgroundTransparency = normalTransparency }, "Fast")
+    end)
+
+    return enter, leave
+end
+
+function Create.Configurable(
+    target,
+    flag,
+    typeName,
+    getter,
+    setter
+)
+    if flag and target._window and target._window.RegisterConfigElement then
+        target._window:RegisterConfigElement(flag, typeName, getter, setter)
+    end
 end
 
 --[[

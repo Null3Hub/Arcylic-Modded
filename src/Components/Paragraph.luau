@@ -3,32 +3,29 @@ local Colors = require(script.Parent.Parent.Constants.Colors)
 local Sizes = require(script.Parent.Parent.Constants.Sizes)
 local Fonts = require(script.Parent.Parent.Constants.Fonts)
 local Defaults = require(script.Parent.Parent.Constants.Defaults)
+local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
 
 local Paragraph = {}
 Paragraph.__index = Paragraph
+setmetatable(Paragraph, { __index = BaseComponent })
 local ComponentDefaults = Defaults.Components or {}
 local CommonDefaults = ComponentDefaults.Common or {}
 local ParagraphDefaults = ComponentDefaults.Paragraph or {}
 
 function Paragraph.new(parent: Instance, config)
-    local self = setmetatable({}, Paragraph)
+    local self = BaseComponent.new(Paragraph, {
+        Parent = parent,
+        Size = UDim2.new(1, 0, 0, 0),
+        Blockable = false,
+        Properties = {
+            AutomaticSize = Enum.AutomaticSize.Y,
+        },
+    })
     local title = (config and config.Title) or ParagraphDefaults.Title or "Paragraph"
     local content = (config and config.Content)
         or ParagraphDefaults.Content
         or "Description text here."
 
-    self._frame = Create.Instance("Frame", {
-        Name = "Paragraph",
-        BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
-        Parent = parent,
-    })
-
-    Create.Corner(self._frame, Sizes.Corner.Medium)
-    Create.Stroke(self._frame)
     Create.Padding(self._frame, 10, 10, 10, 10)
 
     self._title = Create.Instance("TextLabel", {

@@ -7,6 +7,7 @@
 local Services = require(script.Parent.Parent.Utils.Services)
 
 local Create = require(script.Parent.Parent.Utils.Create)
+local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
 local Tween = require(script.Parent.Parent.Utils.Tween)
 local Colors = require(script.Parent.Parent.Constants.Colors)
 local Sizes = require(script.Parent.Parent.Constants.Sizes)
@@ -15,6 +16,7 @@ local Defaults = require(script.Parent.Parent.Constants.Defaults)
 
 local Slider = {}
 Slider.__index = Slider
+setmetatable(Slider, { __index = BaseComponent })
 local SliderDefaults = Defaults.Slider
 local ComponentDefaults = Defaults.Components or {}
 local CommonDefaults = ComponentDefaults.Common or {}
@@ -96,55 +98,39 @@ end
     @return SliderObject - Slider control object
 ]]
 function Slider.new(parent: Instance, config: SliderConfig, window): SliderObject
-    local self = setmetatable({}, Slider)
+    config = config or {}
 
     local name = config.Name or SliderComponentDefaults.Name or "Slider"
-    self._min, self._max = resolveRange(config.Min, config.Max)
-    self._increment = resolveIncrement(config.Increment)
-    self._value =
-        normalizeValue(config.Default, SliderDefaults.Value, self._min, self._max, self._increment)
-    self._callback = config.Callback or function() end
-    self._dragging = false
-    self._flag = config.Flag
-    self._window = window
-    self._connections = {}
+    local min, max = resolveRange(config.Min, config.Max)
+    local increment = resolveIncrement(config.Increment)
+    local value = normalizeValue(config.Default, SliderDefaults.Value, min, max, increment)
     local description = Create.GetDescription(config)
     local hasDescription = description ~= nil
     local height = hasDescription and (Sizes.Slider.HeightWithDescription or 56)
         or Sizes.Slider.Height
 
-    -- Main container
-    self._frame = Create.Instance("Frame", {
-        Name = "Slider_" .. name,
-        BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, height),
+    local self = BaseComponent.new(Slider, {
         Parent = parent,
+        Size = UDim2.new(1, 0, 0, height),
+        Blockable = true,
+        Flag = config.Flag,
+        Window = window,
     })
 
-    Create.Corner(self._frame, Sizes.Corner.Medium)
-    Create.Stroke(self._frame)
+    self._min = min
+    self._max = max
+    self._increment = increment
+    self._value = value
+    self._callback = config.Callback or function() end
+    self._dragging = false
 
     -- Label
-    Create.Instance("TextLabel", {
-        Name = "Label",
-        FontFace = Fonts.Regular,
-        TextColor3 = Colors.Text,
-        Text = name,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        Position = UDim2.new(
-            0,
-            Sizes.Component.LabelLeft or 10,
-            0,
-            hasDescription and (Sizes.Slider.HeaderTopWithDescription or 4)
-                or (Sizes.Slider.HeaderTop or 5)
-        ),
-        TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(0, Sizes.Slider.LabelWidth or 200, 0, Sizes.Component.LabelHeight or 20),
-        Parent = self._frame,
-    })
+    Create.ComponentLabel(
+        self._frame,
+        name,
+        hasDescription,
+        Sizes.Slider.DescriptionRightPadding or 80
+    )
 
     -- Description
     Create.Description(
@@ -216,52 +202,41 @@ function Slider.new(parent: Instance, config: SliderConfig, window): SliderObjec
     Create.Corner(self._fill, Sizes.Corner.Full)
 
     -- Input handling
-    table.insert(
-        self._connections,
-        self._track.InputBegan:Connect(function(input)
-            if self._blocked then
-                return
-            end
+    self:Connect(self._track.InputBegan, function(input)
+        if self._blocked then
+            return
+        end
 
-            if
-                input.UserInputType == Enum.UserInputType.MouseButton1
+        if
+            input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch
+        then
+            self._dragging = true
+            self:_UpdateFromInput(input)
+        end
+    end)
+
+    self:Connect(self._track.InputEnded, function(input)
+        if
+            input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch
+        then
+            self._dragging = false
+        end
+    end)
+
+    self:Connect(Services.UserInputService.InputChanged, function(input)
+        if
+            self._dragging
+            and not self._blocked
+            and (
+                input.UserInputType == Enum.UserInputType.MouseMovement
                 or input.UserInputType == Enum.UserInputType.Touch
-            then
-                self._dragging = true
-                self:_UpdateFromInput(input)
-            end
-        end)
-    )
-
-    table.insert(
-        self._connections,
-        self._track.InputEnded:Connect(function(input)
-            if
-                input.UserInputType == Enum.UserInputType.MouseButton1
-                or input.UserInputType == Enum.UserInputType.Touch
-            then
-                self._dragging = false
-            end
-        end)
-    )
-
-    table.insert(
-        self._connections,
-        Services.UserInputService.InputChanged:Connect(function(input)
-            if
-                self._dragging
-                and not self._blocked
-                and (
-                    input.UserInputType == Enum.UserInputType.MouseMovement
-                    or input.UserInputType == Enum.UserInputType.Touch
-                )
-            then
-                self:_UpdateFromInput(input)
-            end
-        end)
-    )
-
-    Create.Blockable(self, self._frame)
+            )
+        then
+            self:_UpdateFromInput(input)
+        end
+    end)
 
     local baseBlock = self.Block
     self.Block = function(component, text: string?)
@@ -269,15 +244,13 @@ function Slider.new(parent: Instance, config: SliderConfig, window): SliderObjec
         baseBlock(component, text)
     end
 
-    if self._flag and self._window and self._window.RegisterConfigElement then
-        self._window:RegisterConfigElement(self._flag, "Slider", function()
-            return self._value
-        end, function(value)
-            if type(value) == "number" then
-                self:SetValue(value)
-            end
-        end)
-    end
+    Create.Configurable(self, self._flag, "Slider", function()
+        return self._value
+    end, function(value)
+        if type(value) == "number" then
+            self:SetValue(value)
+        end
+    end)
 
     return self
 end
@@ -330,19 +303,6 @@ function Slider:SetMax(max: number)
     end
     self._value = normalizeValue(self._value, self._value, self._min, self._max, self._increment)
     self:_UpdateVisual()
-end
-
-function Slider:Destroy()
-    for _, connection in ipairs(self._connections) do
-        connection:Disconnect()
-    end
-    table.clear(self._connections)
-
-    if self._flag and self._window and self._window.UnregisterConfigElement then
-        self._window:UnregisterConfigElement(self._flag)
-    end
-
-    self._frame:Destroy()
 end
 
 return Slider

@@ -5,6 +5,7 @@
 ]]
 
 local Create = require(script.Parent.Parent.Utils.Create)
+local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
 local Tween = require(script.Parent.Parent.Utils.Tween)
 local Colors = require(script.Parent.Parent.Constants.Colors)
 local Sizes = require(script.Parent.Parent.Constants.Sizes)
@@ -15,6 +16,7 @@ local Layers = require(script.Parent.Parent.Constants.Layers)
 
 local Dropdown = {}
 Dropdown.__index = Dropdown
+setmetatable(Dropdown, { __index = BaseComponent })
 local ComponentDefaults = Defaults.Components or {}
 local CommonDefaults = ComponentDefaults.Common or {}
 local DropdownDefaults = ComponentDefaults.Dropdown or {}
@@ -74,65 +76,51 @@ export type DropdownObject = {
     @return DropdownObject - Dropdown control object
 ]]
 function Dropdown.new(parent: Instance, config: DropdownConfig, window): DropdownObject
-    local self = setmetatable({}, Dropdown)
+    local self
     config = config or {}
 
     local name = config.Name or DropdownDefaults.Name or "Dropdown"
-    self._options = config.Options
+    local options = config.Options
         or DropdownDefaults.Options
         or { "Option 1", "Option 2", "Option 3" }
-    self._multiSelect = if config.MultiSelect == nil
+    local multiSelect = if config.MultiSelect == nil
         then (DropdownDefaults.MultiSelect or false)
         else config.MultiSelect
-    self._callback = config.Callback or function() end
-    self._expanded = false
-    self._flag = config.Flag
-    self._window = window
-    self._connections = {}
-    self._searchEnabled, self._searchPlaceholder = ResolveSearchConfig(config.Search, name)
-    self._searchText = ""
+    local callback = config.Callback or function() end
+    local searchEnabled, searchPlaceholder = ResolveSearchConfig(config.Search, name)
     local description = Create.GetDescription(config)
     local hasDescription = description ~= nil
     local height = hasDescription
             and (DropdownSizes.HeightWithDescription or CommonDefaults.HeightWithDescription or 50)
         or Sizes.Dropdown.Height
 
-    -- Initialize selected value
-    if self._multiSelect then
-        self._selected = if type(config.Default) == "table" then config.Default else {}
-    else
-        self._selected = config.Default or self._options[1]
-    end
+    local selected = if multiSelect
+        then (if type(config.Default) == "table" then config.Default else {})
+        else config.Default or options[1]
 
-    -- Main container
-    self._frame = Create.Instance("Frame", {
-        Name = "Dropdown_" .. name,
-        BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, height),
-        ClipsDescendants = false,
-        ZIndex = DropdownLayers.Base or 1,
+    self = BaseComponent.new(Dropdown, {
         Parent = parent,
+        Size = UDim2.new(1, 0, 0, height),
+        Blockable = true,
+        Flag = config.Flag,
+        Window = window,
     })
 
-    Create.Corner(self._frame, Sizes.Corner.Medium)
-    Create.Stroke(self._frame)
+    self._options = options
+    self._multiSelect = multiSelect
+    self._callback = callback
+    self._expanded = false
+    self._selected = selected
+    self._searchEnabled = searchEnabled
+    self._searchPlaceholder = searchPlaceholder
+    self._searchText = ""
 
-    -- Label
-    Create.Instance("TextLabel", {
-        Name = "Label",
-        FontFace = Fonts.Regular,
-        TextColor3 = Colors.Text,
-        Text = name,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        Position = UDim2.new(0, 10, 0, hasDescription and 6 or 10),
-        TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(0, DropdownSizes.LabelWidth or 200, 0, Sizes.Component.LabelHeight or 20),
-        ZIndex = DropdownLayers.Label or 1,
-        Parent = self._frame,
-    })
+    self._label = Create.ComponentLabel(
+        self._frame,
+        name,
+        hasDescription,
+        DropdownSizes.LabelRightPadding or 120
+    )
 
     -- Description
     Create.Description(
@@ -215,62 +203,45 @@ function Dropdown.new(parent: Instance, config: DropdownConfig, window): Dropdow
         Parent = self._display,
     })
 
-    table.insert(
-        self._connections,
-        toggleBtn.MouseButton1Click:Connect(function()
-            if self._blocked then
-                return
-            end
+    self:Connect(toggleBtn.MouseButton1Click, function()
+        if self._blocked then
+            return
+        end
 
-            if self._expanded then
-                self:Close()
-            else
-                self:Open()
-            end
-        end)
-    )
+        if self._expanded then
+            self:Close()
+        else
+            self:Open()
+        end
+    end)
 
     local contentContainer = self:_GetContentContainer()
     if contentContainer then
-        table.insert(
-            self._connections,
-            contentContainer:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
-                if self._expanded then
-                    self:Close()
-                end
-            end)
-        )
+        self:Connect(contentContainer:GetPropertyChangedSignal("CanvasPosition"), function()
+            if self._expanded then
+                self:Close()
+            end
+        end)
     end
 
     local popupParent = self:_GetPopupParent()
-    table.insert(
-        self._connections,
-        popupParent:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-            if self._expanded then
-                self:_PositionOptionsContainer(#self:_GetFilteredOptions())
-            end
-        end)
-    )
+    self:Connect(popupParent:GetPropertyChangedSignal("AbsoluteSize"), function()
+        if self._expanded then
+            self:_PositionOptionsContainer(#self:_GetFilteredOptions())
+        end
+    end)
 
-    table.insert(
-        self._connections,
-        self._display:GetPropertyChangedSignal("AbsolutePosition"):Connect(function()
-            if self._expanded then
-                self:_PositionOptionsContainer(#self:_GetFilteredOptions())
-            end
-        end)
-    )
+    self:Connect(self._display:GetPropertyChangedSignal("AbsolutePosition"), function()
+        if self._expanded then
+            self:_PositionOptionsContainer(#self:_GetFilteredOptions())
+        end
+    end)
 
-    table.insert(
-        self._connections,
-        self._display:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-            if self._expanded then
-                self:_PositionOptionsContainer(#self:_GetFilteredOptions())
-            end
-        end)
-    )
-
-    Create.Blockable(self, self._frame)
+    self:Connect(self._display:GetPropertyChangedSignal("AbsoluteSize"), function()
+        if self._expanded then
+            self:_PositionOptionsContainer(#self:_GetFilteredOptions())
+        end
+    end)
 
     local baseBlock = self.Block
     self.Block = function(component, text: string?)
@@ -278,15 +249,17 @@ function Dropdown.new(parent: Instance, config: DropdownConfig, window): Dropdow
         baseBlock(component, text)
     end
 
-    if self._flag and self._window and self._window.RegisterConfigElement then
-        self._window:RegisterConfigElement(self._flag, "Dropdown", function()
-            return self._selected
-        end, function(value)
-            if type(value) == "string" or type(value) == "table" then
-                self:SetValue(value)
+    Create.Configurable(self, self._flag, "Dropdown", function()
+        return self._selected
+    end, function(value)
+        if self._multiSelect then
+            if type(value) == "table" then
+                self:SetValue(value, true)
             end
-        end)
-    end
+        elseif type(value) == "string" then
+            self:SetValue(value, true)
+        end
+    end)
 
     return self
 end
@@ -501,13 +474,10 @@ function Dropdown:_CreateOptionsContainer()
             Parent = self._searchContainer,
         })
 
-        table.insert(
-            self._connections,
-            self._searchInput:GetPropertyChangedSignal("Text"):Connect(function()
-                self._searchText = self._searchInput.Text
-                self:_PopulateOptions()
-            end)
-        )
+        self:Connect(self._searchInput:GetPropertyChangedSignal("Text"), function()
+            self._searchText = self._searchInput.Text
+            self:_PopulateOptions()
+        end)
 
         Create.Instance("Frame", {
             Name = "SearchSeparator",
@@ -703,7 +673,7 @@ function Dropdown:Close()
     self._frame.ZIndex = DropdownLayers.Base or 1
 end
 
-function Dropdown:SetValue(value: string | { string })
+function Dropdown:SetValue(value: string | { string }, silent: boolean?)
     if self._multiSelect then
         if type(value) == "table" then
             self._selected = value
@@ -715,7 +685,9 @@ function Dropdown:SetValue(value: string | { string })
     if self._optionsScroll then
         self:_PopulateOptions()
     end
-    self._callback(self._selected)
+    if not silent then
+        self._callback(self._selected)
+    end
 end
 
 function Dropdown:GetValue(): string | { string }
@@ -728,20 +700,12 @@ function Dropdown:Refresh(options: { string })
 end
 
 function Dropdown:Destroy()
-    for _, connection in ipairs(self._connections) do
-        connection:Disconnect()
-    end
-    table.clear(self._connections)
-
-    if self._flag and self._window and self._window.UnregisterConfigElement then
-        self._window:UnregisterConfigElement(self._flag)
-    end
-
     if self._optionsContainer then
         self._optionsContainer:Destroy()
+        self._optionsContainer = nil
     end
 
-    self._frame:Destroy()
+    BaseComponent.Destroy(self)
 end
 
 return Dropdown

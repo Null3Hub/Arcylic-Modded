@@ -48,7 +48,7 @@ Assert-Contains $create 'if not INTERNAL_PROPERTIES[property] then' "Create.Inst
 $window = Read-ProjectFile "src/Core/Window.luau"
 Assert-Contains $window 'game:GetService("CoreGui")' "Window should request CoreGui for ScreenGui parenting"
 Assert-Contains $window 'self._screenGui.Parent = coreGui' "Window should attempt CoreGui parenting after ScreenGui creation"
-Assert-Contains $window 'if not parentedToCoreGui then' "Window should fall back if CoreGui parenting fails"
+Assert-Contains $window 'if not parentedToExplicit and not parentedToCoreGui then' "Window should fall back if explicit/CoreGui parenting fails"
 Assert-Contains $window 'player:WaitForChild("PlayerGui")' "Window should keep PlayerGui fallback for unavailable CoreGui"
 
 $acrylicBlur = Read-ProjectFile "src/Core/AcrylicBlur.luau"

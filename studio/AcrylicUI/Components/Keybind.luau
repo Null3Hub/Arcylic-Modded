@@ -1,6 +1,7 @@
 local Services = require(script.Parent.Parent.Utils.Services)
 
 local Create = require(script.Parent.Parent.Utils.Create)
+local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
 local Colors = require(script.Parent.Parent.Constants.Colors)
 local Sizes = require(script.Parent.Parent.Constants.Sizes)
 local Fonts = require(script.Parent.Parent.Constants.Fonts)
@@ -8,55 +9,33 @@ local Defaults = require(script.Parent.Parent.Constants.Defaults)
 
 local Keybind = {}
 Keybind.__index = Keybind
+setmetatable(Keybind, { __index = BaseComponent })
 local ComponentDefaults = Defaults.Components or {}
 local CommonDefaults = ComponentDefaults.Common or {}
 local KeybindDefaults = ComponentDefaults.Keybind or {}
 local KeybindSizes = Sizes.Keybind or {}
 
 function Keybind.new(parent: Instance, config, window)
-    local self = setmetatable({}, Keybind)
+    config = config or {}
 
-    local name = (config and config.Name) or KeybindDefaults.Name or "Keybind"
-    local default = (config and config.Default) or KeybindDefaults.Key or Enum.KeyCode.F
-    local callback = (config and config.Callback) or function() end
-    local flag = config and config.Flag
+    local name = config.Name or KeybindDefaults.Name or "Keybind"
+    local default = config.Default or KeybindDefaults.Key or Enum.KeyCode.F
+    local callback = config.Callback or function() end
     local description = Create.GetDescription(config)
     local hasDescription = description ~= nil
     local height = hasDescription
             and (KeybindSizes.HeightWithDescription or CommonDefaults.HeightWithDescription or 50)
         or Sizes.Button.Height
 
-    self._frame = Create.Instance("Frame", {
-        Name = "Keybind_" .. name,
-        BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, height),
+    local self = BaseComponent.new(Keybind, {
         Parent = parent,
+        Size = UDim2.new(1, 0, 0, height),
+        Blockable = true,
+        Flag = config.Flag,
+        Window = window,
     })
 
-    Create.Corner(self._frame, Sizes.Corner.Medium)
-    Create.Stroke(self._frame)
-
-    Create.Instance("TextLabel", {
-        Name = "Name",
-        FontFace = Fonts.Regular,
-        TextColor3 = Colors.Text,
-        Text = name,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        Position = hasDescription
-                and UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.LabelTop or 7)
-            or UDim2.new(
-                0,
-                Sizes.Component.LabelLeft or 10,
-                0.5,
-                -(Sizes.Component.LabelCenterOffset or 10)
-            ),
-        TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(0, KeybindSizes.LabelWidth or 200, 0, Sizes.Component.LabelHeight or 20),
-        Parent = self._frame,
-    })
+    Create.ComponentLabel(self._frame, name, hasDescription)
 
     Create.Description(
         self._frame,
@@ -105,9 +84,6 @@ function Keybind.new(parent: Instance, config, window)
 
     self._currentKey = default
     self._listening = false
-    self._flag = flag
-    self._window = window
-    self._connections = {}
 
     self._id = name
         .. "_"
@@ -141,40 +117,32 @@ function Keybind.new(parent: Instance, config, window)
         end
     end
 
-    table.insert(
-        self._connections,
-        self._listenBtn.MouseButton1Click:Connect(function()
-            if self._blocked then
-                return
-            end
+    self:Connect(self._listenBtn.MouseButton1Click, function()
+        if self._blocked then
+            return
+        end
 
-            self._listening = true
+        self._listening = true
+        refresh()
+    end)
+
+    self:Connect(Services.UserInputService.InputBegan, function(input, _gameProcessed)
+        if self._blocked then
+            return
+        end
+
+        if not self._listening then
+            return
+        end
+        if input.UserInputType == Enum.UserInputType.Keyboard then
+            self._currentKey = input.KeyCode
+            self._listening = false
+            window:UpdateKeybind(self._id, self._currentKey)
             refresh()
-        end)
-    )
-
-    table.insert(
-        self._connections,
-        Services.UserInputService.InputBegan:Connect(function(input, _gameProcessed)
-            if self._blocked then
-                return
-            end
-
-            if not self._listening then
-                return
-            end
-            if input.UserInputType == Enum.UserInputType.Keyboard then
-                self._currentKey = input.KeyCode
-                self._listening = false
-                window:UpdateKeybind(self._id, self._currentKey)
-                refresh()
-            end
-        end)
-    )
+        end
+    end)
 
     self._refresh = refresh
-
-    Create.Blockable(self, self._frame)
 
     local baseBlock = self.Block
     self.Block = function(component, text: string?)
@@ -183,15 +151,15 @@ function Keybind.new(parent: Instance, config, window)
         baseBlock(component, text)
     end
 
-    if self._flag and self._window and self._window.RegisterConfigElement then
-        self._window:RegisterConfigElement(self._flag, "Keybind", function()
-            return self._currentKey
-        end, function(value)
-            if typeof(value) == "EnumItem" then
-                self:SetKey(value)
-            end
-        end)
-    end
+    Create.Configurable(self, self._flag, "Keybind", function()
+        return self._currentKey.Name
+    end, function(value)
+        if type(value) == "string" and Enum.KeyCode[value] then
+            self:SetKey(Enum.KeyCode[value])
+        elseif typeof(value) == "EnumItem" then
+            self:SetKey(value)
+        end
+    end)
 
     refresh()
     return self
@@ -205,23 +173,6 @@ end
 
 function Keybind:GetKey(): Enum.KeyCode
     return self._currentKey
-end
-
-function Keybind:Destroy()
-    for _, connection in ipairs(self._connections) do
-        connection:Disconnect()
-    end
-    table.clear(self._connections)
-
-    if self._window then
-        self._window:UnregisterKeybind(self._id)
-    end
-
-    if self._flag and self._window and self._window.UnregisterConfigElement then
-        self._window:UnregisterConfigElement(self._flag)
-    end
-
-    self._frame:Destroy()
 end
 
 return Keybind

@@ -5,15 +5,16 @@
 ]]
 
 local Create = require(script.Parent.Parent.Utils.Create)
+local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
 local Tween = require(script.Parent.Parent.Utils.Tween)
 local Colors = require(script.Parent.Parent.Constants.Colors)
 local Sizes = require(script.Parent.Parent.Constants.Sizes)
-local Fonts = require(script.Parent.Parent.Constants.Fonts)
 local Defaults = require(script.Parent.Parent.Constants.Defaults)
 local Icons = require(script.Parent.Parent.Constants.Icons)
 
 local Button = {}
 Button.__index = Button
+setmetatable(Button, { __index = BaseComponent })
 local ComponentDefaults = Defaults.Components or {}
 local CommonDefaults = ComponentDefaults.Common or {}
 local ButtonDefaults = ComponentDefaults.Button or {}
@@ -54,7 +55,7 @@ export type ButtonObject = {
     })
 ]]
 function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
-    local self = setmetatable({}, Button)
+    local self
     config = config or {}
 
     local name = config.Name or ButtonDefaults.Name or "Button"
@@ -66,46 +67,19 @@ function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
             and (Sizes.Component.HeightWithDescription or CommonDefaults.HeightWithDescription or 50)
         or Sizes.Button.Height
 
-    self._connections = {}
-
-    -- Main container
-    self._frame = Create.Instance("Frame", {
-        Name = "Button_" .. name,
-        BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, height),
+    self = BaseComponent.new(Button, {
         Parent = parent,
+        Size = UDim2.new(1, 0, 0, height),
+        Blockable = true,
     })
-
-    Create.Corner(self._frame, Sizes.Corner.Medium)
-    Create.Stroke(self._frame)
 
     -- Button label
-    self._label = Create.Instance("TextLabel", {
-        Name = "Label",
-        FontFace = Fonts.Regular,
-        TextColor3 = Colors.Text,
-        Text = name,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        Position = hasDescription
-                and UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.LabelTop or 7)
-            or UDim2.new(
-                0,
-                Sizes.Component.LabelLeft or 10,
-                0.5,
-                -(Sizes.Component.LabelCenterOffset or 10)
-            ),
-        TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(
-            1,
-            -(Sizes.Button.LabelRightPadding or 50),
-            0,
-            Sizes.Component.LabelHeight or 20
-        ),
-        Parent = self._frame,
-    })
+    self._label = Create.ComponentLabel(
+        self._frame,
+        name,
+        hasDescription,
+        Sizes.Button.LabelRightPadding or 50
+    )
 
     -- Description
     Create.Description(
@@ -152,57 +126,38 @@ function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
     self._callback = callback
 
     -- Event handlers
-    table.insert(
-        self._connections,
-        self._button.MouseButton1Click:Connect(function()
-            if self._blocked then
-                return
-            end
+    self:Connect(self._button.MouseButton1Click, function()
+        if self._blocked then
+            return
+        end
 
-            -- Click animation
-            Tween.Create(
-                self._frame,
-                { BackgroundTransparency = CommonDefaults.PressedTransparency or 0.2 },
-                "Fast"
-            )
-            task.wait(CommonDefaults.ClickFlashDelay or 0.1)
-            Tween.Create(
-                self._frame,
-                { BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4 },
-                "Fast"
-            )
+        -- Click animation
+        Tween.Create(
+            self._frame,
+            { BackgroundTransparency = CommonDefaults.PressedTransparency or 0.2 },
+            "Fast"
+        )
+        task.wait(CommonDefaults.ClickFlashDelay or 0.1)
+        Tween.Create(
+            self._frame,
+            { BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4 },
+            "Fast"
+        )
 
-            self._callback()
-        end)
+        self._callback()
+    end)
+
+    local enter, leave = Create.HoverEffect(
+        self._button,
+        self._frame,
+        CommonDefaults.HoverTransparency or 0.3,
+        CommonDefaults.SurfaceTransparency or 0.4,
+        function()
+            return not self._blocked
+        end
     )
-
-    table.insert(
-        self._connections,
-        self._button.MouseEnter:Connect(function()
-            if self._blocked then
-                return
-            end
-
-            Tween.Create(
-                self._frame,
-                { BackgroundTransparency = CommonDefaults.HoverTransparency or 0.3 },
-                "Fast"
-            )
-        end)
-    )
-
-    table.insert(
-        self._connections,
-        self._button.MouseLeave:Connect(function()
-            Tween.Create(
-                self._frame,
-                { BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4 },
-                "Fast"
-            )
-        end)
-    )
-
-    Create.Blockable(self, self._frame)
+    table.insert(self._connections, enter)
+    table.insert(self._connections, leave)
 
     return self
 end
@@ -217,15 +172,6 @@ end
 
 function Button:SetCallback(callback: () -> ())
     self._callback = callback
-end
-
-function Button:Destroy()
-    for _, connection in ipairs(self._connections) do
-        connection:Disconnect()
-    end
-    table.clear(self._connections)
-
-    self._frame:Destroy()
 end
 
 return Button

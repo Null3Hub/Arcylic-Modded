@@ -1,4 +1,5 @@
 local Create = require(script.Parent.Parent.Utils.Create)
+local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
 local Tween = require(script.Parent.Parent.Utils.Tween)
 local Colors = require(script.Parent.Parent.Constants.Colors)
 local Sizes = require(script.Parent.Parent.Constants.Sizes)
@@ -8,6 +9,7 @@ local Icons = require(script.Parent.Parent.Constants.Icons)
 
 local TextBox = {}
 TextBox.__index = TextBox
+setmetatable(TextBox, { __index = BaseComponent })
 local ComponentDefaults = Defaults.Components or {}
 local CommonDefaults = ComponentDefaults.Common or {}
 local TextBoxDefaults = ComponentDefaults.TextBox or {}
@@ -27,7 +29,6 @@ export type TextBoxConfig = {
 }
 
 function TextBox.new(parent: Instance, config: TextBoxConfig?, window)
-    local self = setmetatable({}, TextBox)
     config = config or {}
 
     local name = config.Name or TextBoxDefaults.Name or "TextBox"
@@ -38,51 +39,26 @@ function TextBox.new(parent: Instance, config: TextBoxConfig?, window)
             and (TextBoxSizes.HeightWithDescription or CommonDefaults.HeightWithDescription or 50)
         or Sizes.TextBox.Height
 
+    local self = BaseComponent.new(TextBox, {
+        Parent = parent,
+        Size = UDim2.new(1, 0, 0, height),
+        Blockable = true,
+        Flag = config.Flag,
+        Window = window,
+    })
+
     self._callback = config.Callback or function() end
     self._text = tostring(config.Default or TextBoxDefaults.DefaultText or "")
-    self._connections = {}
-    self._window = window
-    self._flag = config.Flag
     self._numbersOnly = if config.NumbersOnly == nil
         then (TextBoxDefaults.NumbersOnly or false)
         else config.NumbersOnly
 
-    self._frame = Create.Instance("Frame", {
-        Name = "TextBox_" .. name,
-        BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, height),
-        Parent = parent,
-    })
-
-    Create.Corner(self._frame, Sizes.Corner.Medium)
-    Create.Stroke(self._frame)
-
-    self._label = Create.Instance("TextLabel", {
-        Name = "Name",
-        FontFace = Fonts.Regular,
-        TextColor3 = Colors.Text,
-        Text = name,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        Position = hasDescription
-                and UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.LabelTop or 7)
-            or UDim2.new(
-                0,
-                Sizes.Component.LabelLeft or 10,
-                0.5,
-                -(Sizes.Component.LabelCenterOffset or 10)
-            ),
-        TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(
-            1,
-            -(TextBoxSizes.LabelRightPadding or 190),
-            0,
-            Sizes.Component.LabelHeight or 20
-        ),
-        Parent = self._frame,
-    })
+    self._label = Create.ComponentLabel(
+        self._frame,
+        name,
+        hasDescription,
+        TextBoxSizes.LabelRightPadding or 190
+    )
 
     Create.Description(
         self._frame,
@@ -140,58 +116,47 @@ function TextBox.new(parent: Instance, config: TextBoxConfig?, window)
         Parent = self._container,
     })
 
-    table.insert(
-        self._connections,
-        self._input.Focused:Connect(function()
-            if self._blocked then
-                self._input:ReleaseFocus()
-                return
+    self:Connect(self._input.Focused, function()
+        if self._blocked then
+            self._input:ReleaseFocus()
+            return
+        end
+
+        Tween.Create(self._container, { BackgroundTransparency = 0 }, "Fast")
+        Tween.Create(self._stroke, { Color = Colors.Accent }, "Fast")
+        Tween.Create(self._icon, { ImageColor3 = Colors.Text }, "Fast")
+    end)
+
+    self:Connect(self._input.FocusLost, function(enterPressed)
+        Tween.Create(
+            self._container,
+            { BackgroundTransparency = CommonDefaults.ControlTransparency or 0.04 },
+            "Fast"
+        )
+        Tween.Create(self._stroke, { Color = Colors.Border }, "Fast")
+        Tween.Create(self._icon, { ImageColor3 = Colors.TextDark }, "Fast")
+
+        if self._numbersOnly then
+            local numberValue = tonumber(self._input.Text)
+            if numberValue then
+                self._text = tostring(numberValue)
             end
+            self._input.Text = self._text
+        else
+            self._text = self._input.Text
+        end
 
-            Tween.Create(self._container, { BackgroundTransparency = 0 }, "Fast")
-            Tween.Create(self._stroke, { Color = Colors.Accent }, "Fast")
-            Tween.Create(self._icon, { ImageColor3 = Colors.Text }, "Fast")
-        end)
-    )
-
-    table.insert(
-        self._connections,
-        self._input.FocusLost:Connect(function(enterPressed)
-            Tween.Create(
-                self._container,
-                { BackgroundTransparency = CommonDefaults.ControlTransparency or 0.04 },
-                "Fast"
-            )
-            Tween.Create(self._stroke, { Color = Colors.Border }, "Fast")
-            Tween.Create(self._icon, { ImageColor3 = Colors.TextDark }, "Fast")
-
-            if self._numbersOnly then
-                local numberValue = tonumber(self._input.Text)
-                if numberValue then
-                    self._text = tostring(numberValue)
-                end
-                self._input.Text = self._text
-            else
-                self._text = self._input.Text
-            end
-
-            self._callback(self._text, enterPressed)
-        end)
-    )
+        self._callback(self._text, enterPressed)
+    end)
 
     if self._numbersOnly then
-        table.insert(
-            self._connections,
-            self._input:GetPropertyChangedSignal("Text"):Connect(function()
-                local filtered = self._input.Text:gsub("[^%d%.%-]", "")
-                if self._input.Text ~= filtered then
-                    self._input.Text = filtered
-                end
-            end)
-        )
+        self:Connect(self._input:GetPropertyChangedSignal("Text"), function()
+            local filtered = self._input.Text:gsub("[^%d%.%-]", "")
+            if self._input.Text ~= filtered then
+                self._input.Text = filtered
+            end
+        end)
     end
-
-    Create.Blockable(self, self._frame)
 
     local baseBlock = self.Block
     self.Block = function(component, text: string?)
@@ -199,15 +164,13 @@ function TextBox.new(parent: Instance, config: TextBoxConfig?, window)
         baseBlock(component, text)
     end
 
-    if self._flag and self._window and self._window.RegisterConfigElement then
-        self._window:RegisterConfigElement(self._flag, "TextBox", function()
-            return self._text
-        end, function(value)
-            if type(value) == "string" then
-                self:SetText(value)
-            end
-        end)
-    end
+    Create.Configurable(self, self._flag, "TextBox", function()
+        return self._text
+    end, function(value)
+        if type(value) == "string" then
+            self:SetText(value)
+        end
+    end)
 
     return self
 end
@@ -231,19 +194,6 @@ function TextBox:Focus()
     end
 
     self._input:CaptureFocus()
-end
-
-function TextBox:Destroy()
-    for _, connection in ipairs(self._connections) do
-        connection:Disconnect()
-    end
-    table.clear(self._connections)
-
-    if self._flag and self._window and self._window.UnregisterConfigElement then
-        self._window:UnregisterConfigElement(self._flag)
-    end
-
-    self._frame:Destroy()
 end
 
 return TextBox

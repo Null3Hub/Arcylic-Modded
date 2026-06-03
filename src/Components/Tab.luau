@@ -5,6 +5,7 @@ local Sizes = require(script.Parent.Parent.Constants.Sizes)
 local Fonts = require(script.Parent.Parent.Constants.Fonts)
 local Defaults = require(script.Parent.Parent.Constants.Defaults)
 local Icons = require(script.Parent.Parent.Constants.Icons)
+local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
 
 local Button = require(script.Parent.Button)
 local Toggle = require(script.Parent.Toggle)
@@ -14,6 +15,7 @@ local TextBox = require(script.Parent.TextBox)
 
 local Tab = {}
 Tab.__index = Tab
+setmetatable(Tab, { __index = BaseComponent })
 local ComponentDefaults = Defaults.Components or {}
 local CommonDefaults = ComponentDefaults.Common or {}
 local ConfigUIDefaults = ComponentDefaults.ConfigUI or {}
@@ -32,25 +34,22 @@ local function closePopupsInElements(elements)
 end
 
 function Tab.new(window, section, name: string, icon: string?)
-    local self = setmetatable({}, Tab)
+    local self = BaseComponent.new(Tab, {
+        Parent = section._tabsContainer,
+        Size = UDim2.new(1, -15, 0, Sizes.Tab.Height),
+        BackgroundColor3 = Colors.Secondary,
+        BackgroundTransparency = 1,
+        StrokeColor = Colors.Border,
+        StrokeTransparency = 1,
+        Blockable = false,
+    })
+
     self._window = window
     self._section = section
     self._name = name
     self._elements = {}
-    self._connections = {}
 
-    -- Button in sidebar
-    self._button = Create.Instance("Frame", {
-        Name = name,
-        BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, -15, 0, Sizes.Tab.Height),
-        Parent = section._tabsContainer,
-    })
-
-    Create.Corner(self._button, Sizes.Corner.Medium)
-    self._stroke = Create.Stroke(self._button, Colors.Border, 1)
+    self._button = self._frame
     self._stroke.LineJoinMode = Enum.LineJoinMode.Round
 
     self._icon = Create.Instance("ImageLabel", {
@@ -102,38 +101,29 @@ function Tab.new(window, section, name: string, icon: string?)
 
     Create.ListLayout(self._content, Sizes.Tab.ContentPadding or 8)
 
-    table.insert(
-        self._connections,
-        click.MouseButton1Click:Connect(function()
-            window:SelectTab(self)
-        end)
-    )
+    self:Connect(click.MouseButton1Click, function()
+        window:SelectTab(self)
+    end)
 
-    table.insert(
-        self._connections,
-        click.MouseEnter:Connect(function()
-            if window._currentTab ~= self then
-                Tween.Create(
-                    self._button,
-                    { BackgroundTransparency = CommonDefaults.HoverFaintTransparency or 0.7 },
-                    "Fast"
-                )
-            end
-        end)
-    )
+    self:Connect(click.MouseEnter, function()
+        if window._currentTab ~= self then
+            Tween.Create(
+                self._button,
+                { BackgroundTransparency = CommonDefaults.HoverFaintTransparency or 0.7 },
+                "Fast"
+            )
+        end
+    end)
 
-    table.insert(
-        self._connections,
-        click.MouseLeave:Connect(function()
-            if window._currentTab ~= self then
-                Tween.Create(
-                    self._button,
-                    { BackgroundTransparency = CommonDefaults.Transparent or 1 },
-                    "Fast"
-                )
-            end
-        end)
-    )
+    self:Connect(click.MouseLeave, function()
+        if window._currentTab ~= self then
+            Tween.Create(
+                self._button,
+                { BackgroundTransparency = CommonDefaults.Transparent or 1 },
+                "Fast"
+            )
+        end
+    end)
 
     if not window._currentTab then
         window:SelectTab(self)
@@ -211,11 +201,6 @@ function Tab:CreateConfigSection()
 end
 
 function Tab:Destroy()
-    for _, connection in ipairs(self._connections) do
-        connection:Disconnect()
-    end
-    table.clear(self._connections)
-
     for _, element in ipairs(self._elements) do
         if element.Destroy then
             element:Destroy()
@@ -227,9 +212,7 @@ function Tab:Destroy()
         self._content:Destroy()
     end
 
-    if self._button then
-        self._button:Destroy()
-    end
+    BaseComponent.Destroy(self)
 end
 
 return Tab

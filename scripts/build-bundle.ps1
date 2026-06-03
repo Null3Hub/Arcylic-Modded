@@ -15,6 +15,7 @@ if (-not (Test-Path -LiteralPath $sourceRoot)) {
 
 $requireReplacements = [ordered]@{
     'require(script.Core.Window)' = '__require("Core.Window")'
+    'require(script.Core.BaseComponent)' = '__require("Core.BaseComponent")'
     'require(script.Constants.Colors)' = '__require("Constants.Colors")'
     'require(script.Constants.Sizes)' = '__require("Constants.Sizes")'
     'require(script.Constants.Fonts)' = '__require("Constants.Fonts")'
@@ -30,11 +31,13 @@ $requireReplacements = [ordered]@{
     'require(script.Utils.IconResolver)' = '__require("Utils.IconResolver")'
     'require(script.Parent.Parent.Utils.Create)' = '__require("Utils.Create")'
     'require(script.Parent.Parent.Utils.Tween)' = '__require("Utils.Tween")'
+    'require(script.Parent.Parent.Core.BaseComponent)' = '__require("Core.BaseComponent")'
     'require(script.Parent.Parent.Utils.Draggable)' = '__require("Utils.Draggable")'
     'require(script.Parent.Parent.Utils.Device)' = '__require("Utils.Device")'
     'require(script.Parent.Parent.Utils.Services)' = '__require("Utils.Services")'
     'require(script.Parent.Parent.Utils.IconResolver)' = '__require("Utils.IconResolver")'
     'require(script.Parent.IconResolver)' = '__require("Utils.IconResolver")'
+    'require(script.Parent.Tween)' = '__require("Utils.Tween")'
     'require(script.Parent.Parent.Constants.Colors)' = '__require("Constants.Colors")'
     'require(script.Parent.Parent.Constants.Sizes)' = '__require("Constants.Sizes")'
     'require(script.Parent.Parent.Constants.Fonts)' = '__require("Constants.Fonts")'

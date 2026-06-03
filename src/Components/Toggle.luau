@@ -5,14 +5,15 @@
 ]]
 
 local Create = require(script.Parent.Parent.Utils.Create)
+local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
 local Tween = require(script.Parent.Parent.Utils.Tween)
 local Colors = require(script.Parent.Parent.Constants.Colors)
 local Sizes = require(script.Parent.Parent.Constants.Sizes)
-local Fonts = require(script.Parent.Parent.Constants.Fonts)
 local Defaults = require(script.Parent.Parent.Constants.Defaults)
 
 local Toggle = {}
 Toggle.__index = Toggle
+setmetatable(Toggle, { __index = BaseComponent })
 local ComponentDefaults = Defaults.Components or {}
 local CommonDefaults = ComponentDefaults.Common or {}
 local ToggleDefaults = ComponentDefaults.Toggle or {}
@@ -43,7 +44,6 @@ export type ToggleObject = {
     @return ToggleObject - Toggle control object
 ]]
 function Toggle.new(parent: Instance, config: ToggleConfig, window): ToggleObject
-    local self = setmetatable({}, Toggle)
     config = config or {}
 
     local name = config.Name or ToggleDefaults.Name or "Toggle"
@@ -59,50 +59,24 @@ function Toggle.new(parent: Instance, config: ToggleConfig, window): ToggleObjec
     local knobPadding = Sizes.Toggle.Padding or 4
     local knobEnabledX = Sizes.Toggle.Width - Sizes.Toggle.Circle - knobPadding
 
+    local self = BaseComponent.new(Toggle, {
+        Parent = parent,
+        Size = UDim2.new(1, 0, 0, height),
+        Blockable = true,
+        Flag = config.Flag,
+        Window = window,
+    })
+
     self._enabled = default
     self._callback = callback
-    self._flag = config.Flag
-    self._window = window
-    self._connections = {}
-
-    -- Main container
-    self._frame = Create.Instance("Frame", {
-        Name = "Toggle_" .. name,
-        BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, height),
-        Parent = parent,
-    })
-
-    Create.Corner(self._frame, Sizes.Corner.Medium)
-    Create.Stroke(self._frame)
 
     -- Label
-    self._label = Create.Instance("TextLabel", {
-        Name = "Label",
-        FontFace = Fonts.Regular,
-        TextColor3 = Colors.Text,
-        Text = name,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        BackgroundTransparency = 1,
-        Position = hasDescription
-                and UDim2.new(0, Sizes.Component.LabelLeft or 10, 0, Sizes.Component.LabelTop or 7)
-            or UDim2.new(
-                0,
-                Sizes.Component.LabelLeft or 10,
-                0.5,
-                -(Sizes.Component.LabelCenterOffset or 10)
-            ),
-        TextSize = Fonts.Size.Normal,
-        Size = UDim2.new(
-            1,
-            -(Sizes.Toggle.LabelRightPadding or 60),
-            0,
-            Sizes.Component.LabelHeight or 20
-        ),
-        Parent = self._frame,
-    })
+    self._label = Create.ComponentLabel(
+        self._frame,
+        name,
+        hasDescription,
+        Sizes.Toggle.LabelRightPadding or 60
+    )
 
     -- Description
     Create.Description(
@@ -158,18 +132,13 @@ function Toggle.new(parent: Instance, config: ToggleConfig, window): ToggleObjec
         Parent = self._frame,
     })
 
-    table.insert(
-        self._connections,
-        button.MouseButton1Click:Connect(function()
-            if self._blocked then
-                return
-            end
+    self:Connect(button.MouseButton1Click, function()
+        if self._blocked then
+            return
+        end
 
-            self:SetValue(not self._enabled)
-        end)
-    )
-
-    Create.Blockable(self, self._frame)
+        self:SetValue(not self._enabled)
+    end)
 
     local baseBlock = self.Block
     self.Block = function(component, text: string?)
@@ -180,15 +149,13 @@ function Toggle.new(parent: Instance, config: ToggleConfig, window): ToggleObjec
         baseBlock(component, text)
     end
 
-    if self._flag and self._window and self._window.RegisterConfigElement then
-        self._window:RegisterConfigElement(self._flag, "Toggle", function()
-            return self._enabled
-        end, function(value)
-            if type(value) == "boolean" then
-                self:SetValue(value)
-            end
-        end)
-    end
+    Create.Configurable(self, self._flag, "Toggle", function()
+        return self._enabled
+    end, function(value)
+        if type(value) == "boolean" then
+            self:SetValue(value, true)
+        end
+    end)
 
     return self
 end
@@ -224,19 +191,6 @@ end
 
 function Toggle:GetValue(): boolean
     return self._enabled
-end
-
-function Toggle:Destroy()
-    for _, connection in ipairs(self._connections) do
-        connection:Disconnect()
-    end
-    table.clear(self._connections)
-
-    if self._flag and self._window and self._window.UnregisterConfigElement then
-        self._window:UnregisterConfigElement(self._flag)
-    end
-
-    self._frame:Destroy()
 end
 
 return Toggle

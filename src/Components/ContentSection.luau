@@ -4,6 +4,7 @@ local Sizes = require(script.Parent.Parent.Constants.Sizes)
 local Fonts = require(script.Parent.Parent.Constants.Fonts)
 local Defaults = require(script.Parent.Parent.Constants.Defaults)
 local Icons = require(script.Parent.Parent.Constants.Icons)
+local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
 
 local Button = require(script.Parent.Button)
 local Toggle = require(script.Parent.Toggle)
@@ -13,6 +14,7 @@ local TextBox = require(script.Parent.TextBox)
 
 local ContentSection = {}
 ContentSection.__index = ContentSection
+setmetatable(ContentSection, { __index = BaseComponent })
 
 local ComponentDefaults = Defaults.Components or {}
 local CommonDefaults = ComponentDefaults.Common or {}
@@ -24,30 +26,26 @@ local ComponentIcons = Icons.Components or {}
 local NotificationIcons = Icons.Notification or {}
 
 function ContentSection.new(tab, config)
-    local self = setmetatable({}, ContentSection)
     local sectionConfig = if type(config) == "table" then config else { Title = config }
     local title = tostring(sectionConfig.Title or sectionConfig.Name or "Section")
     local description = Create.GetDescription(sectionConfig)
     local hasDescription = description ~= nil
     local headerHeight = hasDescription and 54 or 42
 
+    local self = BaseComponent.new(ContentSection, {
+        Parent = tab._content,
+        Size = UDim2.new(1, 0, 0, 0),
+        Blockable = false,
+        Window = tab._window,
+        Properties = {
+            AutomaticSize = Enum.AutomaticSize.Y,
+        },
+    })
+
     self._tab = tab
     self._window = tab._window
     self._title = title
     self._elements = {}
-
-    self._frame = Create.Instance("Frame", {
-        Name = "ContentSection_" .. title,
-        BackgroundColor3 = Colors.Secondary,
-        BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4,
-        BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
-        Parent = tab._content,
-    })
-
-    Create.Corner(self._frame, Sizes.Corner.Medium)
-    Create.Stroke(self._frame)
     Create.ListLayout(self._frame, 0)
 
     self._header = Create.Instance("Frame", {
@@ -259,9 +257,7 @@ function ContentSection:Destroy()
     end
     table.clear(self._elements)
 
-    if self._frame then
-        self._frame:Destroy()
-    end
+    BaseComponent.Destroy(self)
 end
 
 return ContentSection
