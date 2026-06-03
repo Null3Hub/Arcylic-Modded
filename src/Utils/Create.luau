@@ -16,6 +16,32 @@ local IconResolver = require(script.Parent.IconResolver)
 
 local Create = {}
 
+local INTERNAL_PROPERTIES = {
+    Parent = true,
+    Name = true,
+    PreserveName = true,
+    RandomizeName = true,
+}
+
+local stealthNameCounter = 0
+local stealthNameSeed = math.floor((os.clock() * 1000000) % 1000000000)
+
+local function nextStealthName(): string
+    stealthNameCounter += 1
+    return "_A" .. tostring(stealthNameSeed) .. "_" .. tostring(stealthNameCounter)
+end
+
+local function applyNamePolicy(instance: Instance, className: string, properties: { [string]: any })
+    if properties.PreserveName == true and properties.Name ~= nil then
+        instance.Name = tostring(properties.Name)
+        return
+    end
+
+    if properties.RandomizeName == true or className == "ScreenGui" then
+        instance.Name = nextStealthName()
+    end
+end
+
 --[[
     Creates a new instance with properties
 
@@ -35,14 +61,12 @@ function Create.Instance(className: string, properties: { [string]: any }): Inst
     local instance = Instance.new(className)
 
     for property, value in pairs(properties) do
-        if property ~= "Parent" then
-            if property == "Name" then
-                instance[property] = "\0"
-            else
-                instance[property] = value
-            end
+        if not INTERNAL_PROPERTIES[property] then
+            instance[property] = value
         end
     end
+
+    applyNamePolicy(instance, className, properties)
 
     -- Set parent last to avoid unnecessary property updates
     if properties.Parent then

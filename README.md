@@ -13,7 +13,7 @@ A stabilized, toolchain-backed modded build of AcrylicUI for Roblox, with acryli
 -  **Keybind System** - Custom keybinds with listener support
 -  **Sections & Tabs** - Organized layout with collapsible sections
 -  **Config System** - Save, load, and manage configuration profiles with auto-save support
--  **Native Stealth** - UI instances use null names and the main ScreenGui targets CoreGui when available
+-  **Executor-Safe Stealth** - Root UI uses a non-semantic session name, descendants avoid semantic names, and CoreGui is used when available
 
 ## Installation
 

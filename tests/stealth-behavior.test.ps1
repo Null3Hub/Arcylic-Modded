@@ -38,8 +38,12 @@ function Assert-NotContains {
 }
 
 $create = Read-ProjectFile "src/Utils/Create.luau"
-Assert-Contains $create 'if property == "Name" then' "Create.Instance should special-case Name properties"
-Assert-Contains $create 'instance[property] = "\0"' "Create.Instance should assign null names"
+Assert-NotContains $create '"\0"' "Create.Instance must not use plugin-gated null names"
+Assert-Contains $create 'Name = true' "Create.Instance should treat Name as an internal policy field"
+Assert-Contains $create 'PreserveName = true' "Create.Instance should expose an explicit preserve-name escape hatch"
+Assert-Contains $create 'RandomizeName = true' "Create.Instance should expose an explicit randomized-name option"
+Assert-Contains $create 'className == "ScreenGui"' "Create.Instance should randomize root ScreenGui names"
+Assert-Contains $create 'if not INTERNAL_PROPERTIES[property] then' "Create.Instance should skip internal policy fields during property assignment"
 
 $window = Read-ProjectFile "src/Core/Window.luau"
 Assert-Contains $window 'game:GetService("CoreGui")' "Window should request CoreGui for ScreenGui parenting"
