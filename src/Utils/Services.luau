@@ -7,14 +7,23 @@
     @license MIT
 ]]
 
+local cloneref = cloneref or function(s) return s end
+local ProtectGui = protect_gui or protectgui or (syn and syn.protect_gui) or function(s) return s end
+
 local Services = {
-    TweenService = game:GetService("TweenService"),
-    UserInputService = game:GetService("UserInputService"),
-    Players = game:GetService("Players"),
-    Lighting = game:GetService("Lighting"),
-    RunService = game:GetService("RunService"),
-    GuiService = game:GetService("GuiService"),
-    HttpService = game:GetService("HttpService"),
+    TweenService = cloneref(game:GetService("TweenService")),
+    UserInputService = cloneref(game:GetService("UserInputService")),
+    Players = cloneref(game:GetService("Players")),
+    Lighting = cloneref(game:GetService("Lighting")),
+    RunService = cloneref(game:GetService("RunService")),
+    GuiService = cloneref(game:GetService("GuiService")),
+    HttpService = cloneref(game:GetService("HttpService")),
+    TextService = cloneref(game:GetService("TextService")),
+}
+
+Services.Protection = {
+    cloneref = cloneref,
+    ProtectGui = ProtectGui,
 }
 
 return Services
