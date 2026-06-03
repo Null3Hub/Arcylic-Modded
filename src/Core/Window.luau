@@ -363,8 +363,14 @@ function Window:_CreateGui()
     self._dragConnection = Draggable.Enable(self._container, self._topBarDragArea)
     self._bottomDragConnection = Draggable.Enable(self._container, self._bottomDragArea)
 
-    -- Acrylic blur effect
-    self._acrylicBlur = AcrylicBlur.new(self._container)
+    -- Acrylic blur effect. Some executors block 3D/effect properties; keep UI alive without blur.
+    local blurOk, blur = pcall(AcrylicBlur.new, self._container)
+    if blurOk then
+        self._acrylicBlur = blur
+    else
+        self._acrylicBlur = nil
+        warn("[AcrylicUI] Acrylic blur disabled: " .. tostring(blur))
+    end
 
     -- Notification container
     Notification.CreateContainer(self._screenGui)

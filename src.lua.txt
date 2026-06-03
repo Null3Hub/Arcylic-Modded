@@ -3842,11 +3842,14 @@ function AcrylicBlur:_CreateMesh()
         Anchored = true,
         CanCollide = false,
         CanQuery = false,
-        Locked = true,
         CastShadow = false,
         Transparency = BlurDefaults.RootTransparency or 0.9,
         Parent = self._folder,
     })
+
+    pcall(function()
+        self._root.Locked = true
+    end)
 
     Create.Instance("SpecialMesh", {
         MeshType = Enum.MeshType.Brick,
@@ -4652,8 +4655,14 @@ function Window:_CreateGui()
     self._dragConnection = Draggable.Enable(self._container, self._topBarDragArea)
     self._bottomDragConnection = Draggable.Enable(self._container, self._bottomDragArea)
 
-    -- Acrylic blur effect
-    self._acrylicBlur = AcrylicBlur.new(self._container)
+    -- Acrylic blur effect. Some executors block 3D/effect properties; keep UI alive without blur.
+    local blurOk, blur = pcall(AcrylicBlur.new, self._container)
+    if blurOk then
+        self._acrylicBlur = blur
+    else
+        self._acrylicBlur = nil
+        warn("[AcrylicUI] Acrylic blur disabled: " .. tostring(blur))
+    end
 
     -- Notification container
     Notification.CreateContainer(self._screenGui)

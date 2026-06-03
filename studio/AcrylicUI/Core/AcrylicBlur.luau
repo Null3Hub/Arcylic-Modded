@@ -86,11 +86,14 @@ function AcrylicBlur:_CreateMesh()
         Anchored = true,
         CanCollide = false,
         CanQuery = false,
-        Locked = true,
         CastShadow = false,
         Transparency = BlurDefaults.RootTransparency or 0.9,
         Parent = self._folder,
     })
+
+    pcall(function()
+        self._root.Locked = true
+    end)
 
     Create.Instance("SpecialMesh", {
         MeshType = Enum.MeshType.Brick,
