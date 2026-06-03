@@ -35,7 +35,7 @@ foreach ($prefix in @("src", "studio/AcrylicUI")) {
     Assert-Contains $base "setmetatable(classTable, { __index = BaseComponent })" "$prefix BaseComponent should chain child class tables to BaseComponent when missing"
     Assert-Contains $base "setmetatable({}, classTable or BaseComponent)" "$prefix BaseComponent should preserve child component method lookup"
     Assert-Contains $base "self._connections = {}" "$prefix BaseComponent should initialize connection tracking"
-    Assert-Contains $base 'Name = "\0"' "$prefix BaseComponent should use stealth null names for base frames"
+    Assert-Contains $base 'Name = RandomString.new()' "$prefix BaseComponent should use RandomString.new() for stealth naming"
     Assert-Contains $base "PreserveName = true" "$prefix BaseComponent should preserve the stealth null frame name"
     Assert-Contains $base "config.Properties or {}" "$prefix BaseComponent should support extra frame properties"
     Assert-Contains $base "if config.Corner ~= false then" "$prefix BaseComponent should allow disabling UICorner"

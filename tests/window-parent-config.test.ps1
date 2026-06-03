@@ -17,8 +17,8 @@ if ($window -notmatch 'if\s+self\._parent\s+then') {
     $errors.Add("Window:_CreateGui should prefer an explicit parent when provided")
 }
 
-if ($window -notmatch 'self\._screenGui\.Parent\s*=\s*self\._parent') {
-    $errors.Add("Window:_CreateGui should parent ScreenGui to the explicit parent")
+if ($window -notmatch 'self\._screenGui\.Parent\s*=\s*guiParent') {
+    $errors.Add("Window:_CreateGui should parent ScreenGui to the resolved guiParent")
 }
 
 if ($errors.Count -gt 0) {

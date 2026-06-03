@@ -51,10 +51,10 @@ Assert-Contains $create 'className == "ScreenGui"' "Create.Instance should rando
 Assert-Contains $create 'if not INTERNAL_PROPERTIES[property] then' "Create.Instance should skip internal policy fields during property assignment"
 
 $window = Read-ProjectFile "src/Core/Window.luau"
-Assert-Contains $window 'game:GetService("CoreGui")' "Window should request CoreGui for ScreenGui parenting"
-Assert-Contains $window 'self._screenGui.Parent = coreGui' "Window should attempt CoreGui parenting after ScreenGui creation"
-Assert-Contains $window 'if not parentedToExplicit and not parentedToCoreGui then' "Window should fall back if explicit/CoreGui parenting fails"
-Assert-Contains $window 'player:WaitForChild("PlayerGui")' "Window should keep PlayerGui fallback for unavailable CoreGui"
+Assert-Contains $window 'function Window:_FindGuiParent' "Window should define a _FindGuiParent method"
+Assert-Contains $window 'game:GetService("CoreGui")' "Window should request CoreGui as a fallback parent"
+Assert-Contains $window 'self._screenGui.Parent = guiParent' "Window should parent ScreenGui to the resolved guiParent"
+Assert-Contains $window 'LocalPlayer:WaitForChild("PlayerGui")' "Window should keep PlayerGui as final fallback"
 
 $acrylicBlur = Read-ProjectFile "src/Core/AcrylicBlur.luau"
 Assert-NotContains $acrylicBlur 'Locked = true,' "AcrylicBlur should not require plugin-only Locked in Create.Instance properties"
