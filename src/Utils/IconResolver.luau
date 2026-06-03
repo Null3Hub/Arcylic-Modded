@@ -27,6 +27,68 @@ local _warned: { [string]: boolean } = {}
 
 local ASSET_PREFIX = "rbxassetid://"
 
+local function getExecutorEnv(): { [string]: any }?
+    local genv = if type(_G) == "table" then rawget(_G, "getgenv") else nil
+    if type(genv) == "function" then
+        local ok, env = pcall(genv)
+        if ok and type(env) == "table" then
+            return env
+        end
+    end
+
+    if type(_G) == "table" then
+        return _G
+    end
+
+    return nil
+end
+
+local function fetchUrl(url: string): string?
+    local httpGet = game["HttpGet"]
+    if type(httpGet) == "function" then
+        local ok, body = pcall(httpGet, game, url, true)
+        if ok and type(body) == "string" then
+            return body
+        end
+    end
+
+    local env = getExecutorEnv()
+    if env then
+        local request = env.request or env.http_request
+        if type(request) ~= "function" and type(env.syn) == "table" then
+            request = env.syn.request
+        end
+        if type(request) ~= "function" and type(env.http) == "table" then
+            request = env.http.request
+        end
+
+        if type(request) == "function" then
+            local ok, response = pcall(request, {
+                Url = url,
+                Method = "GET",
+            })
+            if ok then
+                if type(response) == "table" and type(response.Body) == "string" then
+                    return response.Body
+                end
+                if type(response) == "string" then
+                    return response
+                end
+            end
+        end
+    end
+
+    local httpService = game:GetService("HttpService")
+    local ok, body = pcall(function()
+        return httpService:GetAsync(url, true)
+    end)
+    if ok and type(body) == "string" then
+        return body
+    end
+
+    return nil
+end
+
 function IconResolver.IsAsset(icon: string?): boolean
     if icon == nil or type(icon) ~= "string" then
         return false
@@ -58,10 +120,8 @@ local function _loadPack(pack: string): any
     if not url then
         return nil
     end
-    local ok, body = pcall(function()
-        return game:GetService("HttpService"):HttpGet(url, true)
-    end)
-    if not ok or type(body) ~= "string" then
+    local body = fetchUrl(url)
+    if type(body) ~= "string" then
         if not _warned[pack] then
             _warned[pack] = true
             warn(string.format("[AcrylicUI] Failed to fetch icon pack '%s'", pack))
