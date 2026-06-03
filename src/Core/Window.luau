@@ -19,9 +19,14 @@ local Layers = require(script.Parent.Parent.Constants.Layers)
 local AcrylicBlur = require(script.Parent.AcrylicBlur)
 local Notification = require(script.Parent.Notification)
 local ConfigEncryption = require(script.Parent.Parent.Utils.ConfigEncryption)
+local RandomString = require(script.Parent.Parent.Utils.RandomString)
 
 local Window = {}
 Window.__index = Window
+
+Window._sharedScreenGui = nil
+Window._sharedScreenGuiCount = 0
+Window._sharedScreenGuiParent = nil
 
 local function safeGet(name: string): (...any) -> ...any?
     local sources = {}
@@ -320,15 +325,41 @@ end
 
 function Window:_CreateGui()
     local guiParent = self:_FindGuiParent()
+    local Protection = Services.Protection or {}
 
-    -- Screen GUI
-    self._screenGui = Create.Instance("ScreenGui", {
-        Name = WindowDefaults.ScreenGuiName or "AcrylicUI",
-        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-        ResetOnSpawn = false,
-    })
-
-    self._screenGui.Parent = guiParent
+    if not self._parent then
+        -- Use shared ScreenGui
+        if not Window._sharedScreenGui or Window._sharedScreenGuiParent ~= guiParent then
+            Window._sharedScreenGui = Create.Instance("ScreenGui", {
+                Name = RandomString.new(),
+                IgnoreGuiInset = true,
+                ZIndexBehavior = Enum.ZIndexBehavior.Global,
+                ResetOnSpawn = false,
+            })
+            if Protection.ProtectGui then
+                Protection.ProtectGui(Window._sharedScreenGui)
+            end
+            Window._sharedScreenGui.Parent = guiParent
+            Window._sharedScreenGuiCount = 0
+            Window._sharedScreenGuiParent = guiParent
+        end
+        Window._sharedScreenGuiCount += 1
+        self._screenGui = Window._sharedScreenGui
+        self._usesSharedScreenGui = true
+    else
+        -- Create dedicated ScreenGui for this parent
+        self._screenGui = Create.Instance("ScreenGui", {
+            Name = RandomString.new(),
+            IgnoreGuiInset = true,
+            ZIndexBehavior = Enum.ZIndexBehavior.Global,
+            ResetOnSpawn = false,
+        })
+        if Protection.ProtectGui then
+            Protection.ProtectGui(self._screenGui)
+        end
+        self._screenGui.Parent = guiParent
+        self._usesSharedScreenGui = false
+    end
 
     -- Main container
     self._container = Create.Instance("Frame", {
@@ -1441,8 +1472,19 @@ function Window:Destroy()
         Notification.DestroyContainer(self._screenGui)
     end
 
-    if self._screenGui then
-        self._screenGui:Destroy()
+    if self._usesSharedScreenGui then
+        Window._sharedScreenGuiCount = math.max(0, Window._sharedScreenGuiCount - 1)
+        if Window._sharedScreenGuiCount == 0 then
+            if Window._sharedScreenGui then
+                Window._sharedScreenGui:Destroy()
+            end
+            Window._sharedScreenGui = nil
+            Window._sharedScreenGuiParent = nil
+        end
+    else
+        if self._screenGui then
+            self._screenGui:Destroy()
+        end
     end
 
     table.clear(self._keybinds)
