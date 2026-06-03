@@ -18,6 +18,7 @@ local Layers = require(script.Parent.Parent.Constants.Layers)
 
 local AcrylicBlur = require(script.Parent.AcrylicBlur)
 local Notification = require(script.Parent.Notification)
+local ConfigEncryption = require(script.Parent.Parent.Utils.ConfigEncryption)
 
 local Window = {}
 Window.__index = Window
@@ -1029,9 +1030,11 @@ function Window:SaveConfig(configName: string?): boolean
     end
 
     local success = pcall(function()
+        local jsonData = Services.HttpService:JSONEncode(configData)
+        local encryptedData = ConfigEncryption.Encrypt(jsonData)
         writeFile(
             GetConfigPath(self._configFolder, sanitizedName),
-            Services.HttpService:JSONEncode(configData)
+            encryptedData
         )
     end)
 
@@ -1092,9 +1095,30 @@ function Window:LoadConfig(configName: string?): boolean
         return false
     end
 
-    local success, data = pcall(function()
-        return Services.HttpService:JSONDecode(readFile(path))
-    end)
+    local rawData = readFile(path)
+    local isPlainJson = rawData:sub(1, 1) == "{"
+    local success, data
+
+    if isPlainJson then
+        -- Plain JSON (legacy) - re-save as encrypted
+        success, data = pcall(function()
+            return Services.HttpService:JSONDecode(rawData)
+        end)
+        if success and data then
+            pcall(function()
+                writeFile(
+                    GetConfigPath(self._configFolder, sanitizedName),
+                    ConfigEncryption.Encrypt(rawData)
+                )
+            end)
+        end
+    else
+        -- Encrypted config
+        success, data = pcall(function()
+            local decrypted = ConfigEncryption.Decrypt(rawData)
+            return Services.HttpService:JSONDecode(decrypted)
+        end)
+    end
 
     if not success or type(data) ~= "table" then
         self:Notify({
