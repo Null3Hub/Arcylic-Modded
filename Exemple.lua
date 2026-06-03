@@ -162,13 +162,13 @@ local uiSection = window:CreateSection("UI")
 local settingsSection = window:CreateSection("Settings")
 
 local combatTab = combatSection:CreateTab("Combat", "solar/crosshair-minimalistic")
-combatTab:CreateSection({
+local actionsSection = combatTab:CreateSection({
     Title = "Actions",
     Description = "Core combat actions and configuration.",
 })
 
 local autoFarmEnabled = false
-local autoFarmToggle = combatTab:Toggle({
+local autoFarmToggle = actionsSection:Toggle({
     Name = "Auto Farm",
     Description = "Toggle with config saving and runtime blocking support.",
     Default = false,
@@ -183,7 +183,7 @@ local autoFarmToggle = combatTab:Toggle({
     end,
 })
 
-local actionButton = combatTab:Button({
+local actionButton = actionsSection:Button({
     Name = "Run Action",
     Desc = "Button with SetText, SetIcon, SetCallback, Block, and Unblock support.",
     Icon = "rbxassetid://10709775704",
@@ -196,7 +196,7 @@ local actionButton = combatTab:Button({
     end,
 })
 
-local damageSlider = combatTab:Slider({
+local damageSlider = actionsSection:Slider({
     Name = "Damage Multiplier",
     Description = "Slider with min, max, increment, callbacks, and config flag.",
     Min = 1,
@@ -209,7 +209,7 @@ local damageSlider = combatTab:Slider({
     end,
 })
 
-local targetDropdown = combatTab:Dropdown({
+local targetDropdown = actionsSection:Dropdown({
     Name = "Target Priority",
     Description = "Single-select dropdown with search enabled.",
     Options = { "Closest", "Lowest HP", "Highest Threat" },
@@ -221,7 +221,7 @@ local targetDropdown = combatTab:Dropdown({
     end,
 })
 
-local weaponsDropdown = combatTab:Dropdown({
+local weaponsDropdown = actionsSection:Dropdown({
     Name = "Allowed Weapons",
     Desc = "Multi-select dropdown using a table value.",
     Options = { "Sword", "Bow", "Magic", "Melee" },
@@ -234,12 +234,12 @@ local weaponsDropdown = combatTab:Dropdown({
 })
 
 local movementTab = playerSection:CreateTab("Movement", "rbxassetid://10734898355")
-movementTab:CreateSection({
+local movementControls = movementTab:CreateSection({
     Title = "Movement Controls",
     Description = "Speed, flight, and teleport settings.",
 })
 
-local walkSpeedSlider = movementTab:Slider({
+local walkSpeedSlider = movementControls:Slider({
     Name = "Walk Speed",
     Description = "Applies to the local Humanoid when available.",
     Min = 16,
@@ -255,7 +255,7 @@ local walkSpeedSlider = movementTab:Slider({
     end,
 })
 
-local flyKeybind = movementTab:Keybind({
+local flyKeybind = movementControls:Keybind({
     Name = "Fly Toggle",
     Description = "Keybind selector and global key callback.",
     Default = Enum.KeyCode.F,
@@ -269,7 +269,7 @@ local flyKeybind = movementTab:Keybind({
     end,
 })
 
-local teleportBox = movementTab:TextBox({
+local teleportBox = movementControls:TextBox({
     Name = "Teleport Target",
     Desc = "TextBox with placeholder, SetText, GetText, and Focus support.",
     Default = "",
@@ -288,12 +288,12 @@ local teleportBox = movementTab:TextBox({
 })
 
 local appearanceTab = uiSection:CreateTab("Appearance", "rbxassetid://10734898355")
-appearanceTab:CreateSection({
+local themeSection = appearanceTab:CreateSection({
     Title = "Theme and Text",
     Description = "Customize accent colors and display text.",
 })
 
-local accentPicker = appearanceTab:ColorPicker({
+local accentPicker = themeSection:ColorPicker({
     Name = "Accent Color",
     Description = "ColorPicker plus SetTheme example.",
     Default = themeSnapshot.Accent,
@@ -312,7 +312,7 @@ local accentPicker = appearanceTab:ColorPicker({
     end,
 })
 
-local statusBox = appearanceTab:TextBox({
+local statusBox = themeSection:TextBox({
     Name = "Status Message",
     Description = "Press Enter to show the text in a notification.",
     Default = "Ready",
@@ -329,7 +329,7 @@ local statusBox = appearanceTab:TextBox({
     end,
 })
 
-local infoParagraph = appearanceTab:Paragraph({
+local infoParagraph = themeSection:Paragraph({
     Title = "Library Info",
     Content = "Version: " .. tostring(libraryInfo.Version) .. "\nAuthor: " .. tostring(
         libraryInfo.Author
@@ -337,12 +337,12 @@ local infoParagraph = appearanceTab:Paragraph({
 })
 
 local runtimeTab = uiSection:CreateTab("Runtime API", "rbxassetid://10723356507")
-runtimeTab:CreateSection({
+local runtimeSection = runtimeTab:CreateSection({
     Title = "Programmatic Methods",
     Description = "Set values, block/unblock controls, and manage window state at runtime.",
 })
 
-runtimeTab:Button({
+runtimeSection:Button({
     Name = "Set Example Values",
     Description = "Programmatic setters keep working even when components are blocked.",
     Callback = function()
@@ -369,7 +369,7 @@ runtimeTab:Button({
     end,
 })
 
-runtimeTab:Button({
+runtimeSection:Button({
     Name = "Block Showcase Controls",
     Description = "Adds the shared blocked overlay to several controls.",
     Callback = function()
@@ -391,7 +391,7 @@ runtimeTab:Button({
     end,
 })
 
-runtimeTab:Button({
+runtimeSection:Button({
     Name = "Unblock Showcase Controls",
     Description = "Removes the shared blocked overlay.",
     Callback = function()
@@ -407,7 +407,7 @@ runtimeTab:Button({
     end,
 })
 
-runtimeTab:Button({
+runtimeSection:Button({
     Name = "Focus Status TextBox",
     Description = "TextBox:Focus() no-ops while blocked.",
     Callback = function()
@@ -426,7 +426,7 @@ runtimeTab:Button({
     end,
 })
 
-runtimeTab:Button({
+runtimeSection:Button({
     Name = "Reset Theme",
     Description = "Calls Library.ResetTheme() and restores the picker color.",
     Callback = function()
@@ -439,12 +439,12 @@ runtimeTab:Button({
 local configTab = settingsSection:CreateTab("Config", "rbxassetid://10723356507")
 local configSection = configTab:CreateConfigSection()
 
-configTab:CreateSection({
+local manualConfigSection = configTab:CreateSection({
     Title = "Manual Config API",
     Description = "Direct config save/load/delete via window methods.",
 })
 
-configTab:Button({
+manualConfigSection:Button({
     Name = "Save ExampleManual",
     Description = "Calls window:SaveConfig().",
     Callback = function()
@@ -453,7 +453,7 @@ configTab:Button({
     end,
 })
 
-configTab:Button({
+manualConfigSection:Button({
     Name = "Load ExampleManual",
     Description = "Calls window:LoadConfig().",
     Callback = function()
@@ -461,7 +461,7 @@ configTab:Button({
     end,
 })
 
-configTab:Button({
+manualConfigSection:Button({
     Name = "Delete ExampleManual",
     Description = "Calls window:DeleteConfig().",
     Callback = function()
@@ -471,7 +471,7 @@ configTab:Button({
     end,
 })
 
-configTab:Button({
+manualConfigSection:Button({
     Name = "Print Available Configs",
     Description = "Calls window:GetConfigs().",
     Callback = function()
@@ -486,7 +486,7 @@ configTab:Button({
     end,
 })
 
-configTab:Toggle({
+manualConfigSection:Toggle({
     Name = "Manual Auto Save",
     Description = "Calls window:SetAutoSave(). Requires executor file APIs.",
     Default = false,
@@ -495,7 +495,7 @@ configTab:Toggle({
     end,
 })
 
-configTab:Toggle({
+manualConfigSection:Toggle({
     Name = "Manual Auto Load",
     Description = "Calls window:SetAutoLoad() and window:GetAutoLoad().",
     Default = window:GetAutoLoad(),
