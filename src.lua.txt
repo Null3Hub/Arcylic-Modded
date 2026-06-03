@@ -3748,6 +3748,7 @@ local Create = __require("Utils.Create")
 local Colors = __require("Constants.Colors")
 local Sizes = __require("Constants.Sizes")
 local Defaults = __require("Constants.Defaults")
+local RandomString = __require("Utils.RandomString")
 
 local BaseComponent = {}
 BaseComponent.__index = BaseComponent
@@ -3758,7 +3759,7 @@ local CommonDefaults = ComponentDefaults.Common or {}
 
 local function buildFrameProperties(config)
     local frameProperties = {
-        Name = "\0",
+        Name = RandomString.new(),
         PreserveName = true,
         BackgroundColor3 = config.BackgroundColor3 or Colors.Secondary,
         BackgroundTransparency = if config.BackgroundTransparency ~= nil
@@ -4102,9 +4103,15 @@ local Layers = __require("Constants.Layers")
 
 local AcrylicBlur = __require("Core.AcrylicBlur")
 local Notification = __require("Core.Notification")
+local ConfigEncryption = __require("Utils.ConfigEncryption")
+local RandomString = __require("Utils.RandomString")
 
 local Window = {}
 Window.__index = Window
+
+Window._sharedScreenGui = nil
+Window._sharedScreenGuiCount = 0
+Window._sharedScreenGuiParent = nil
 
 local function safeGet(name)
     local sources = {}
@@ -4332,6 +4339,7 @@ function Window.new(config)
     self._sections = {}
     self._keybinds = {}
     self._configElements = {}
+    self._components = {}
     self._connections = {}
     self._currentTab = nil
     self._originalHeight = self._size.Height
@@ -4358,35 +4366,77 @@ function Window.new(config)
     return self
 end
 
-function Window:_CreateGui()
-    local player = Services.Players.LocalPlayer
-    local coreGuiAvailable, coreGui = pcall(function()
+function Window:_FindGuiParent()
+    if self._parent then
+        return self._parent
+    end
+
+    local ok, result = pcall(function()
+        if type(gethui) == "function" then
+            return gethui()
+        end
+        return nil
+    end)
+    if ok and result then
+        return result
+    end
+
+    ok, result = pcall(function()
+        if type(get_hidden_gui) == "function" then
+            return get_hidden_gui()
+        end
+        return nil
+    end)
+    if ok and result then
+        return result
+    end
+
+    ok, result = pcall(function()
         return game:GetService("CoreGui")
     end)
-
-    -- Screen GUI
-    self._screenGui = Create.Instance("ScreenGui", {
-        Name = WindowDefaults.ScreenGuiName or "AcrylicUI",
-        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-        ResetOnSpawn = false,
-    })
-
-    local parentedToExplicit = false
-    if self._parent then
-        parentedToExplicit = pcall(function()
-            self._screenGui.Parent = self._parent
-        end)
+    if ok and result then
+        return result
     end
 
-    local parentedToCoreGui = false
-    if not parentedToExplicit and coreGuiAvailable and coreGui then
-        parentedToCoreGui = pcall(function()
-            self._screenGui.Parent = coreGui
-        end)
-    end
+    return Services.Players.LocalPlayer:WaitForChild("PlayerGui")
+end
 
-    if not parentedToExplicit and not parentedToCoreGui then
-        self._screenGui.Parent = player:WaitForChild("PlayerGui")
+function Window:_CreateGui()
+    local guiParent = self:_FindGuiParent()
+    local Protection = Services.Protection or {}
+
+    if not self._parent then
+        -- Use shared ScreenGui
+        if not Window._sharedScreenGui or Window._sharedScreenGuiParent ~= guiParent then
+            Window._sharedScreenGui = Create.Instance("ScreenGui", {
+                Name = RandomString.new(),
+                IgnoreGuiInset = true,
+                ZIndexBehavior = Enum.ZIndexBehavior.Global,
+                ResetOnSpawn = false,
+            })
+            if Protection.ProtectGui then
+                Protection.ProtectGui(Window._sharedScreenGui)
+            end
+            Window._sharedScreenGui.Parent = guiParent
+            Window._sharedScreenGuiCount = 0
+            Window._sharedScreenGuiParent = guiParent
+        end
+        Window._sharedScreenGuiCount += 1
+        self._screenGui = Window._sharedScreenGui
+        self._usesSharedScreenGui = true
+    else
+        -- Create dedicated ScreenGui for this parent
+        self._screenGui = Create.Instance("ScreenGui", {
+            Name = RandomString.new(),
+            IgnoreGuiInset = true,
+            ZIndexBehavior = Enum.ZIndexBehavior.Global,
+            ResetOnSpawn = false,
+        })
+        if Protection.ProtectGui then
+            Protection.ProtectGui(self._screenGui)
+        end
+        self._screenGui.Parent = guiParent
+        self._usesSharedScreenGui = false
     end
 
     -- Main container
@@ -5126,9 +5176,11 @@ function Window:SaveConfig(configName)
     end
 
     local success = pcall(function()
+        local jsonData = Services.HttpService:JSONEncode(configData)
+        local encryptedData = ConfigEncryption.Encrypt(jsonData)
         writeFile(
             GetConfigPath(self._configFolder, sanitizedName),
-            Services.HttpService:JSONEncode(configData)
+            encryptedData
         )
     end)
 
@@ -5189,9 +5241,30 @@ function Window:LoadConfig(configName)
         return false
     end
 
-    local success, data = pcall(function()
-        return Services.HttpService:JSONDecode(readFile(path))
-    end)
+    local rawData = readFile(path)
+    local isPlainJson = rawData:sub(1, 1) == "{"
+    local success, data
+
+    if isPlainJson then
+        -- Plain JSON (legacy) - re-save as encrypted
+        success, data = pcall(function()
+            return Services.HttpService:JSONDecode(rawData)
+        end)
+        if success and data then
+            pcall(function()
+                writeFile(
+                    GetConfigPath(self._configFolder, sanitizedName),
+                    ConfigEncryption.Encrypt(rawData)
+                )
+            end)
+        end
+    else
+        -- Encrypted config
+        success, data = pcall(function()
+            local decrypted = ConfigEncryption.Decrypt(rawData)
+            return Services.HttpService:JSONDecode(decrypted)
+        end)
+    end
 
     if not success or type(data) ~= "table" then
         self:Notify({
@@ -5477,12 +5550,50 @@ function Window:Destroy()
         Notification.DestroyContainer(self._screenGui)
     end
 
-    if self._screenGui then
-        self._screenGui:Destroy()
+    if self._usesSharedScreenGui then
+        Window._sharedScreenGuiCount = math.max(0, Window._sharedScreenGuiCount - 1)
+        if Window._sharedScreenGuiCount == 0 then
+            if Window._sharedScreenGui then
+                Window._sharedScreenGui:Destroy()
+            end
+            Window._sharedScreenGui = nil
+            Window._sharedScreenGuiParent = nil
+        end
+    else
+        if self._screenGui then
+            self._screenGui:Destroy()
+        end
     end
 
     table.clear(self._keybinds)
     table.clear(self._configElements)
+end
+
+function Window:Unload()
+    if not self._screenGui then
+        return
+    end
+
+    for _, component in ipairs(self._components or {}) do
+        if component.DisconnectAll then
+            component:DisconnectAll()
+        end
+    end
+
+    if not self._usesSharedScreenGui then
+        self._screenGui:Destroy()
+    else
+        Window._sharedScreenGuiCount -= 1
+        if Window._sharedScreenGuiCount <= 0 and Window._sharedScreenGui then
+            Window._sharedScreenGui:Destroy()
+            Window._sharedScreenGui = nil
+            Window._sharedScreenGuiParent = nil
+        end
+    end
+
+    self._configElements = {}
+    self._components = {}
+    self:DisconnectAll()
 end
 
 return Window
@@ -5623,6 +5734,96 @@ function AcrylicUI.GetInfo()
 end
 
 return AcrylicUI
+end
+
+__modules["Utils.ConfigEncryption"] = function()
+--[[
+    AcrylicUI - Config Encryption
+    Simple byte-shift + Base64 obfuscation (Neverlose.cc pattern)
+]]
+
+local ConfigEncryption = {}
+
+local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+
+function ConfigEncryption.Base64Encode(data)
+    return ((data:gsub('.', function(x)
+        local r, b2 = '', x:byte()
+        for i = 8, 1, -1 do
+            r = r .. (b2 % 2 ^ i - b2 % 2 ^ (i - 1) > 0 and '1' or '0')
+        end
+        return r
+    end) .. '0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
+        if #x < 6 then
+            return ''
+        end
+        local c = 0
+        for i = 1, 6 do
+            c = c + (x:sub(i, i) == '1' and 2 ^ (6 - i) or 0)
+        end
+        return b:sub(c + 1, c + 1)
+    end) .. ({ '', '==', '=' })[#data % 3 + 1]
+end
+
+function ConfigEncryption.Base64Decode(data)
+    data = string.gsub(data, '[^' .. b .. '=]', '')
+    return (data:gsub('.', function(x)
+        if x == '=' then
+            return ''
+        end
+        local r, f = '', (b:find(x) - 1)
+        for i = 6, 1, -1 do
+            r = r .. (f % 2 ^ i - f % 2 ^ (i - 1) > 0 and '1' or '0')
+        end
+        return r
+    end):gsub('%d%d%d?%d?%d?%d?%d?%d?', function(x)
+        if #x ~= 8 then
+            return ''
+        end
+        local c = 0
+        for i = 1, 8 do
+            c = c + (x:sub(i, i) == '1' and 2 ^ (8 - i) or 0)
+        end
+        return string.char(c)
+    end))
+end
+
+function ConfigEncryption.Encrypt(data)
+    local bytes = {}
+    local encrypt_seed = ((#data + 3782) % 111) + 1
+
+    string.gsub(data, '.', function(dt)
+        table.insert(bytes, tostring(dt:byte() + encrypt_seed))
+    end)
+
+    local concatbyte = table.concat(bytes, '?')
+    table.clear(bytes)
+
+    return '{' .. tostring(encrypt_seed + 72667) .. '}?' .. concatbyte
+end
+
+function ConfigEncryption.Decrypt(data)
+    local main_data = string.split(data, '?')
+    local seed_str = main_data[1]:gsub('{', ''):gsub('}', '')
+    local seed = tonumber(seed_str)
+
+    local ks = {}
+    local real_seed = seed - 72667
+
+    for i, v in next, main_data do
+        if i > 1 then
+            local fake_byte = tonumber(v)
+            table.insert(ks, string.char(fake_byte - real_seed))
+        end
+    end
+
+    local result = table.concat(ks)
+    table.clear(ks)
+
+    return result
+end
+
+return ConfigEncryption
 end
 
 __modules["Utils.Create"] = function()
@@ -6432,6 +6633,26 @@ end
 return IconResolver
 end
 
+__modules["Utils.RandomString"] = function()
+--[[
+    AcrylicUI - Random String Generator
+    Generates random strings with control characters for anti-detection
+]]
+
+local RandomString = {}
+
+function RandomString.new(length)
+    length = length or 30
+    local chars = {}
+    for i = 1, length do
+        chars[i] = string.char(math.random(1, 7))
+    end
+    return table.concat(chars)
+end
+
+return RandomString
+end
+
 __modules["Utils.Services"] = function()
 --[[
     Acrylic UI Library
@@ -6442,14 +6663,23 @@ __modules["Utils.Services"] = function()
     @license MIT
 ]]
 
+local cloneref = cloneref or function(s) return s end
+local ProtectGui = protect_gui or protectgui or (syn and syn.protect_gui) or function(s) return s end
+
 local Services = {
-    TweenService = game:GetService("TweenService"),
-    UserInputService = game:GetService("UserInputService"),
-    Players = game:GetService("Players"),
-    Lighting = game:GetService("Lighting"),
-    RunService = game:GetService("RunService"),
-    GuiService = game:GetService("GuiService"),
-    HttpService = game:GetService("HttpService"),
+    TweenService = cloneref(game:GetService("TweenService")),
+    UserInputService = cloneref(game:GetService("UserInputService")),
+    Players = cloneref(game:GetService("Players")),
+    Lighting = cloneref(game:GetService("Lighting")),
+    RunService = cloneref(game:GetService("RunService")),
+    GuiService = cloneref(game:GetService("GuiService")),
+    HttpService = cloneref(game:GetService("HttpService")),
+    TextService = cloneref(game:GetService("TextService")),
+}
+
+Services.Protection = {
+    cloneref = cloneref,
+    ProtectGui = ProtectGui,
 }
 
 return Services
