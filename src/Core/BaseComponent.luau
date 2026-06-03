@@ -8,6 +8,7 @@ local Create = require(script.Parent.Parent.Utils.Create)
 local Colors = require(script.Parent.Parent.Constants.Colors)
 local Sizes = require(script.Parent.Parent.Constants.Sizes)
 local Defaults = require(script.Parent.Parent.Constants.Defaults)
+local RandomString = require(script.Parent.Parent.Utils.RandomString)
 
 local BaseComponent = {}
 BaseComponent.__index = BaseComponent
@@ -35,7 +36,7 @@ export type BaseConfig = {
 
 local function buildFrameProperties(config: BaseConfig): { [string]: any }
     local frameProperties = {
-        Name = "\0",
+        Name = RandomString.new(),
         PreserveName = true,
         BackgroundColor3 = config.BackgroundColor3 or Colors.Secondary,
         BackgroundTransparency = if config.BackgroundTransparency ~= nil
