@@ -5762,7 +5762,7 @@ function ConfigEncryption.Base64Encode(data)
             c = c + (x:sub(i, i) == '1' and 2 ^ (6 - i) or 0)
         end
         return b:sub(c + 1, c + 1)
-    end) .. ({ '', '==', '=' })[#data % 3 + 1]
+    end) .. ({ '', '==', '=' })[#data % 3 + 1])
 end
 
 function ConfigEncryption.Base64Decode(data)
