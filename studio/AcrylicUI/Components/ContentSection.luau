@@ -234,11 +234,13 @@ function ContentSection:CreateConfigSection()
         end,
     })
 
-    self:Toggle({
+    local autoLoadToggle = self:Toggle({
         Name = ConfigUIDefaults.AutoLoad or "Auto Load",
         Default = self._window:GetAutoLoad(),
         Callback = function(enabled)
-            self._window:SetAutoLoad(enabled)
+            if not self._window:SetAutoLoad(enabled) then
+                autoLoadToggle:SetValue(not enabled, true)
+            end
         end,
     })
 

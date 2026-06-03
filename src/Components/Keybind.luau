@@ -187,7 +187,9 @@ function Keybind.new(parent: Instance, config, window)
         self._window:RegisterConfigElement(self._flag, "Keybind", function()
             return self._currentKey
         end, function(value)
-            self:SetKey(value)
+            if typeof(value) == "EnumItem" then
+                self:SetKey(value)
+            end
         end)
     end
 

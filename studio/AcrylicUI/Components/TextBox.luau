@@ -99,13 +99,13 @@ function TextBox.new(parent: Instance, config: TextBoxConfig?, window)
     self._icon = Create.Instance("ImageLabel", {
         Name = "Icon",
         BackgroundTransparency = 1,
-        Image = ComponentIcons.TextBox or "rbxassetid://93828793199781",
         ImageColor3 = Colors.TextDark,
         AnchorPoint = Vector2.new(1, 0.5),
         Position = UDim2.new(1, -(TextBoxSizes.IconRightOffset or 165), 0.5, 0),
         Size = UDim2.new(0, TextBoxSizes.IconSize or 18, 0, TextBoxSizes.IconSize or 18),
         Parent = self._frame,
     })
+    Create.ApplyIcon(self._icon, nil, ComponentIcons.TextBox)
 
     self._container = Create.Instance("Frame", {
         Name = "TextBoxContainer",
@@ -203,7 +203,9 @@ function TextBox.new(parent: Instance, config: TextBoxConfig?, window)
         self._window:RegisterConfigElement(self._flag, "TextBox", function()
             return self._text
         end, function(value)
-            self:SetText(value)
+            if type(value) == "string" then
+                self:SetText(value)
+            end
         end)
     end
 

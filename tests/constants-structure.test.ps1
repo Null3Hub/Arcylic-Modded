@@ -50,4 +50,5 @@ foreach ($section in @("WindowChrome", "Dropdown", "ColorPicker", "Component")) 
     Assert-Contains $sizes ("    {0} = {{" -f $section) ("Sizes should include {0}" -f $section)
 }
 
+
 "Constants structure test passed"

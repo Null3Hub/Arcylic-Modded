@@ -187,7 +187,6 @@ function Dropdown.new(parent: Instance, config: DropdownConfig, window): Dropdow
     -- Arrow indicator
     self._arrow = Create.Instance("ImageLabel", {
         Name = "Arrow",
-        Image = ComponentIcons.Arrow or "rbxassetid://105558791071013",
         ImageColor3 = Colors.TextDark,
         BackgroundTransparency = 1,
         Position = UDim2.new(
@@ -201,6 +200,7 @@ function Dropdown.new(parent: Instance, config: DropdownConfig, window): Dropdow
         ZIndex = DropdownLayers.Display or 2,
         Parent = self._display,
     })
+    Create.ApplyIcon(self._arrow, nil, ComponentIcons.Arrow)
 
     -- Create options container
     self:_CreateOptionsContainer()
@@ -282,7 +282,9 @@ function Dropdown.new(parent: Instance, config: DropdownConfig, window): Dropdow
         self._window:RegisterConfigElement(self._flag, "Dropdown", function()
             return self._selected
         end, function(value)
-            self:SetValue(value)
+            if type(value) == "string" or type(value) == "table" then
+                self:SetValue(value)
+            end
         end)
     end
 
@@ -460,9 +462,8 @@ function Dropdown:_CreateOptionsContainer()
             Parent = self._optionsContainer,
         })
 
-        Create.Instance("ImageLabel", {
+        local searchIcon = Create.Instance("ImageLabel", {
             Name = "SearchIcon",
-            Image = SEARCH_ICON,
             ImageColor3 = Colors.TextDark,
             BackgroundTransparency = 1,
             Position = UDim2.new(
@@ -480,6 +481,7 @@ function Dropdown:_CreateOptionsContainer()
             ZIndex = (DropdownLayers.Options or 100) + 2,
             Parent = self._searchContainer,
         })
+        Create.ApplyIcon(searchIcon, nil, SEARCH_ICON)
 
         self._searchInput = Create.Instance("TextBox", {
             Name = "SearchInput",
@@ -588,7 +590,6 @@ function Dropdown:_PopulateOptions()
 
         local selectedIcon = Create.Instance("ImageLabel", {
             Name = "SelectedIcon",
-            Image = SELECTED_ICON,
             ImageColor3 = Colors.Text,
             BackgroundTransparency = 1,
             Position = UDim2.new(
@@ -607,6 +608,7 @@ function Dropdown:_PopulateOptions()
             ZIndex = (DropdownLayers.Options or 100) + 1,
             Parent = optionBtn,
         })
+        Create.ApplyIcon(selectedIcon, nil, SELECTED_ICON)
 
         local optionText = Create.Instance("TextLabel", {
             Name = "OptionText",

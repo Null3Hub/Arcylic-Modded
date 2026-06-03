@@ -66,7 +66,6 @@ function Section.new(window, name: string)
     -- Arrow
     local arrow = Create.Instance("ImageButton", {
         Name = "Arrow",
-        Image = ComponentIcons.Arrow or "rbxassetid://105558791071013",
         ImageColor3 = Colors.TextDark,
         BackgroundTransparency = 1,
         Position = UDim2.new(
@@ -79,6 +78,7 @@ function Section.new(window, name: string)
         Rotation = 0,
         Parent = header,
     })
+    Create.ApplyIcon(arrow, nil, ComponentIcons.Arrow)
 
     -- Tabs container
     self._tabsContainer = Create.Instance("Frame", {
@@ -92,7 +92,7 @@ function Section.new(window, name: string)
     })
 
     Create.ListLayout(self._tabsContainer, Sizes.Section.LayoutPadding or 2)
-    Create.Padding(self._tabsContainer, 0, 0, Sizes.Section.TabsIndent or 15, 0)
+    Create.Padding(self._tabsContainer, 2, 2, Sizes.Section.TabsIndent or 15, 0)
 
     local expanded = true
     local function toggle()

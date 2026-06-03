@@ -392,7 +392,6 @@ function Window:_CreateWindowControls()
     local minimizeBtn = Create.Instance("ImageLabel", {
         Name = "Minimize",
         ImageColor3 = Colors.TextDark,
-        Image = WindowIcons.Minimize or "rbxassetid://82603981310445",
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(1, 0),
         Position = UDim2.new(
@@ -409,6 +408,7 @@ function Window:_CreateWindowControls()
         ),
         Parent = self._topBarControls,
     })
+    Create.ApplyIcon(minimizeBtn, nil, WindowIcons.Minimize)
 
     local minimizeClick = Create.Instance("TextButton", {
         Name = "ClickArea",
@@ -439,7 +439,6 @@ function Window:_CreateWindowControls()
     local closeBtn = Create.Instance("ImageButton", {
         Name = "Close",
         ImageColor3 = Colors.TextDark,
-        Image = WindowIcons.Close or "rbxassetid://119943770201674",
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(1, 0),
         Position = UDim2.new(
@@ -456,6 +455,7 @@ function Window:_CreateWindowControls()
         ),
         Parent = self._topBarControls,
     })
+    Create.ApplyIcon(closeBtn, nil, WindowIcons.Close)
 
     closeBtn.MouseButton1Click:Connect(function()
         self:Destroy()
@@ -474,7 +474,6 @@ function Window:_CreateWindowControls()
         Name = "Resize",
         Active = true,
         ImageColor3 = Colors.ResizeHandle,
-        Image = WindowIcons.Resize or "rbxassetid://120997033468887",
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.new(
@@ -493,6 +492,7 @@ function Window:_CreateWindowControls()
         ZIndex = WindowLayers.ResizeHandle or 1000,
         Parent = self._container,
     })
+    Create.ApplyIcon(self._resizeBtn, nil, WindowIcons.Resize)
 
     -- Bottom drag handle
     self._bottomDragArea = Create.Instance("TextButton", {
@@ -797,7 +797,6 @@ end
 function Window:_SetupMobileToggle()
     self._mobileToggle = Create.Instance("ImageButton", {
         Name = "MobileToggle",
-        Image = WindowIcons.MobileToggle or "rbxassetid://112235310154264",
         ImageColor3 = Colors.Text,
         BackgroundColor3 = Colors.Background,
         BackgroundTransparency = 0.1,
@@ -817,6 +816,7 @@ function Window:_SetupMobileToggle()
         Visible = false,
         Parent = self._screenGui,
     })
+    Create.ApplyIcon(self._mobileToggle, nil, WindowIcons.MobileToggle)
 
     Create.Corner(self._mobileToggle, WindowChromeSizes.MobileToggleCorner or 25)
     Create.Stroke(self._mobileToggle)
@@ -986,9 +986,18 @@ function Window:RegisterConfigElement(
     }
 
     if self._pendingConfigData and self._pendingConfigData[sanitizedFlag] ~= nil then
-        pcall(function()
+        local success, err = pcall(function()
             setValue(DeserializeValue(self._pendingConfigData[sanitizedFlag]))
         end)
+        if not success then
+            warn(
+                string.format(
+                    "[AcrylicUI] Failed to apply pending config '%s': %s",
+                    sanitizedFlag,
+                    tostring(err)
+                )
+            )
+        end
         self._pendingConfigData[sanitizedFlag] = nil
     end
 end
@@ -1105,9 +1114,19 @@ function Window:LoadConfig(configName: string?): boolean
     for flag, value in pairs(data) do
         local element = self._configElements[flag]
         if element then
-            pcall(function()
+            local ok, err = pcall(function()
                 element.setValue(DeserializeValue(value))
             end)
+            if not ok then
+                warn(
+                    string.format(
+                        "[AcrylicUI] Failed to apply config '%s' for element '%s': %s",
+                        flag,
+                        tostring(element.type or "?"),
+                        tostring(err)
+                    )
+                )
+            end
         else
             if not self._pendingConfigData then
                 self._pendingConfigData = {}
@@ -1212,7 +1231,7 @@ end
 
     @param enabled boolean - Whether to auto-load on startup
 ]]
-function Window:SetAutoLoad(enabled: boolean)
+function Window:SetAutoLoad(enabled: boolean): boolean
     if enabled then
         local sanitizedName = SanitizeConfigName(self._currentConfig)
         if sanitizedName == AUTOLOAD_CONFIG_NAME then
@@ -1227,7 +1246,7 @@ function Window:SetAutoLoad(enabled: boolean)
                     or "Save or load a config before enabling Auto Load",
                 Duration = NotificationDefaults.Duration or 3,
             })
-            return
+            return false
         end
 
         self._autoLoadConfigName = sanitizedName
@@ -1235,6 +1254,7 @@ function Window:SetAutoLoad(enabled: boolean)
 
     self._autoLoad = enabled
     self:_SaveAutoLoadState()
+    return true
 end
 
 --[[

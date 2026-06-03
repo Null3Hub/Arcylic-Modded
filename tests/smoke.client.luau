@@ -1,6 +1,12 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local AcrylicUI = require(ReplicatedStorage:WaitForChild("AcrylicUI"))
+local IconResolver = require(
+    ReplicatedStorage:WaitForChild("AcrylicUI"):WaitForChild("Utils"):WaitForChild("IconResolver")
+)
+local Create = require(
+    ReplicatedStorage:WaitForChild("AcrylicUI"):WaitForChild("Utils"):WaitForChild("Create")
+)
 
 assert(AcrylicUI.Defaults.Window.Title == "AcrylicUI", "Defaults should expose window title")
 assert(AcrylicUI.Defaults.Config.Root == "AcrylicConfigs", "Defaults should expose config root")
@@ -179,5 +185,38 @@ assert(window:GetPopupLayer() ~= nil, "Window should expose popup layer")
 assert(window:GetSectionsContainer() ~= nil, "Window should expose sections container")
 assert(window:GetContentContainer() ~= nil, "Window should expose content container")
 window:Destroy()
+
+assert(IconResolver.IsAsset("rbxassetid://12345") == true, "IsAsset should accept rbxassetid")
+assert(IconResolver.IsAsset("solar/home-bold") == false, "IsAsset should reject pack prefixes")
+assert(IconResolver.IsAsset(nil) == false, "IsAsset should reject nil")
+local pack, name = IconResolver.ParsePackPath("solar/home-bold")
+assert(pack == "solar" and name == "home-bold", "ParsePackPath should split solar/home-bold")
+assert(
+    IconResolver.ParsePackPath("rbxassetid://123") == nil,
+    "ParsePackPath should reject rbxassetid"
+)
+assert(IconResolver.ParsePackPath("invalid") == nil, "ParsePackPath should reject no-slash strings")
+
+local assetLabel = Instance.new("ImageLabel")
+assert(
+    Create.ApplyIcon(assetLabel, "rbxassetid://999") == true,
+    "ApplyIcon should accept rbxassetid"
+)
+assert(assetLabel.Visible == true, "ApplyIcon should leave label visible on rbxassetid")
+assert(assetLabel.Image == "rbxassetid://999", "ApplyIcon should set Image")
+assetLabel:Destroy()
+
+local hiddenLabel = Instance.new("ImageLabel")
+assert(Create.ApplyIcon(hiddenLabel, nil) == false, "ApplyIcon should hide on nil")
+assert(hiddenLabel.Visible == false, "ApplyIcon should set Visible=false on nil")
+hiddenLabel:Destroy()
+
+local fallbackLabel = Instance.new("ImageLabel")
+assert(
+    Create.ApplyIcon(fallbackLabel, "solar/nonexistent", "rbxassetid://1") == true,
+    "ApplyIcon should fall back when pack missing"
+)
+assert(fallbackLabel.Image == "rbxassetid://1", "ApplyIcon should use fallback asset")
+fallbackLabel:Destroy()
 
 print("AcrylicUI smoke test passed")

@@ -124,7 +124,6 @@ function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
     self._icon = Create.Instance("ImageLabel", {
         Name = "Icon",
         BackgroundTransparency = 1,
-        Image = icon,
         ImageColor3 = Colors.Text,
         Position = UDim2.new(
             1,
@@ -135,6 +134,7 @@ function Button.new(parent: Instance, config: ButtonConfig): ButtonObject
         Size = UDim2.new(0, Sizes.Button.IconSize or 20, 0, Sizes.Button.IconSize or 20),
         Parent = self._frame,
     })
+    Create.ApplyIcon(self._icon, icon, ComponentIcons.Button)
 
     Create.Instance("UIAspectRatioConstraint", {
         Parent = self._icon,
@@ -211,8 +211,8 @@ function Button:SetText(text: string)
     self._label.Text = text
 end
 
-function Button:SetIcon(icon: string)
-    self._icon.Image = icon
+function Button:SetIcon(icon: string?)
+    Create.ApplyIcon(self._icon, icon, ComponentIcons.Button)
 end
 
 function Button:SetCallback(callback: () -> ())

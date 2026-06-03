@@ -273,7 +273,9 @@ function Slider.new(parent: Instance, config: SliderConfig, window): SliderObjec
         self._window:RegisterConfigElement(self._flag, "Slider", function()
             return self._value
         end, function(value)
-            self:SetValue(value)
+            if type(value) == "number" then
+                self:SetValue(value)
+            end
         end)
     end
 

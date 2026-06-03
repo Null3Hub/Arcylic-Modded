@@ -2,3 +2,9 @@ AcrylicStudio.rbxl
 
 # Local agent planning/spec artifacts
 docs/superpowers/
+
+# Dev tooling
+start-rojo.bat
+studio/AcrylicUI-patches/
+tests/icon_resolver_test.js
+tests/icon_resolver_test.py

@@ -8,6 +8,7 @@ A stabilized, toolchain-backed modded build of AcrylicUI for Roblox, with acryli
 -  **Notifications** - Beautiful notification system with icons and timers
 -  **Components** - Button, Toggle, Slider, Dropdown (with search), Keybind, ColorPicker, TextBox, Paragraph
 -  **Content Sections** - Grouped content areas with header, description, and separator inside tabs
+-  **Icon Packs** - Drop in `solar/home-bold`, `lucide/arrow`, `gravity/...` style names; raw `rbxassetid://...` also works
 -  **Customizable** - Theme colors, sizes, fonts, and animation speeds
 -  **Keybind System** - Custom keybinds with listener support
 -  **Sections & Tabs** - Organized layout with collapsible sections
@@ -634,6 +635,26 @@ Animation speeds are tuned for smooth, modern feel:
 - Very Slow: 0.3s
 
 ## Icons
+
+Any `icon` argument that takes a string accepts three forms:
+
+1. **Raw asset** - `rbxassetid://12345`. Works everywhere, including Studio.
+2. **Pack name** - `solar/home-bold`, `lucide/arrow`, `gravity/...`. Resolved at runtime against a pack URL map. Falls back to the per-component default asset if the pack is unavailable.
+3. **Empty / unknown** - the ImageLabel is hidden (or uses the component's fallback asset if one is configured).
+
+```lua
+local tab = section:CreateTab("Combat", "solar/crosshair-minimalistic")
+
+tab:Button({
+    Name = "Run",
+    Icon = "lucide/play",  -- resolved via IconResolver; falls back to default if pack missing
+    Callback = function() end,
+})
+```
+
+Pack resolution uses `game:HttpGet` + `loadstring` inside `pcall`, so:
+- **Executors**: pack icons render automatically.
+- **Studio / published games**: HttpGet/loadstring are unavailable, the pack silently fails, and components fall back to the bundled `rbxassetid://...` defaults (or hide if no fallback).
 
 Common asset IDs used in examples:
 - `rbxassetid://10709775704` - Checkmark/Success

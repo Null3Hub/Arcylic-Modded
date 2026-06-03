@@ -27,7 +27,7 @@ export type ToggleConfig = {
 }
 
 export type ToggleObject = {
-    SetValue: (self: ToggleObject, value: boolean) -> (),
+    SetValue: (self: ToggleObject, value: boolean, silent: boolean?) -> (),
     GetValue: (self: ToggleObject) -> boolean,
     Block: (self: ToggleObject, text: string?) -> (),
     Unblock: (self: ToggleObject) -> (),
@@ -184,7 +184,9 @@ function Toggle.new(parent: Instance, config: ToggleConfig, window): ToggleObjec
         self._window:RegisterConfigElement(self._flag, "Toggle", function()
             return self._enabled
         end, function(value)
-            self:SetValue(value)
+            if type(value) == "boolean" then
+                self:SetValue(value)
+            end
         end)
     end
 
@@ -212,10 +214,12 @@ function Toggle:_UpdateVisual()
     end
 end
 
-function Toggle:SetValue(value: boolean)
+function Toggle:SetValue(value: boolean, silent: boolean?)
     self._enabled = value
     self:_UpdateVisual()
-    self._callback(self._enabled)
+    if not silent then
+        self._callback(self._enabled)
+    end
 end
 
 function Toggle:GetValue(): boolean

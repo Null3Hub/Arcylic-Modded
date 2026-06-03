@@ -175,7 +175,6 @@ function Notification.Show(config: NotificationConfig, screenGui: ScreenGui?): F
     local iconImage = Create.Instance("ImageLabel", {
         Name = "Icon",
         BackgroundTransparency = 1,
-        Image = icon,
         Position = UDim2.new(
             1,
             -(NotificationSizes.IconRightOffset or 33),
@@ -185,6 +184,7 @@ function Notification.Show(config: NotificationConfig, screenGui: ScreenGui?): F
         Size = UDim2.new(0, NotificationSizes.IconSize or 19, 0, NotificationSizes.IconSize or 19),
         Parent = notification,
     })
+    Create.ApplyIcon(iconImage, icon, NotificationIcons.Default)
 
     Create.Instance("UIAspectRatioConstraint", {
         Parent = iconImage,

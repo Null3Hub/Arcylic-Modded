@@ -18,6 +18,18 @@ local ComponentDefaults = Defaults.Components or {}
 local CommonDefaults = ComponentDefaults.Common or {}
 local ConfigUIDefaults = ComponentDefaults.ConfigUI or {}
 local ComponentIcons = Icons.Components or {}
+local function closePopupsInElements(elements)
+    for _, element in ipairs(elements) do
+        if element then
+            if type(element.Close) == "function" then
+                element:Close()
+            end
+            if type(element._elements) == "table" then
+                closePopupsInElements(element._elements)
+            end
+        end
+    end
+end
 
 function Tab.new(window, section, name: string, icon: string?)
     local self = setmetatable({}, Tab)
@@ -33,23 +45,24 @@ function Tab.new(window, section, name: string, icon: string?)
         BackgroundColor3 = Colors.Secondary,
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-        Size = UDim2.new(0, Sizes.Tab.Width, 0, Sizes.Tab.Height),
+        Size = UDim2.new(1, -15, 0, Sizes.Tab.Height),
         Parent = section._tabsContainer,
     })
 
     Create.Corner(self._button, Sizes.Corner.Medium)
     self._stroke = Create.Stroke(self._button, Colors.Border, 1)
+    self._stroke.LineJoinMode = Enum.LineJoinMode.Round
 
     self._icon = Create.Instance("ImageLabel", {
         Name = "Icon",
         BackgroundTransparency = 1,
-        Image = icon or ComponentIcons.Tab or "rbxassetid://112235310154264",
         ImageColor3 = Colors.TextDark,
         AnchorPoint = Vector2.new(0, 0.5),
         Position = UDim2.new(0, Sizes.Tab.IconLeft or 11, 0.5, 0),
         Size = UDim2.new(0, Sizes.Tab.IconSize or 15, 0, Sizes.Tab.IconSize or 15),
         Parent = self._button,
     })
+    Create.ApplyIcon(self._icon, icon, ComponentIcons.Tab)
 
     self._text = Create.Instance("TextLabel", {
         Name = "TabText",
@@ -136,11 +149,7 @@ end
 
 function Tab:Select()
     self._content.Visible = true
-    Tween.Create(
-        self._button,
-        { BackgroundTransparency = CommonDefaults.SurfaceTransparency or 0.4 },
-        "Fast"
-    )
+    Tween.Create(self._button, { BackgroundTransparency = 0.25 }, "Fast")
     Tween.Create(self._text, { TextColor3 = Colors.Text }, "Fast")
     Tween.Create(self._icon, { ImageColor3 = Colors.Text }, "Fast")
     self._stroke.Transparency = 0
@@ -152,6 +161,7 @@ function Tab:Deselect()
     Tween.Create(self._text, { TextColor3 = Colors.TextDark }, "Fast")
     Tween.Create(self._icon, { ImageColor3 = Colors.TextDark }, "Fast")
     self._stroke.Transparency = 1
+    closePopupsInElements(self._elements)
 end
 
 -- Content helpers

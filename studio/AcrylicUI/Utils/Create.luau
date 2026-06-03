@@ -12,6 +12,8 @@ local Constants = {
     Layers = require(script.Parent.Parent.Constants.Layers),
 }
 
+local IconResolver = require(script.Parent.IconResolver)
+
 local Create = {}
 
 --[[
@@ -161,6 +163,60 @@ function Create.GetDescription(config: { [string]: any }?): string?
     end
 
     return tostring(description)
+end
+
+--[[
+    Applies an icon string to an ImageLabel.
+
+    Accepts:
+        "rbxassetid://..."  -> direct asset
+        "pack/name"         -> resolved via IconResolver
+        nil / "" / unknown  -> hides the label (or applies fallbackIcon)
+]]
+function Create.ApplyIcon(imageLabel, icon, fallbackIcon)
+    if imageLabel == nil then
+        return false
+    end
+
+    if icon == nil or icon == "" then
+        if fallbackIcon and fallbackIcon ~= "" then
+            imageLabel.Image = fallbackIcon
+            imageLabel.ImageRectOffset = Vector2.zero
+            imageLabel.ImageRectSize = Vector2.zero
+            imageLabel.Visible = true
+            return true
+        end
+        imageLabel.Visible = false
+        return false
+    end
+
+    if IconResolver.IsAsset(icon) then
+        imageLabel.Image = icon
+        imageLabel.ImageRectOffset = Vector2.zero
+        imageLabel.ImageRectSize = Vector2.zero
+        imageLabel.Visible = true
+        return true
+    end
+
+    local resolved = IconResolver.Resolve(icon)
+    if resolved and resolved.Image then
+        imageLabel.Image = resolved.Image
+        imageLabel.ImageRectOffset = resolved.ImageRectOffset or Vector2.zero
+        imageLabel.ImageRectSize = resolved.ImageRectSize or Vector2.zero
+        imageLabel.Visible = true
+        return true
+    end
+
+    if fallbackIcon and fallbackIcon ~= "" then
+        imageLabel.Image = fallbackIcon
+        imageLabel.ImageRectOffset = Vector2.zero
+        imageLabel.ImageRectSize = Vector2.zero
+        imageLabel.Visible = true
+        return true
+    end
+
+    imageLabel.Visible = false
+    return false
 end
 
 function Create.Description(

@@ -4,6 +4,7 @@ local Sizes = require(script.Parent.Parent.Constants.Sizes)
 local Fonts = require(script.Parent.Parent.Constants.Fonts)
 local Defaults = require(script.Parent.Parent.Constants.Defaults)
 local Layers = require(script.Parent.Parent.Constants.Layers)
+local Services = require(script.Parent.Parent.Utils.Services)
 
 local ColorPicker = {}
 ColorPicker.__index = ColorPicker
@@ -151,6 +152,17 @@ function ColorPicker.new(parent: Instance, config, window)
         Parent = self._palette,
     })
 
+    local function close()
+        if self._isOpen then
+            self._isOpen = false
+            self._palette.Visible = false
+            if self._outsideClickConn then
+                self._outsideClickConn:Disconnect()
+                self._outsideClickConn = nil
+            end
+        end
+    end
+
     for _, col in ipairs(PRESETS) do
         local swatch = Create.Instance("TextButton", {
             BackgroundColor3 = col,
@@ -173,7 +185,7 @@ function ColorPicker.new(parent: Instance, config, window)
                 end
 
                 self:SetColor(col)
-                self._palette.Visible = false
+                close()
             end)
         )
     end
@@ -191,6 +203,57 @@ function ColorPicker.new(parent: Instance, config, window)
             p.Y + (ColorPickerSizes.PaletteYOffset or 22)
         )
         self._palette.Visible = true
+        self._isOpen = true
+
+        -- Connect outside-click handler
+        if not self._outsideClickConn then
+            self._outsideClickConn = Services.UserInputService.InputBegan:Connect(
+                function(input, gameProcessed)
+                    if gameProcessed then
+                        return
+                    end
+                    if
+                        input.UserInputType ~= Enum.UserInputType.MouseButton1
+                        and input.UserInputType ~= Enum.UserInputType.Touch
+                    then
+                        return
+                    end
+
+                    if not self._isOpen then
+                        return
+                    end
+
+                    local clickPos = input.Position
+
+                    -- Click on palette → let swatch handle it
+                    local palPos = self._palette.AbsolutePosition
+                    local palSize = self._palette.AbsoluteSize
+                    if
+                        clickPos.X >= palPos.X
+                        and clickPos.X <= palPos.X + palSize.X
+                        and clickPos.Y >= palPos.Y
+                        and clickPos.Y <= palPos.Y + palSize.Y
+                    then
+                        return
+                    end
+
+                    -- Click on preview → let toggle handle it
+                    local prevPos = self._preview.AbsolutePosition
+                    local prevSize = self._preview.AbsoluteSize
+                    if
+                        clickPos.X >= prevPos.X
+                        and clickPos.X <= prevPos.X + prevSize.X
+                        and clickPos.Y >= prevPos.Y
+                        and clickPos.Y <= prevPos.Y + prevSize.Y
+                    then
+                        return
+                    end
+
+                    close()
+                end
+            )
+            table.insert(self._connections, self._outsideClickConn)
+        end
     end
 
     table.insert(
@@ -200,8 +263,9 @@ function ColorPicker.new(parent: Instance, config, window)
                 return
             end
 
-            self._palette.Visible = not self._palette.Visible
-            if self._palette.Visible then
+            if self._isOpen then
+                close()
+            else
                 open()
             end
         end)
@@ -211,7 +275,7 @@ function ColorPicker.new(parent: Instance, config, window)
 
     local baseBlock = self.Block
     self.Block = function(component, text: string?)
-        component._palette.Visible = false
+        close()
         baseBlock(component, text)
     end
 
@@ -219,7 +283,9 @@ function ColorPicker.new(parent: Instance, config, window)
         self._window:RegisterConfigElement(self._flag, "ColorPicker", function()
             return self._color
         end, function(value)
-            self:SetColor(value)
+            if typeof(value) == "Color3" then
+                self:SetColor(value)
+            end
         end)
     end
 
