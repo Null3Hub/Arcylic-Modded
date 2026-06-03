@@ -281,8 +281,43 @@ function Window.new(config: WindowConfig?)
     return self
 end
 
+function Window:_FindGuiParent(): Instance
+    if self._parent then
+        return self._parent
+    end
+
+    local ok, result = pcall(function()
+        if type(gethui) == "function" then
+            return gethui()
+        end
+        return nil
+    end)
+    if ok and result then
+        return result
+    end
+
+    ok, result = pcall(function()
+        if type(get_hidden_gui) == "function" then
+            return get_hidden_gui()
+        end
+        return nil
+    end)
+    if ok and result then
+        return result
+    end
+
+    ok, result = pcall(function()
+        return game:GetService("CoreGui")
+    end)
+    if ok and result then
+        return result
+    end
+
+    return Services.Players.LocalPlayer:WaitForChild("PlayerGui")
+end
+
 function Window:_CreateGui()
-    local player = Services.Players.LocalPlayer
+    local guiParent = self:_FindGuiParent()
 
     -- Screen GUI (Studio: always visible in PlayerGui)
     self._screenGui = Create.Instance("ScreenGui", {
@@ -291,7 +326,7 @@ function Window:_CreateGui()
         ResetOnSpawn = false,
     })
 
-    self._screenGui.Parent = player:WaitForChild("PlayerGui")
+    self._screenGui.Parent = guiParent
 
     -- Main container
     self._container = Create.Instance("Frame", {

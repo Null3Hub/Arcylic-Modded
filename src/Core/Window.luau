@@ -283,11 +283,43 @@ function Window.new(config: WindowConfig?)
     return self
 end
 
-function Window:_CreateGui()
-    local player = Services.Players.LocalPlayer
-    local coreGuiAvailable, coreGui = pcall(function()
+function Window:_FindGuiParent(): Instance
+    if self._parent then
+        return self._parent
+    end
+
+    local ok, result = pcall(function()
+        if type(gethui) == "function" then
+            return gethui()
+        end
+        return nil
+    end)
+    if ok and result then
+        return result
+    end
+
+    ok, result = pcall(function()
+        if type(get_hidden_gui) == "function" then
+            return get_hidden_gui()
+        end
+        return nil
+    end)
+    if ok and result then
+        return result
+    end
+
+    ok, result = pcall(function()
         return game:GetService("CoreGui")
     end)
+    if ok and result then
+        return result
+    end
+
+    return Services.Players.LocalPlayer:WaitForChild("PlayerGui")
+end
+
+function Window:_CreateGui()
+    local guiParent = self:_FindGuiParent()
 
     -- Screen GUI
     self._screenGui = Create.Instance("ScreenGui", {
@@ -296,23 +328,7 @@ function Window:_CreateGui()
         ResetOnSpawn = false,
     })
 
-    local parentedToExplicit = false
-    if self._parent then
-        parentedToExplicit = pcall(function()
-            self._screenGui.Parent = self._parent
-        end)
-    end
-
-    local parentedToCoreGui = false
-    if not parentedToExplicit and coreGuiAvailable and coreGui then
-        parentedToCoreGui = pcall(function()
-            self._screenGui.Parent = coreGui
-        end)
-    end
-
-    if not parentedToExplicit and not parentedToCoreGui then
-        self._screenGui.Parent = player:WaitForChild("PlayerGui")
-    end
+    self._screenGui.Parent = guiParent
 
     -- Main container
     self._container = Create.Instance("Frame", {
