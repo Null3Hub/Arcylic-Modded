@@ -262,6 +262,7 @@ function Window.new(config: WindowConfig?)
     self._sections = {}
     self._keybinds = {}
     self._configElements = {}
+    self._components = {}
     self._connections = {}
     self._currentTab = nil
     self._originalHeight = self._size.Height
@@ -1492,6 +1493,33 @@ function Window:Destroy()
 
     table.clear(self._keybinds)
     table.clear(self._configElements)
+end
+
+function Window:Unload()
+    if not self._screenGui then
+        return
+    end
+
+    for _, component in ipairs(self._components or {}) do
+        if component.DisconnectAll then
+            component:DisconnectAll()
+        end
+    end
+
+    if not self._usesSharedScreenGui then
+        self._screenGui:Destroy()
+    else
+        Window._sharedScreenGuiCount -= 1
+        if Window._sharedScreenGuiCount <= 0 and Window._sharedScreenGui then
+            Window._sharedScreenGui:Destroy()
+            Window._sharedScreenGui = nil
+            Window._sharedScreenGuiParent = nil
+        end
+    end
+
+    self._configElements = {}
+    self._components = {}
+    self:DisconnectAll()
 end
 
 return Window
