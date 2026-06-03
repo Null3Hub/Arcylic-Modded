@@ -37,6 +37,11 @@ function Assert-NotContains {
     }
 }
 
+$baseComponent = Read-ProjectFile "src/Core/BaseComponent.luau"
+Assert-Contains $baseComponent 'local RandomString = require(script.Parent.Parent.Utils.RandomString)' "BaseComponent should require RandomString"
+Assert-Contains $baseComponent 'Name = RandomString.new()' "BaseComponent should use RandomString.new() for stealth naming"
+Assert-NotContains $baseComponent 'Name = "\0"' "BaseComponent must not use null character names"
+
 $create = Read-ProjectFile "src/Utils/Create.luau"
 Assert-NotContains $create '"\0"' "Create.Instance must not use plugin-gated null names"
 Assert-Contains $create 'Name = true' "Create.Instance should treat Name as an internal policy field"
