@@ -19,7 +19,6 @@ Slider.__index = Slider
 setmetatable(Slider, { __index = BaseComponent })
 local SliderDefaults = Defaults.Slider
 local ComponentDefaults = Defaults.Components or {}
-local CommonDefaults = ComponentDefaults.Common or {}
 local SliderComponentDefaults = ComponentDefaults.Slider or {}
 
 export type SliderConfig = {
@@ -246,9 +245,9 @@ function Slider.new(parent: Instance, config: SliderConfig, window): SliderObjec
 
     Create.Configurable(self, self._flag, "Slider", function()
         return self._value
-    end, function(value)
-        if type(value) == "number" then
-            self:SetValue(value)
+    end, function(configValue)
+        if type(configValue) == "number" then
+            self:SetValue(configValue)
         end
     end)
 

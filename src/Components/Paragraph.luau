@@ -9,7 +9,6 @@ local Paragraph = {}
 Paragraph.__index = Paragraph
 setmetatable(Paragraph, { __index = BaseComponent })
 local ComponentDefaults = Defaults.Components or {}
-local CommonDefaults = ComponentDefaults.Common or {}
 local ParagraphDefaults = ComponentDefaults.Paragraph or {}
 
 function Paragraph.new(parent: Instance, config)

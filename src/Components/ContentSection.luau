@@ -17,7 +17,6 @@ ContentSection.__index = ContentSection
 setmetatable(ContentSection, { __index = BaseComponent })
 
 local ComponentDefaults = Defaults.Components or {}
-local CommonDefaults = ComponentDefaults.Common or {}
 local ConfigUIDefaults = ComponentDefaults.ConfigUI or {}
 local ConfigDefaults = Defaults.Config or {}
 local MessageDefaults = Defaults.Messages or {}
