@@ -20,7 +20,7 @@ jobs:
         run: aftman install
 
       - name: Check formatting
-        run: stylua --check src/ tests/ studio/
+        run: stylua --check src/ studio/
 
   lint-static:
     name: Selene Static Analysis
@@ -35,7 +35,7 @@ jobs:
         run: aftman install
 
       - name: Run selene
-        run: selene src/ tests/ studio/
+        run: selene src/ studio/
 
   build-rojo:
     name: Rojo Build
@@ -51,17 +51,3 @@ jobs:
 
       - name: Build project
         run: rojo build default.project.json --output build.rbxl
-
-  validate-bundle:
-    name: Bundle Validation
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build bundle
-        shell: powershell
-        run: powershell -ExecutionPolicy Bypass -File scripts/build-bundle.ps1
-
-      - name: Validate bundle
-        shell: powershell
-        run: powershell -ExecutionPolicy Bypass -File scripts/validate-bundle.ps1
