@@ -102,6 +102,16 @@ local function loadLibrary(url)
 end
 
 local Library = loadLibrary(LIBRARY_URL)
+Library.AddIcons("example", {
+    layered = {
+        Image = "rbxassetid://10709775704",
+        ImageRectSize = Vector2.zero,
+        ImageRectPosition = Vector2.zero,
+        Parts = { "layered-overlay" },
+    },
+    ["layered-overlay"] = "rbxassetid://10734898355",
+})
+
 local Players = game:GetService("Players")
 
 local function joinValues(values)
@@ -186,7 +196,7 @@ local autoFarmToggle = actionsSection:Toggle({
 local actionButton = actionsSection:Button({
     Name = "Run Action",
     Desc = "Button with SetText, SetIcon, SetCallback, Block, and Unblock support.",
-    Icon = "rbxassetid://10709775704",
+    Icon = "example:layered",
     Callback = function()
         window:Notify({
             Title = "Action",

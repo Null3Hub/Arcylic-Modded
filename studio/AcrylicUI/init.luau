@@ -36,6 +36,7 @@ AcrylicUI.Author = "Arcylic-Modded"
 
 -- Core modules
 local Window = require(script.Core.Window)
+local IconResolver = require(script.Utils.IconResolver)
 
 -- Constants (exposed for customization)
 AcrylicUI.Colors = require(script.Constants.Colors)
@@ -52,6 +53,7 @@ AcrylicUI.Utils = {
     Tween = require(script.Utils.Tween),
     Draggable = require(script.Utils.Draggable),
     Device = require(script.Utils.Device),
+    IconResolver = IconResolver,
 }
 
 --[[
@@ -103,6 +105,23 @@ end
 ]]
 function AcrylicUI.GetTheme(): { [string]: any }
     return AcrylicUI.Colors:Snapshot()
+end
+
+--[[
+    Registers custom icons for a pack.
+
+    @param packName string - pack name used by "pack:name" or "pack/name"
+    @param iconsData table - name-to-asset or name-to-descriptor map
+]]
+function AcrylicUI.AddIcons(packName: string, iconsData: { [string]: any })
+    IconResolver.AddIcons(packName, iconsData)
+end
+
+--[[
+    Sets the default icon pack used by bare icon names.
+]]
+function AcrylicUI.SetIconsType(iconType: string)
+    IconResolver.SetIconsType(iconType)
 end
 
 --[[

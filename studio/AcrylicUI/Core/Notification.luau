@@ -23,7 +23,7 @@ export type NotificationConfig = {
     Title: string?,
     Description: string?,
     Duration: number?,
-    Icon: string?,
+    Icon: (string | number)?,
 }
 
 --[[

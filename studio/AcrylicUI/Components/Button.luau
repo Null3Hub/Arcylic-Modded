@@ -20,17 +20,19 @@ local CommonDefaults = ComponentDefaults.Common or {}
 local ButtonDefaults = ComponentDefaults.Button or {}
 local ComponentIcons = Icons.Components or {}
 
+export type IconValue = string | number
+
 export type ButtonConfig = {
     Name: string?,
     Description: string?,
     Desc: string?,
-    Icon: string?,
+    Icon: IconValue?,
     Callback: (() -> ())?,
 }
 
 export type ButtonObject = {
     SetText: (self: ButtonObject, text: string) -> (),
-    SetIcon: (self: ButtonObject, icon: string) -> (),
+    SetIcon: (self: ButtonObject, icon: IconValue?) -> (),
     SetCallback: (self: ButtonObject, callback: () -> ()) -> (),
     Block: (self: ButtonObject, text: string?) -> (),
     Unblock: (self: ButtonObject) -> (),
@@ -166,7 +168,7 @@ function Button:SetText(text: string)
     self._label.Text = text
 end
 
-function Button:SetIcon(icon: string?)
+function Button:SetIcon(icon: IconValue?)
     Create.ApplyIcon(self._icon, icon, ComponentIcons.Button)
 end
 

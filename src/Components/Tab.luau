@@ -33,7 +33,7 @@ local function closePopupsInElements(elements)
     end
 end
 
-function Tab.new(window, section, name: string, icon: string?)
+function Tab.new(window, section, name: string, icon: (string | number)?)
     local self = BaseComponent.new(Tab, {
         Parent = section._tabsContainer,
         Size = UDim2.new(1, -15, 0, Sizes.Tab.Height),

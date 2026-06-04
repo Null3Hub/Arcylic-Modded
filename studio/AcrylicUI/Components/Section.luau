@@ -113,7 +113,7 @@ function Section.new(window, name: string)
     return self
 end
 
-function Section:CreateTab(name: string, icon: string?)
+function Section:CreateTab(name: string, icon: (string | number)?)
     local Tab = require(script.Parent.Tab)
     local tab = Tab.new(self._window, self, name, icon)
     table.insert(self._tabs, tab)

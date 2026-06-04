@@ -26,6 +26,11 @@ local INTERNAL_PROPERTIES = {
 
 local stealthNameCounter = 0
 local stealthNameSeed = math.floor((os.clock() * 1000000) % 1000000000)
+local _iconPartChildren: { [Instance]: boolean } = setmetatable({}, { __mode = "k" }) :: any
+local _iconPartConnections: { [ImageLabel]: { RBXScriptConnection } } = setmetatable(
+    {},
+    { __mode = "k" }
+) :: any
 
 local function nextStealthName(): string
     stealthNameCounter += 1
@@ -260,62 +265,129 @@ function Create.Configurable(
     end
 end
 
+local function syncIconParts(imageLabel: ImageLabel)
+    for _, child in ipairs(imageLabel:GetChildren()) do
+        if _iconPartChildren[child] and child:IsA("ImageLabel") then
+            child.ImageColor3 = imageLabel.ImageColor3
+            child.ImageTransparency = imageLabel.ImageTransparency
+        end
+    end
+end
+
+local function clearIconParts(imageLabel: ImageLabel)
+    local connections = _iconPartConnections[imageLabel]
+    if connections then
+        _iconPartConnections[imageLabel] = nil
+        for _, connection in ipairs(connections) do
+            connection:Disconnect()
+        end
+    end
+
+    for _, child in ipairs(imageLabel:GetChildren()) do
+        if _iconPartChildren[child] then
+            _iconPartChildren[child] = nil
+            child:Destroy()
+        end
+    end
+end
+
+local function applyResolvedIcon(imageLabel: ImageLabel, resolved: { [string]: any }): boolean
+    if not resolved.Image then
+        return false
+    end
+
+    clearIconParts(imageLabel)
+
+    imageLabel.Image = resolved.Image
+    imageLabel.ImageRectOffset = resolved.ImageRectOffset
+        or resolved.ImageRectPosition
+        or Vector2.zero
+    imageLabel.ImageRectSize = resolved.ImageRectSize or Vector2.zero
+    imageLabel.Visible = true
+
+    local parts = resolved.Parts
+    local createdPart = false
+    if type(parts) == "table" then
+        for index, part in ipairs(parts) do
+            local partResolved = IconResolver.Resolve(part, resolved.Pack)
+            if partResolved and partResolved.Image then
+                local partLabel = Create.Instance("ImageLabel", {
+                    BackgroundTransparency = 1,
+                    ImageColor3 = imageLabel.ImageColor3,
+                    ImageTransparency = imageLabel.ImageTransparency,
+                    Image = partResolved.Image,
+                    ImageRectOffset = partResolved.ImageRectOffset
+                        or partResolved.ImageRectPosition
+                        or Vector2.zero,
+                    ImageRectSize = partResolved.ImageRectSize or Vector2.zero,
+                    Position = UDim2.new(0, 0, 0, 0),
+                    Size = UDim2.new(1, 0, 1, 0),
+                    ScaleType = imageLabel.ScaleType,
+                    ZIndex = imageLabel.ZIndex + index,
+                    RandomizeName = true,
+                    Parent = imageLabel,
+                }) :: ImageLabel
+
+                _iconPartChildren[partLabel] = true
+                createdPart = true
+            end
+        end
+    end
+
+    if createdPart then
+        _iconPartConnections[imageLabel] = {
+            imageLabel:GetPropertyChangedSignal("ImageColor3"):Connect(function()
+                syncIconParts(imageLabel)
+            end),
+            imageLabel:GetPropertyChangedSignal("ImageTransparency"):Connect(function()
+                syncIconParts(imageLabel)
+            end),
+        }
+    end
+
+    return true
+end
+
 --[[
-    Applies an icon string to an ImageLabel.
+    Applies an icon to an ImageLabel.
 
     Accepts:
-        "rbxassetid://..."  -> direct asset
-        "pack/name"         -> resolved via IconResolver
-        nil / "" / unknown  -> hides the label (or applies fallbackIcon)
+        "rbxassetid://12345" -> pass-through asset
+        12345 / "12345"      -> normalized to rbxassetid://12345
+        "solar/home-bold"    -> pack path
+        "solar:home-bold"    -> WindUI-compatible pack path
+        "home"               -> current default pack via IconsType
+        layered descriptors   -> renders Parts as child ImageLabels
+        nil / "" / unknown   -> hides the label (or applies fallbackIcon)
 
     @param imageLabel ImageLabel - target
-    @param icon string? - the user-supplied icon string
-    @param fallbackIcon string? - optional rbxassetid to use when pack
+    @param icon (string | number)? - the user-supplied icon value
+    @param fallbackIcon (string | number)? - optional icon to use when pack
         resolution fails or the input is missing
     @return boolean - true if an icon was applied, false if hidden
 ]]
-function Create.ApplyIcon(imageLabel: ImageLabel, icon: string?, fallbackIcon: string?): boolean
+function Create.ApplyIcon(
+    imageLabel: ImageLabel,
+    icon: (string | number)?,
+    fallbackIcon: (string | number)?
+): boolean
     if imageLabel == nil then
         return false
     end
 
-    if icon == nil or icon == "" then
-        if fallbackIcon and fallbackIcon ~= "" then
-            imageLabel.Image = fallbackIcon
-            imageLabel.ImageRectOffset = Vector2.zero
-            imageLabel.ImageRectSize = Vector2.zero
-            imageLabel.Visible = true
-            return true
-        end
-        imageLabel.Visible = false
-        return false
-    end
-
-    if IconResolver.IsAsset(icon) then
-        imageLabel.Image = icon
-        imageLabel.ImageRectOffset = Vector2.zero
-        imageLabel.ImageRectSize = Vector2.zero
-        imageLabel.Visible = true
-        return true
-    end
-
     local resolved = IconResolver.Resolve(icon)
-    if resolved and resolved.Image then
-        imageLabel.Image = resolved.Image
-        imageLabel.ImageRectOffset = resolved.ImageRectOffset or Vector2.zero
-        imageLabel.ImageRectSize = resolved.ImageRectSize or Vector2.zero
-        imageLabel.Visible = true
+    if not resolved then
+        resolved = IconResolver.Resolve(fallbackIcon)
+    end
+
+    if resolved and applyResolvedIcon(imageLabel, resolved) then
         return true
     end
 
-    if fallbackIcon and fallbackIcon ~= "" then
-        imageLabel.Image = fallbackIcon
-        imageLabel.ImageRectOffset = Vector2.zero
-        imageLabel.ImageRectSize = Vector2.zero
-        imageLabel.Visible = true
-        return true
-    end
-
+    clearIconParts(imageLabel)
+    imageLabel.Image = ""
+    imageLabel.ImageRectOffset = Vector2.zero
+    imageLabel.ImageRectSize = Vector2.zero
     imageLabel.Visible = false
     return false
 end

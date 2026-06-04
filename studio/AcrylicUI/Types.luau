@@ -9,6 +9,14 @@
 export type Color3 = Color3
 export type UDim2 = UDim2
 export type Instance = Instance
+export type IconValue = string | number
+export type IconDescriptor = {
+    Image: IconValue,
+    ImageRectOffset: Vector2?,
+    ImageRectPosition: Vector2?,
+    ImageRectSize: Vector2?,
+    Parts: { IconValue }?,
+}
 
 export type ThemeColors = {
     Background: Color3,
@@ -47,6 +55,7 @@ export type ButtonConfig = {
     Name: string?,
     Description: string?,
     Desc: string?,
+    Icon: IconValue?,
     Callback: (() -> ())?,
 }
 
@@ -127,7 +136,7 @@ export type NotificationConfig = {
     Title: string?,
     Description: string?,
     Duration: number?,
-    Icon: string?,
+    Icon: IconValue?,
 }
 
 export type Connection = RBXScriptConnection

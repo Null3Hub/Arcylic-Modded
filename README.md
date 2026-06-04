@@ -636,27 +636,52 @@ Animation speeds are tuned for smooth, modern feel:
 
 ## Icons
 
-Any `icon` argument that takes a string accepts three forms:
+Any `icon` argument accepts these forms:
 
 1. **Raw asset** - `rbxassetid://12345`. Works everywhere, including Studio.
-2. **Pack name** - `solar/home-bold`, `lucide/arrow`, `gravity/...`. Resolved at runtime against a pack URL map. Falls back to the per-component default asset if the pack is unavailable.
-3. **Empty / unknown** - the ImageLabel is hidden (or uses the component's fallback asset if one is configured).
+2. **Numeric asset** - `12345` or `"12345"`. Normalized to `rbxassetid://12345`.
+3. **Pack path** - `solar/home-bold`, `lucide/play`, `gravity/...`.
+4. **WindUI-style pack path** - `solar:home-bold`, `lucide:play`.
+5. **Bare name** - `play`, resolved against the current default pack. The default is `lucide`; change it with `Library.SetIconsType("solar")`.
+6. **Empty / unknown** - the `ImageLabel` is hidden, or the component fallback asset is used when configured.
 
 ```lua
-local tab = section:CreateTab("Combat", "solar/crosshair-minimalistic")
+local tab = section:CreateTab("Combat", "solar:crosshair-minimalistic")
 
 tab:Button({
     Name = "Run",
-    Icon = "lucide/play",  -- resolved via IconResolver; falls back to default if pack missing
+    Icon = "lucide:play",
     Callback = function() end,
 })
 ```
 
+### Custom Icon Packs
+
+Register custom packs with `Library.AddIcons(packName, iconsData)`. Values can be numeric asset IDs, `rbxassetid://...` strings, or descriptors with sprite rect data and optional `Parts`.
+
+```lua
+Library.AddIcons("custom", {
+    shield = {
+        Image = "rbxassetid://1000000000",
+        ImageRectSize = Vector2.new(32, 32),
+        ImageRectPosition = Vector2.new(0, 0),
+        Parts = { "shield-shine" },
+    },
+    ["shield-shine"] = 1000000001,
+})
+
+local tab = section:CreateTab("Defense", "custom:shield")
+```
+
+Layered `Parts` render as child `ImageLabel`s inside the base icon label. Parts inherit the parent icon color, transparency, scale type, and size.
+
 Pack resolution uses `game:HttpGet` + `loadstring` inside `pcall`, so:
-- **Executors**: pack icons render automatically.
-- **Studio / published games**: HttpGet/loadstring are unavailable, the pack silently fails, and components fall back to the bundled `rbxassetid://...` defaults (or hide if no fallback).
+
+- **Executors**: remote pack icons render automatically when HTTP/loadstring are available.
+- **Studio / published games**: remote pack loading may be unavailable, so components fall back to bundled `rbxassetid://...` defaults unless you register custom local icons with `AddIcons`.
 
 Common asset IDs used in examples:
+
 - `rbxassetid://10709775704` - Checkmark/Success
 - `rbxassetid://10747384394` - Warning/Error
 - `rbxassetid://10723407389` - Target/Aim
