@@ -4371,9 +4371,10 @@ function Window:_FindGuiParent()
         return self._parent
     end
 
+    local getHui = safeGet("gethui")
     local ok, result = pcall(function()
-        if type(gethui) == "function" then
-            return gethui()
+        if getHui then
+            return getHui()
         end
         return nil
     end)
@@ -4381,9 +4382,10 @@ function Window:_FindGuiParent()
         return result
     end
 
+    local getHiddenGui = safeGet("get_hidden_gui")
     ok, result = pcall(function()
-        if type(get_hidden_gui) == "function" then
-            return get_hidden_gui()
+        if getHiddenGui then
+            return getHiddenGui()
         end
         return nil
     end)
@@ -5178,10 +5180,7 @@ function Window:SaveConfig(configName)
     local success = pcall(function()
         local jsonData = Services.HttpService:JSONEncode(configData)
         local encryptedData = ConfigEncryption.Encrypt(jsonData)
-        writeFile(
-            GetConfigPath(self._configFolder, sanitizedName),
-            encryptedData
-        )
+        writeFile(GetConfigPath(self._configFolder, sanitizedName), encryptedData)
     end)
 
     if success then
@@ -5744,67 +5743,71 @@ __modules["Utils.ConfigEncryption"] = function()
 
 local ConfigEncryption = {}
 
-local b = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+local b = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
 function ConfigEncryption.Base64Encode(data)
-    return ((data:gsub('.', function(x)
-        local r, b2 = '', x:byte()
-        for i = 8, 1, -1 do
-            r = r .. (b2 % 2 ^ i - b2 % 2 ^ (i - 1) > 0 and '1' or '0')
-        end
-        return r
-    end) .. '0000'):gsub('%d%d%d?%d?%d?%d?', function(x)
-        if #x < 6 then
-            return ''
-        end
-        local c = 0
-        for i = 1, 6 do
-            c = c + (x:sub(i, i) == '1' and 2 ^ (6 - i) or 0)
-        end
-        return b:sub(c + 1, c + 1)
-    end) .. ({ '', '==', '=' })[#data % 3 + 1])
+    return (
+        (data:gsub(".", function(x)
+            local r, b2 = "", x:byte()
+            for i = 8, 1, -1 do
+                r = r .. (b2 % 2 ^ i - b2 % 2 ^ (i - 1) > 0 and "1" or "0")
+            end
+            return r
+        end) .. "0000"):gsub("%d%d%d?%d?%d?%d?", function(x)
+            if #x < 6 then
+                return ""
+            end
+            local c = 0
+            for i = 1, 6 do
+                c = c + (x:sub(i, i) == "1" and 2 ^ (6 - i) or 0)
+            end
+            return b:sub(c + 1, c + 1)
+        end) .. ({ "", "==", "=" })[#data % 3 + 1]
+    )
 end
 
 function ConfigEncryption.Base64Decode(data)
-    data = string.gsub(data, '[^' .. b .. '=]', '')
-    return (data:gsub('.', function(x)
-        if x == '=' then
-            return ''
-        end
-        local r, f = '', (b:find(x) - 1)
-        for i = 6, 1, -1 do
-            r = r .. (f % 2 ^ i - f % 2 ^ (i - 1) > 0 and '1' or '0')
-        end
-        return r
-    end):gsub('%d%d%d?%d?%d?%d?%d?%d?', function(x)
-        if #x ~= 8 then
-            return ''
-        end
-        local c = 0
-        for i = 1, 8 do
-            c = c + (x:sub(i, i) == '1' and 2 ^ (8 - i) or 0)
-        end
-        return string.char(c)
-    end))
+    data = string.gsub(data, "[^" .. b .. "=]", "")
+    return (
+        data:gsub(".", function(x)
+            if x == "=" then
+                return ""
+            end
+            local r, f = "", (b:find(x) - 1)
+            for i = 6, 1, -1 do
+                r = r .. (f % 2 ^ i - f % 2 ^ (i - 1) > 0 and "1" or "0")
+            end
+            return r
+        end):gsub("%d%d%d?%d?%d?%d?%d?%d?", function(x)
+            if #x ~= 8 then
+                return ""
+            end
+            local c = 0
+            for i = 1, 8 do
+                c = c + (x:sub(i, i) == "1" and 2 ^ (8 - i) or 0)
+            end
+            return string.char(c)
+        end)
+    )
 end
 
 function ConfigEncryption.Encrypt(data)
     local bytes = {}
     local encrypt_seed = ((#data + 3782) % 111) + 1
 
-    string.gsub(data, '.', function(dt)
+    _ = string.gsub(data, ".", function(dt)
         table.insert(bytes, tostring(dt:byte() + encrypt_seed))
     end)
 
-    local concatbyte = table.concat(bytes, '?')
+    local concatbyte = table.concat(bytes, "?")
     table.clear(bytes)
 
-    return '{' .. tostring(encrypt_seed + 72667) .. '}?' .. concatbyte
+    return "{" .. tostring(encrypt_seed + 72667) .. "}?" .. concatbyte
 end
 
 function ConfigEncryption.Decrypt(data)
-    local main_data = string.split(data, '?')
-    local seed_str = main_data[1]:gsub('{', ''):gsub('}', '')
+    local main_data = string.split(data, "?")
+    local seed_str = main_data[1]:gsub("{", ""):gsub("}", "")
     local seed = tonumber(seed_str)
 
     local ks = {}
@@ -6663,8 +6666,61 @@ __modules["Utils.Services"] = function()
     @license MIT
 ]]
 
-local cloneref = cloneref or function(s) return s end
-local ProtectGui = protect_gui or protectgui or (syn and syn.protect_gui) or function(s) return s end
+local function safeGet(name)
+    local sources = {}
+
+    if type(_G) == "table" then
+        local getgenv = rawget(_G, "getgenv")
+        if type(getgenv) == "function" then
+            local ok, env = pcall(getgenv)
+            if ok and type(env) == "table" then
+                table.insert(sources, env)
+            end
+        end
+    end
+
+    local ok, env = pcall(function()
+        if type(getfenv) == "function" then
+            return getfenv()
+        end
+        return nil
+    end)
+    if ok and type(env) == "table" then
+        table.insert(sources, env)
+    end
+
+    table.insert(sources, _G)
+
+    for _, source in ipairs(sources) do
+        if type(source) == "table" then
+            local value = rawget(source, name)
+            if value ~= nil then
+                return value
+            end
+        end
+    end
+
+    return nil
+end
+
+local cloneref = safeGet("cloneref")
+if type(cloneref) ~= "function" then
+    cloneref = function(s)
+        return s
+    end
+end
+
+-- Executor GUI protection fallback order: protect_gui or protectgui or syn.protect_gui.
+local ProtectGui = safeGet("protect_gui") or safeGet("protectgui")
+local synEnv = safeGet("syn")
+if type(ProtectGui) ~= "function" and type(synEnv) == "table" then
+    ProtectGui = synEnv.protect_gui
+end
+if type(ProtectGui) ~= "function" then
+    ProtectGui = function(s)
+        return s
+    end
+end
 
 local Services = {
     TweenService = cloneref(game:GetService("TweenService")),

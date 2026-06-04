@@ -294,9 +294,10 @@ function Window:_FindGuiParent(): Instance
         return self._parent
     end
 
+    local getHui = safeGet("gethui")
     local ok, result = pcall(function()
-        if type(gethui) == "function" then
-            return gethui()
+        if getHui then
+            return getHui()
         end
         return nil
     end)
@@ -304,9 +305,10 @@ function Window:_FindGuiParent(): Instance
         return result
     end
 
+    local getHiddenGui = safeGet("get_hidden_gui")
     ok, result = pcall(function()
-        if type(get_hidden_gui) == "function" then
-            return get_hidden_gui()
+        if getHiddenGui then
+            return getHiddenGui()
         end
         return nil
     end)
@@ -1101,10 +1103,7 @@ function Window:SaveConfig(configName: string?): boolean
     local success = pcall(function()
         local jsonData = Services.HttpService:JSONEncode(configData)
         local encryptedData = ConfigEncryption.Encrypt(jsonData)
-        writeFile(
-            GetConfigPath(self._configFolder, sanitizedName),
-            encryptedData
-        )
+        writeFile(GetConfigPath(self._configFolder, sanitizedName), encryptedData)
     end)
 
     if success then
