@@ -23,13 +23,13 @@ __modules["Components.Button"] = function()
     A clickable button with hover effects and icon support.
 ]]
 
-local Create = require(script.Parent.Parent.Utils.Create)
-local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
-local Tween = require(script.Parent.Parent.Utils.Tween)
-local Colors = require(script.Parent.Parent.Constants.Colors)
-local Sizes = require(script.Parent.Parent.Constants.Sizes)
-local Defaults = require(script.Parent.Parent.Constants.Defaults)
-local Icons = require(script.Parent.Parent.Constants.Icons)
+local Create = __require("Utils.Create")
+local BaseComponent = __require("Core.BaseComponent")
+local Tween = __require("Utils.Tween")
+local Colors = __require("Constants.Colors")
+local Sizes = __require("Constants.Sizes")
+local Defaults = __require("Constants.Defaults")
+local Icons = __require("Constants.Icons")
 
 local Button = {}
 Button.__index = Button
@@ -199,13 +199,13 @@ return Button
 end
 
 __modules["Components.ColorPicker"] = function()
-local Create = require(script.Parent.Parent.Utils.Create)
-local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
-local Colors = require(script.Parent.Parent.Constants.Colors)
-local Sizes = require(script.Parent.Parent.Constants.Sizes)
-local Defaults = require(script.Parent.Parent.Constants.Defaults)
-local Layers = require(script.Parent.Parent.Constants.Layers)
-local Services = require(script.Parent.Parent.Utils.Services)
+local Create = __require("Utils.Create")
+local BaseComponent = __require("Core.BaseComponent")
+local Colors = __require("Constants.Colors")
+local Sizes = __require("Constants.Sizes")
+local Defaults = __require("Constants.Defaults")
+local Layers = __require("Constants.Layers")
+local Services = __require("Utils.Services")
 
 local ColorPicker = {}
 ColorPicker.__index = ColorPicker
@@ -500,19 +500,19 @@ return ColorPicker
 end
 
 __modules["Components.ContentSection"] = function()
-local Create = require(script.Parent.Parent.Utils.Create)
-local Colors = require(script.Parent.Parent.Constants.Colors)
-local Sizes = require(script.Parent.Parent.Constants.Sizes)
-local Fonts = require(script.Parent.Parent.Constants.Fonts)
-local Defaults = require(script.Parent.Parent.Constants.Defaults)
-local Icons = require(script.Parent.Parent.Constants.Icons)
-local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
+local Create = __require("Utils.Create")
+local Colors = __require("Constants.Colors")
+local Sizes = __require("Constants.Sizes")
+local Fonts = __require("Constants.Fonts")
+local Defaults = __require("Constants.Defaults")
+local Icons = __require("Constants.Icons")
+local BaseComponent = __require("Core.BaseComponent")
 
-local Button = require(script.Parent.Button)
-local Toggle = require(script.Parent.Toggle)
-local Slider = require(script.Parent.Slider)
-local Dropdown = require(script.Parent.Dropdown)
-local TextBox = require(script.Parent.TextBox)
+local Button = __require("Components.Button")
+local Toggle = __require("Components.Toggle")
+local Slider = __require("Components.Slider")
+local Dropdown = __require("Components.Dropdown")
+local TextBox = __require("Components.TextBox")
 
 local ContentSection = {}
 ContentSection.__index = ContentSection
@@ -615,7 +615,7 @@ function ContentSection:_AddElement(element)
 end
 
 function ContentSection:Paragraph(config)
-    local Paragraph = require(script.Parent.Paragraph)
+    local Paragraph = __require("Components.Paragraph")
     return self:_AddElement(Paragraph.new(self._container, config))
 end
 
@@ -636,12 +636,12 @@ function ContentSection:Dropdown(config)
 end
 
 function ContentSection:Keybind(config)
-    local Keybind = require(script.Parent.Keybind)
+    local Keybind = __require("Components.Keybind")
     return self:_AddElement(Keybind.new(self._container, config, self._window))
 end
 
 function ContentSection:ColorPicker(config)
-    local ColorPicker = require(script.Parent.ColorPicker)
+    local ColorPicker = __require("Components.ColorPicker")
     return self:_AddElement(ColorPicker.new(self._container, config, self._window))
 end
 
@@ -771,15 +771,15 @@ __modules["Components.Dropdown"] = function()
     A dropdown menu with single/multi-select support.
 ]]
 
-local Create = require(script.Parent.Parent.Utils.Create)
-local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
-local Tween = require(script.Parent.Parent.Utils.Tween)
-local Colors = require(script.Parent.Parent.Constants.Colors)
-local Sizes = require(script.Parent.Parent.Constants.Sizes)
-local Fonts = require(script.Parent.Parent.Constants.Fonts)
-local Defaults = require(script.Parent.Parent.Constants.Defaults)
-local Icons = require(script.Parent.Parent.Constants.Icons)
-local Layers = require(script.Parent.Parent.Constants.Layers)
+local Create = __require("Utils.Create")
+local BaseComponent = __require("Core.BaseComponent")
+local Tween = __require("Utils.Tween")
+local Colors = __require("Constants.Colors")
+local Sizes = __require("Constants.Sizes")
+local Fonts = __require("Constants.Fonts")
+local Defaults = __require("Constants.Defaults")
+local Icons = __require("Constants.Icons")
+local Layers = __require("Constants.Layers")
 
 local Dropdown = {}
 Dropdown.__index = Dropdown
@@ -1479,14 +1479,14 @@ return Dropdown
 end
 
 __modules["Components.Keybind"] = function()
-local Services = require(script.Parent.Parent.Utils.Services)
+local Services = __require("Utils.Services")
 
-local Create = require(script.Parent.Parent.Utils.Create)
-local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
-local Colors = require(script.Parent.Parent.Constants.Colors)
-local Sizes = require(script.Parent.Parent.Constants.Sizes)
-local Fonts = require(script.Parent.Parent.Constants.Fonts)
-local Defaults = require(script.Parent.Parent.Constants.Defaults)
+local Create = __require("Utils.Create")
+local BaseComponent = __require("Core.BaseComponent")
+local Colors = __require("Constants.Colors")
+local Sizes = __require("Constants.Sizes")
+local Fonts = __require("Constants.Fonts")
+local Defaults = __require("Constants.Defaults")
 
 local Keybind = {}
 Keybind.__index = Keybind
@@ -1660,12 +1660,12 @@ return Keybind
 end
 
 __modules["Components.Paragraph"] = function()
-local Create = require(script.Parent.Parent.Utils.Create)
-local Colors = require(script.Parent.Parent.Constants.Colors)
-local Sizes = require(script.Parent.Parent.Constants.Sizes)
-local Fonts = require(script.Parent.Parent.Constants.Fonts)
-local Defaults = require(script.Parent.Parent.Constants.Defaults)
-local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
+local Create = __require("Utils.Create")
+local Colors = __require("Constants.Colors")
+local Sizes = __require("Constants.Sizes")
+local Fonts = __require("Constants.Fonts")
+local Defaults = __require("Constants.Defaults")
+local BaseComponent = __require("Core.BaseComponent")
 
 local Paragraph = {}
 Paragraph.__index = Paragraph
@@ -1731,14 +1731,14 @@ return Paragraph
 end
 
 __modules["Components.Section"] = function()
-local Create = require(script.Parent.Parent.Utils.Create)
-local Tween = require(script.Parent.Parent.Utils.Tween)
-local Colors = require(script.Parent.Parent.Constants.Colors)
-local Fonts = require(script.Parent.Parent.Constants.Fonts)
-local Sizes = require(script.Parent.Parent.Constants.Sizes)
-local Defaults = require(script.Parent.Parent.Constants.Defaults)
-local Icons = require(script.Parent.Parent.Constants.Icons)
-local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
+local Create = __require("Utils.Create")
+local Tween = __require("Utils.Tween")
+local Colors = __require("Constants.Colors")
+local Fonts = __require("Constants.Fonts")
+local Sizes = __require("Constants.Sizes")
+local Defaults = __require("Constants.Defaults")
+local Icons = __require("Constants.Icons")
+local BaseComponent = __require("Core.BaseComponent")
 
 local Section = {}
 Section.__index = Section
@@ -1847,7 +1847,7 @@ function Section.new(window, name: string)
 end
 
 function Section:CreateTab(name: string, icon: (string | number)?)
-    local Tab = require(script.Parent.Tab)
+    local Tab = __require("Components.Tab")
     local tab = Tab.new(self._window, self, name, icon)
     table.insert(self._tabs, tab)
     return tab
@@ -1874,15 +1874,15 @@ __modules["Components.Slider"] = function()
     A draggable slider for numeric value selection.
 ]]
 
-local Services = require(script.Parent.Parent.Utils.Services)
+local Services = __require("Utils.Services")
 
-local Create = require(script.Parent.Parent.Utils.Create)
-local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
-local Tween = require(script.Parent.Parent.Utils.Tween)
-local Colors = require(script.Parent.Parent.Constants.Colors)
-local Sizes = require(script.Parent.Parent.Constants.Sizes)
-local Fonts = require(script.Parent.Parent.Constants.Fonts)
-local Defaults = require(script.Parent.Parent.Constants.Defaults)
+local Create = __require("Utils.Create")
+local BaseComponent = __require("Core.BaseComponent")
+local Tween = __require("Utils.Tween")
+local Colors = __require("Constants.Colors")
+local Sizes = __require("Constants.Sizes")
+local Fonts = __require("Constants.Fonts")
+local Defaults = __require("Constants.Defaults")
 
 local Slider = {}
 Slider.__index = Slider
@@ -2178,20 +2178,20 @@ return Slider
 end
 
 __modules["Components.Tab"] = function()
-local Create = require(script.Parent.Parent.Utils.Create)
-local Tween = require(script.Parent.Parent.Utils.Tween)
-local Colors = require(script.Parent.Parent.Constants.Colors)
-local Sizes = require(script.Parent.Parent.Constants.Sizes)
-local Fonts = require(script.Parent.Parent.Constants.Fonts)
-local Defaults = require(script.Parent.Parent.Constants.Defaults)
-local Icons = require(script.Parent.Parent.Constants.Icons)
-local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
+local Create = __require("Utils.Create")
+local Tween = __require("Utils.Tween")
+local Colors = __require("Constants.Colors")
+local Sizes = __require("Constants.Sizes")
+local Fonts = __require("Constants.Fonts")
+local Defaults = __require("Constants.Defaults")
+local Icons = __require("Constants.Icons")
+local BaseComponent = __require("Core.BaseComponent")
 
-local Button = require(script.Parent.Button)
-local Toggle = require(script.Parent.Toggle)
-local Slider = require(script.Parent.Slider)
-local Dropdown = require(script.Parent.Dropdown)
-local TextBox = require(script.Parent.TextBox)
+local Button = __require("Components.Button")
+local Toggle = __require("Components.Toggle")
+local Slider = __require("Components.Slider")
+local Dropdown = __require("Components.Dropdown")
+local TextBox = __require("Components.TextBox")
 
 local Tab = {}
 Tab.__index = Tab
@@ -2336,12 +2336,12 @@ end
 
 -- Content helpers
 function Tab:CreateSection(config)
-    local ContentSection = require(script.Parent.ContentSection)
+    local ContentSection = __require("Components.ContentSection")
     return self:_AddElement(ContentSection.new(self, config))
 end
 
 function Tab:Paragraph(config)
-    local Paragraph = require(script.Parent.Paragraph)
+    local Paragraph = __require("Components.Paragraph")
     return self:_AddElement(Paragraph.new(self._content, config))
 end
 
@@ -2362,12 +2362,12 @@ function Tab:Dropdown(config)
 end
 
 function Tab:Keybind(config)
-    local Keybind = require(script.Parent.Keybind)
+    local Keybind = __require("Components.Keybind")
     return self:_AddElement(Keybind.new(self._content, config, self._window))
 end
 
 function Tab:ColorPicker(config)
-    local ColorPicker = require(script.Parent.ColorPicker)
+    local ColorPicker = __require("Components.ColorPicker")
     return self:_AddElement(ColorPicker.new(self._content, config, self._window))
 end
 
@@ -2399,14 +2399,14 @@ return Tab
 end
 
 __modules["Components.TextBox"] = function()
-local Create = require(script.Parent.Parent.Utils.Create)
-local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
-local Tween = require(script.Parent.Parent.Utils.Tween)
-local Colors = require(script.Parent.Parent.Constants.Colors)
-local Sizes = require(script.Parent.Parent.Constants.Sizes)
-local Fonts = require(script.Parent.Parent.Constants.Fonts)
-local Defaults = require(script.Parent.Parent.Constants.Defaults)
-local Icons = require(script.Parent.Parent.Constants.Icons)
+local Create = __require("Utils.Create")
+local BaseComponent = __require("Core.BaseComponent")
+local Tween = __require("Utils.Tween")
+local Colors = __require("Constants.Colors")
+local Sizes = __require("Constants.Sizes")
+local Fonts = __require("Constants.Fonts")
+local Defaults = __require("Constants.Defaults")
+local Icons = __require("Constants.Icons")
 
 local TextBox = {}
 TextBox.__index = TextBox
@@ -2607,12 +2607,12 @@ __modules["Components.Toggle"] = function()
     A toggle switch with smooth animations.
 ]]
 
-local Create = require(script.Parent.Parent.Utils.Create)
-local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
-local Tween = require(script.Parent.Parent.Utils.Tween)
-local Colors = require(script.Parent.Parent.Constants.Colors)
-local Sizes = require(script.Parent.Parent.Constants.Sizes)
-local Defaults = require(script.Parent.Parent.Constants.Defaults)
+local Create = __require("Utils.Create")
+local BaseComponent = __require("Core.BaseComponent")
+local Tween = __require("Utils.Tween")
+local Colors = __require("Constants.Colors")
+local Sizes = __require("Constants.Sizes")
+local Defaults = __require("Constants.Defaults")
 
 local Toggle = {}
 Toggle.__index = Toggle
@@ -3519,10 +3519,10 @@ __modules["Core.AcrylicBlur"] = function()
     Handles camera nil-check and reconnects on camera swap (respawn).
 ]]
 
-local Services = require(script.Parent.Parent.Utils.Services)
+local Services = __require("Utils.Services")
 
-local Create = require(script.Parent.Parent.Utils.Create)
-local Defaults = require(script.Parent.Parent.Constants.Defaults)
+local Create = __require("Utils.Create")
+local Defaults = __require("Constants.Defaults")
 
 local AcrylicBlur = {}
 AcrylicBlur.__index = AcrylicBlur
@@ -3828,11 +3828,11 @@ __modules["Core.BaseComponent"] = function()
     Shared lifecycle helpers for UI components.
 ]]
 
-local Create = require(script.Parent.Parent.Utils.Create)
-local Colors = require(script.Parent.Parent.Constants.Colors)
-local Sizes = require(script.Parent.Parent.Constants.Sizes)
-local Defaults = require(script.Parent.Parent.Constants.Defaults)
-local RandomString = require(script.Parent.Parent.Utils.RandomString)
+local Create = __require("Utils.Create")
+local Colors = __require("Constants.Colors")
+local Sizes = __require("Constants.Sizes")
+local Defaults = __require("Constants.Defaults")
+local RandomString = __require("Utils.RandomString")
 
 local BaseComponent = {}
 BaseComponent.__index = BaseComponent
@@ -3957,13 +3957,13 @@ __modules["Core.Notification"] = function()
     Toast-style notifications with auto-dismiss.
 ]]
 
-local Create = require(script.Parent.Parent.Utils.Create)
-local Tween = require(script.Parent.Parent.Utils.Tween)
-local Colors = require(script.Parent.Parent.Constants.Colors)
-local Sizes = require(script.Parent.Parent.Constants.Sizes)
-local Fonts = require(script.Parent.Parent.Constants.Fonts)
-local Defaults = require(script.Parent.Parent.Constants.Defaults)
-local Icons = require(script.Parent.Parent.Constants.Icons)
+local Create = __require("Utils.Create")
+local Tween = __require("Utils.Tween")
+local Colors = __require("Constants.Colors")
+local Sizes = __require("Constants.Sizes")
+local Fonts = __require("Constants.Fonts")
+local Defaults = __require("Constants.Defaults")
+local Icons = __require("Constants.Icons")
 
 local Notification = {}
 local NotificationDefaults = Defaults.Notification or {}
@@ -4196,22 +4196,22 @@ __modules["Core.Window"] = function()
     The main window container with dragging, resizing, and minimize support.
 ]]
 
-local Services = require(script.Parent.Parent.Utils.Services)
-local Create = require(script.Parent.Parent.Utils.Create)
-local Tween = require(script.Parent.Parent.Utils.Tween)
-local Draggable = require(script.Parent.Parent.Utils.Draggable)
-local Device = require(script.Parent.Parent.Utils.Device)
-local Colors = require(script.Parent.Parent.Constants.Colors)
-local Sizes = require(script.Parent.Parent.Constants.Sizes)
-local Fonts = require(script.Parent.Parent.Constants.Fonts)
-local Defaults = require(script.Parent.Parent.Constants.Defaults)
-local Icons = require(script.Parent.Parent.Constants.Icons)
-local Layers = require(script.Parent.Parent.Constants.Layers)
+local Services = __require("Utils.Services")
+local Create = __require("Utils.Create")
+local Tween = __require("Utils.Tween")
+local Draggable = __require("Utils.Draggable")
+local Device = __require("Utils.Device")
+local Colors = __require("Constants.Colors")
+local Sizes = __require("Constants.Sizes")
+local Fonts = __require("Constants.Fonts")
+local Defaults = __require("Constants.Defaults")
+local Icons = __require("Constants.Icons")
+local Layers = __require("Constants.Layers")
 
-local AcrylicBlur = require(script.Parent.AcrylicBlur)
-local Notification = require(script.Parent.Notification)
-local ConfigEncryption = require(script.Parent.Parent.Utils.ConfigEncryption)
-local RandomString = require(script.Parent.Parent.Utils.RandomString)
+local AcrylicBlur = __require("Core.AcrylicBlur")
+local Notification = __require("Core.Notification")
+local ConfigEncryption = __require("Utils.ConfigEncryption")
+local RandomString = __require("Utils.RandomString")
 
 local Window = {}
 Window.__index = Window
@@ -5180,7 +5180,7 @@ end
     @return Section - Section instance
 ]]
 function Window:CreateSection(name: string)
-    local Section = require(script.Parent.Parent.Components.Section)
+    local Section = __require("Components.Section")
     local section = Section.new(self, name)
     table.insert(self._sections, section)
     return section
@@ -5751,24 +5751,24 @@ AcrylicUI.Version = "2.0.0"
 AcrylicUI.Author = "Arcylic-Modded"
 
 -- Core modules
-local Window = require(script.Core.Window)
-local IconResolver = require(script.Utils.IconResolver)
+local Window = __require("Core.Window")
+local IconResolver = __require("Utils.IconResolver")
 
 -- Constants (exposed for customization)
-AcrylicUI.Colors = require(script.Constants.Colors)
-AcrylicUI.Sizes = require(script.Constants.Sizes)
-AcrylicUI.Fonts = require(script.Constants.Fonts)
-AcrylicUI.Animation = require(script.Constants.Animation)
-AcrylicUI.Defaults = require(script.Constants.Defaults)
-AcrylicUI.Icons = require(script.Constants.Icons)
-AcrylicUI.Layers = require(script.Constants.Layers)
+AcrylicUI.Colors = __require("Constants.Colors")
+AcrylicUI.Sizes = __require("Constants.Sizes")
+AcrylicUI.Fonts = __require("Constants.Fonts")
+AcrylicUI.Animation = __require("Constants.Animation")
+AcrylicUI.Defaults = __require("Constants.Defaults")
+AcrylicUI.Icons = __require("Constants.Icons")
+AcrylicUI.Layers = __require("Constants.Layers")
 
 -- Utilities (exposed for advanced usage)
 AcrylicUI.Utils = {
-    Create = require(script.Utils.Create),
-    Tween = require(script.Utils.Tween),
-    Draggable = require(script.Utils.Draggable),
-    Device = require(script.Utils.Device),
+    Create = __require("Utils.Create"),
+    Tween = __require("Utils.Tween"),
+    Draggable = __require("Utils.Draggable"),
+    Device = __require("Utils.Device"),
     IconResolver = IconResolver,
 }
 
@@ -6118,15 +6118,15 @@ __modules["Utils.Create"] = function()
 ]]
 
 local Constants = {
-    Colors = require(script.Parent.Parent.Constants.Colors),
-    Sizes = require(script.Parent.Parent.Constants.Sizes),
-    Fonts = require(script.Parent.Parent.Constants.Fonts),
-    Defaults = require(script.Parent.Parent.Constants.Defaults),
-    Layers = require(script.Parent.Parent.Constants.Layers),
+    Colors = __require("Constants.Colors"),
+    Sizes = __require("Constants.Sizes"),
+    Fonts = __require("Constants.Fonts"),
+    Defaults = __require("Constants.Defaults"),
+    Layers = __require("Constants.Layers"),
 }
 
-local IconResolver = require(script.Parent.IconResolver)
-local Tween = require(script.Parent.Tween)
+local IconResolver = __require("Utils.IconResolver")
+local Tween = __require("Utils.Tween")
 
 local Create = {}
 
@@ -6599,8 +6599,8 @@ __modules["Utils.Device"] = function()
     Detects device type and capabilities.
 ]]
 
-local Services = require(script.Parent.Services)
-local Defaults = require(script.Parent.Parent.Constants.Defaults)
+local Services = __require("Utils.Services")
+local Defaults = __require("Constants.Defaults")
 
 local Device = {}
 local DeviceDefaults = Defaults.Device or {}
@@ -6685,7 +6685,7 @@ __modules["Utils.Draggable"] = function()
     Makes UI elements draggable with mouse and touch support.
 ]]
 
-local Services = require(script.Parent.Services)
+local Services = __require("Utils.Services")
 
 local Draggable = {}
 
@@ -7300,8 +7300,8 @@ __modules["Utils.Tween"] = function()
     Animation helper functions using TweenService.
 ]]
 
-local Services = require(script.Parent.Services)
-local Animation = require(script.Parent.Parent.Constants.Animation)
+local Services = __require("Utils.Services")
+local Animation = __require("Constants.Animation")
 
 local Tween = {}
 
