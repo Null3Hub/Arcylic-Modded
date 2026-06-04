@@ -105,8 +105,8 @@ local Library = loadLibrary(LIBRARY_URL)
 Library.AddIcons("example", {
     layered = {
         Image = "rbxassetid://10709775704",
-        ImageRectSize = Vector2.zero,
-        ImageRectPosition = Vector2.zero,
+        ImageRectSize = Vector2.new(0, 0),
+        ImageRectPosition = Vector2.new(0, 0),
         Parts = { "layered-overlay" },
     },
     ["layered-overlay"] = "rbxassetid://10734898355",
