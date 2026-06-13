@@ -10,7 +10,5 @@ studio/AcrylicUI-patches/
 tests/icon_resolver_test.js
 tests/icon_resolver_test.py
 
-# Test, build, and scripts output
-tests/
+# Build output
 build/
-scripts/

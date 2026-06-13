@@ -259,10 +259,10 @@ function Window.new(config: WindowConfig?)
     self._configFolder = SanitizeConfigName(config.ConfigFolder or self._title)
     self._visible = true
     self._minimized = false
+    self._minimizedChangedEvent = Instance.new("BindableEvent")
     self._sections = {}
     self._keybinds = {}
     self._configElements = {}
-    self._components = {}
     self._connections = {}
     self._currentTab = nil
     self._originalHeight = self._size.Height
@@ -454,6 +454,44 @@ function Window:_CreateWindowControls()
         Parent = self._container,
     })
 
+    local controlFrame = Create.Instance("Frame", {
+        Name = "ControlFrame",
+        BackgroundColor3 = Color3.fromRGB(163, 162, 165),
+        BackgroundTransparency = 1,
+        BorderColor3 = Color3.fromRGB(27, 42, 53),
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(
+            1,
+            -(WindowChromeSizes.ControlFrameRightInset or 5),
+            0,
+            WindowChromeSizes.ControlFrameTop or 3
+        ),
+        Size = UDim2.new(
+            0,
+            WindowChromeSizes.ControlFrameWidth or 55,
+            0,
+            WindowChromeSizes.ControlFrameHeight or 37
+        ),
+        ZIndex = WindowLayers.TopBarControls or 6,
+        Parent = self._topBarControls,
+    })
+    Create.Instance("UICorner", {
+        CornerRadius = UDim.new(0, 5),
+        Parent = controlFrame,
+    })
+    Create.Instance("UIStroke", {
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+        BorderStrokePosition = Enum.BorderStrokePosition.Inner,
+        Color = Colors.Border,
+        LineJoinMode = Enum.LineJoinMode.Round,
+        StrokeSizingMode = Enum.StrokeSizingMode.FixedSize,
+        Thickness = 1,
+        Transparency = 0,
+        Parent = controlFrame,
+    })
+
     -- Minimize button
     local minimizeBtn = Create.Instance("ImageLabel", {
         Name = "Minimize",
@@ -603,7 +641,7 @@ end
 
 function Window:_CreateContentArea()
     -- Header separator
-    Create.Instance("Frame", {
+    self._headerSeparator = Create.Instance("Frame", {
         Name = "HeaderSeparator",
         BackgroundColor3 = Colors.Border,
         Position = UDim2.new(0, 0, 0, WindowChromeSizes.HeaderHeight or 45),
@@ -810,6 +848,7 @@ end
 
 function Window:_ToggleMinimize()
     self._minimized = not self._minimized
+    self._minimizedChangedEvent:Fire(self._minimized)
 
     if self._minimized then
         Tween.Create(self._mainContent, { Size = UDim2.new(1, 0, 0, 0) }, "Slow")
@@ -821,12 +860,14 @@ function Window:_ToggleMinimize()
                 WindowChromeSizes.HeaderHeight or 45
             ),
         }, "Slow")
+        self._headerSeparator.Visible = false
         self._resizeBtn.Visible = false
         self._bottomDragArea.Visible = false
     else
         Tween.Create(self._container, {
             Size = UDim2.new(0, self._container.AbsoluteSize.X, 0, self._originalHeight),
         }, "Slow")
+        self._headerSeparator.Visible = true
         task.delay(WindowDefaults.MinimizeRestoreDelay or 0.1, function()
             Tween.Create(
                 self._mainContent,
@@ -978,7 +1019,7 @@ end
     @param config NotificationConfig - Notification configuration
 ]]
 function Window:Notify(config)
-    return Notification.Show(config, self._screenGui)
+    return Notification.Show(config, self._screenGui, self._title)
 end
 
 --[[
@@ -1164,11 +1205,16 @@ function Window:LoadConfig(configName: string?): boolean
     end
 
     local rawData = readFile(path)
-    local isPlainJson = rawData:sub(1, 1) == "{"
+    local isEncrypted = ConfigEncryption.IsEncrypted(rawData)
     local success, data
 
-    if isPlainJson then
-        -- Plain JSON (legacy) - re-save as encrypted
+    if isEncrypted then
+        success, data = pcall(function()
+            local decrypted = ConfigEncryption.Decrypt(rawData)
+            return Services.HttpService:JSONDecode(decrypted)
+        end)
+    else
+        -- Plain JSON (legacy) - re-save as encrypted after a successful decode.
         success, data = pcall(function()
             return Services.HttpService:JSONDecode(rawData)
         end)
@@ -1180,12 +1226,6 @@ function Window:LoadConfig(configName: string?): boolean
                 )
             end)
         end
-    else
-        -- Encrypted config
-        success, data = pcall(function()
-            local decrypted = ConfigEncryption.Decrypt(rawData)
-            return Services.HttpService:JSONDecode(decrypted)
-        end)
     end
 
     if not success or type(data) ~= "table" then
@@ -1432,6 +1472,10 @@ function Window:GetPopupLayer(): Frame
     return self._popupLayer
 end
 
+function Window:GetMinimizedSignal(): RBXScriptSignal
+    return self._minimizedChangedEvent.Event
+end
+
 function Window:Destroy()
     if self._destroyed then
         return
@@ -1468,6 +1512,11 @@ function Window:Destroy()
         self._acrylicBlur:Destroy()
     end
 
+    if self._minimizedChangedEvent then
+        self._minimizedChangedEvent:Destroy()
+        self._minimizedChangedEvent = nil
+    end
+
     if self._screenGui then
         Notification.DestroyContainer(self._screenGui)
     end
@@ -1489,33 +1538,6 @@ function Window:Destroy()
 
     table.clear(self._keybinds)
     table.clear(self._configElements)
-end
-
-function Window:Unload()
-    if not self._screenGui then
-        return
-    end
-
-    for _, component in ipairs(self._components or {}) do
-        if component.DisconnectAll then
-            component:DisconnectAll()
-        end
-    end
-
-    if not self._usesSharedScreenGui then
-        self._screenGui:Destroy()
-    else
-        Window._sharedScreenGuiCount -= 1
-        if Window._sharedScreenGuiCount <= 0 and Window._sharedScreenGui then
-            Window._sharedScreenGui:Destroy()
-            Window._sharedScreenGui = nil
-            Window._sharedScreenGuiParent = nil
-        end
-    end
-
-    self._configElements = {}
-    self._components = {}
-    self:DisconnectAll()
 end
 
 return Window

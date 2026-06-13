@@ -12,6 +12,8 @@ local Fonts = {
 
     Light = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Regular),
 
+    Medium = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Medium),
+
     -- Text sizes
     Size = {
         Title = 14,

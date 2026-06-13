@@ -124,7 +124,7 @@ interactionSection:Button({
         window:Notify({
             Title = "Current State",
             Description = featureEnabled and "Feature is enabled" or "Feature is disabled",
-            Duration = 3,
+            Duration = 999999,
         })
     end,
 })
@@ -136,7 +136,7 @@ interactionSection:Keybind({
     Callback = function()
         window:Notify({
             Title = "Keybind",
-            Description = "Pressed F",
+            Description = "Pressed FPressed FPressed FPressed FPressed FPressed FPressed FPressed FPressed F",
             Duration = 2,
         })
     end,

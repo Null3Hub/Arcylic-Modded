@@ -1,663 +1,325 @@
 # Arcylic-Modded
-A stabilized, toolchain-backed modded build of AcrylicUI for Roblox, with acrylic blur effects, smooth animations, config support, and generated loadstring output.
 
-## Highlights
--  **Modern Design** - Acrylic blur backdrop with smooth animations
--  **Mobile Support** - Built-in draggable mobile toggle button for touch devices
--  **Drag & Resize** - Fully draggable topbar and window with smart resizing
--  **Notifications** - Beautiful notification system with icons and timers
--  **Components** - Button, Toggle, Slider, Dropdown (with search), Keybind, ColorPicker, TextBox, Paragraph
--  **Content Sections** - Grouped content areas with header, description, and separator inside tabs
--  **Icon Packs** - Drop in `solar/home-bold`, `lucide/arrow`, `gravity/...` style names; raw `rbxassetid://...` also works
--  **Customizable** - Theme colors, sizes, fonts, and animation speeds
--  **Keybind System** - Custom keybinds with listener support
--  **Sections & Tabs** - Organized layout with collapsible sections
--  **Config System** - Save, load, and manage configuration profiles with auto-save support
--  **Executor-Safe Stealth** - Root UI uses a non-semantic session name, descendants avoid semantic names, and CoreGui is used when available
+Arcylic-Modded is a Roblox UI library based on AcrylicUI. It provides a draggable acrylic-style window, sidebar sections, tabs, interactive components, notifications, config profiles, theme helpers, and icon pack support.
 
-## Installation
+## Usage
 
-### Method 1: Executor / Loadstring
+### ModuleScript
 
-```lua
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Null3Hub/Arcylic-Modded/refs/heads/main/src.lua.txt"))()
-```
+Place the library as `ReplicatedStorage.AcrylicUI` and require it from a LocalScript.
 
-### Method 2: Roblox Studio / Rojo (ModuleScript)
-> For Studio, Rojo sync, or published games without an executor.
-
-**Option A:** Drop the library folder into your project as a ModuleScript (e.g. under `ReplicatedStorage`) and require it:
-```lua
-local Library = require(game.ReplicatedStorage:WaitForChild("AcrylicUI"))
-```
-
-**Option B:** Use Rojo with the included project files:
-```bash
-rojo serve default.project.json   # syncs src/ into ReplicatedStorage.AcrylicUI
-```
-Then require from a LocalScript:
-```lua
-local Library = require(game.ReplicatedStorage:WaitForChild("AcrylicUI"))
-```
-
-> **Note:** `loadstring` is only available in executor environments. In Studio or published games, always use `require`.
-
-## Source & Build
-
-`src/` is the source of truth. The loadstring file `src.lua.txt` is generated from the modular source and should not be edited manually.
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/build-bundle.ps1
-powershell -ExecutionPolicy Bypass -File scripts/validate-bundle.ps1
-```
-
-Project tooling is included for Rojo, Aftman, Wally, StyLua, and Selene.
-
-## Quick Start
-
-### Executor / Loadstring
-```lua
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/Null3Hub/Arcylic-Modded/refs/heads/main/src.lua.txt"))()
-
-local window = Library.new("My Hub", "MyHubConfigs")
-window:SetToggleKey(Enum.KeyCode.RightControl)
-
-window:Notify({
-    Title = "Welcome!",
-    Description = "Hub loaded successfully",
-    Duration = 3,
-    Icon = "rbxassetid://10709775704"
-})
-```
-
-### Studio / Rojo (require)
 ```lua
 local Library = require(game.ReplicatedStorage:WaitForChild("AcrylicUI"))
 
 local window = Library.new("My Hub", "MyHubConfigs")
 window:SetToggleKey(Enum.KeyCode.RightControl)
-
-window:Notify({
-    Title = "Welcome!",
-    Description = "Hub loaded successfully",
-    Duration = 3,
-    Icon = "rbxassetid://10709775704"
-})
 ```
 
-## API Reference
+### Executor
 
-### Library
+Executor environments can use the bundled `src.lua.txt` distribution when `loadstring` is available. Review or pin the source you load for your own project instead of depending blindly on a moving branch.
 
-#### `Library.new(title, configFolder)`
-Creates a new window instance.
+## Library API
+
+### `Library.new(title, configFolder)`
+
+Creates a window with a title and optional config folder.
 
 ```lua
 local window = Library.new("My Hub", "MyHubConfigs")
 ```
 
-**Parameters:**
-- `title` (string): The window title
-- `configFolder` (string, optional): Name for config folder (defaults to title)
+### `Library.CreateWindow(config)`
 
-**Returns:** Window object
-
----
-
-### Window Methods
-
-#### `window:SetToggleKey(keyCode)`
-Sets the keybind to toggle UI visibility.
+Creates a window with table-based options.
 
 ```lua
-window:SetToggleKey(Enum.KeyCode.RightControl)
+local window = Library.CreateWindow({
+    Title = "My Hub",
+    ConfigFolder = "MyHubConfigs",
+    Size = { Width = 560, Height = 460 },
+    ToggleKey = Enum.KeyCode.RightControl,
+    ClampToViewport = true,
+})
 ```
 
-**Parameters:**
-- `keyCode` (KeyCode): The key to toggle the UI
+### Theme and metadata
 
----
+- `Library.SetTheme(overrides)` applies partial theme overrides.
+- `Library.ResetTheme()` restores default theme colors.
+- `Library.GetTheme()` returns a snapshot of the current theme.
+- `Library.GetInfo()` returns version, author, and component names.
+- `Library.AddIcons(packName, iconsData)` registers a local custom icon pack.
+- `Library.SetIconsType(iconType)` changes the default pack used by bare icon names.
 
-#### `window:Toggle()`
-Manually toggles the UI visibility.
+## Window
 
-```lua
-window:Toggle()
-```
+Window methods:
 
----
-
-#### `window:Notify(config)`
-Shows a notification.
+- `window:SetToggleKey(keyCode)` changes the key used to show or hide the UI.
+- `window:Toggle()` toggles visibility.
+- `window:Notify(config)` shows a notification.
+- `window:CreateSection(name)` creates a sidebar section.
+- `window:Destroy()` destroys the UI and disconnects resources.
+- `window:SaveConfig(configName)` saves flagged component values.
+- `window:LoadConfig(configName)` loads flagged component values.
+- `window:DeleteConfig(configName)` deletes a config profile.
+- `window:GetConfigs()` returns available config profile names.
+- `window:SetAutoSave(enabled)` enables periodic saving.
+- `window:SetAutoLoad(enabled)` stores whether the last config should auto-load.
+- `window:GetAutoLoad()` returns the auto-load state.
+- `window:ApplyAutoLoad()` loads the stored auto-load profile when available.
 
 ```lua
 window:Notify({
-    Title = "Notification Title",
-    Description = "Notification description text",
+    Title = "Loaded",
+    Description = "Press RightControl to toggle the UI.",
     Duration = 3,
-    Icon = "rbxassetid://10709775704" -- optional
+    Icon = "rbxassetid://10709775704",
 })
 ```
 
-**Parameters:**
-- `Title` (string): Notification title
-- `Description` (string): Notification description
-- `Duration` (number): Duration in seconds (default: 3)
-- `Icon` (string): Optional asset ID for icon
+`Destroy()` is the cleanup API. It stops auto-save, destroys sections and components, disconnects window connections, clears keybind/config registries, removes notifications, and releases the screen GUI when appropriate.
 
----
+## UI Elements
 
-#### `window:CreateSection(name)`
-Creates a collapsible section in the sidebar.
+### Sections and Tabs
+
+Sections group tabs in the sidebar.
 
 ```lua
-local section = window:CreateSection("Combat")
+local mainSection = window:CreateSection("Main")
+local combatTab = mainSection:CreateTab("Combat", "solar/crosshair-minimalistic")
 ```
 
-**Parameters:**
-- `name` (string): Section name
-
-**Returns:** Section object
-
----
-
-#### `window:Destroy()`
-Destroys the UI and cleans up all connections. Auto-saves config if auto-save is enabled.
+Tabs and content sections can create the same interactive elements. Use `tab:CreateSection(config)` to group controls with an optional description.
 
 ```lua
-window:Destroy()
+local controls = combatTab:CreateSection({
+    Title = "Controls",
+    Description = "Core combat settings.",
+})
 ```
 
----
+### Button
 
-### Config System Methods
-
-#### `window:SaveConfig(configName)`
-Saves the current settings to a config file.
+Runs a callback when clicked. Supports text, description, icon, callback replacement, and blocking.
 
 ```lua
-window:SaveConfig("MyConfig")
-```
-
-**Parameters:**
-- `configName` (string): Name of the config file
-
-**Returns:** Boolean (success)
-
----
-
-#### `window:LoadConfig(configName)`
-Loads settings from a config file.
-
-```lua
-window:LoadConfig("MyConfig")
-```
-
-**Parameters:**
-- `configName` (string): Name of the config to load
-
-**Returns:** Boolean (success)
-
----
-
-#### `window:DeleteConfig(configName)`
-Deletes a config file.
-
-```lua
-window:DeleteConfig("MyConfig")
-```
-
-**Parameters:**
-- `configName` (string): Name of the config to delete
-
-**Returns:** Boolean (success)
-
----
-
-#### `window:GetConfigs()`
-Returns a list of available config names.
-
-```lua
-local configs = window:GetConfigs()
-for _, name in ipairs(configs) do
-    print(name)
-end
-```
-
-**Returns:** Table of config names
-
----
-
-#### `window:SetAutoSave(enabled)`
-Enables or disables auto-save (saves every 30 seconds).
-
-```lua
-window:SetAutoSave(true)
-```
-
-**Parameters:**
-- `enabled` (boolean): Enable or disable auto-save
-
----
-
-### Section Methods
-
-#### `section:CreateTab(name, icon)`
-Creates a tab within the section.
-
-```lua
-local tab = section:CreateTab("Aimbot", "rbxassetid://10723407389")
-```
-
-**Parameters:**
-- `name` (string): Tab name
-- `icon` (string, optional): Asset ID for tab icon
-
-**Returns:** Tab object
-
----
-
-### Tab Methods
-
-#### `tab:CreateSection(config)`
-Creates a content section within the tab. Returns a ContentSection handler.
-
-```lua
--- String shorthand
-local section = tab:CreateSection("Settings")
-
--- Table config with description
-local section = tab:CreateSection({
-    Title = "Settings",
-    Description = "Adjust your settings below.",
+local button = controls:Button({
+    Name = "Run Action",
+    Description = "Runs the configured action.",
+    Icon = "lucide:play",
+    Callback = function() end,
 })
 
--- Use the handler to add elements inside the section
-local toggle = section:Toggle({
-    Name = "Enable",
+button:SetText("Updated Action")
+button:SetIcon("rbxassetid://10747384394")
+button:SetCallback(function() end)
+```
+
+### Toggle
+
+Stores a boolean value. Supports config flags, callbacks, programmatic value changes, and blocking.
+
+```lua
+local toggle = controls:Toggle({
+    Name = "Auto Farm",
+    Description = "Saved when Flag is set.",
     Default = false,
+    Flag = "AutoFarm",
     Callback = function(enabled) end,
 })
+
+toggle:SetValue(true)
+print(toggle:GetValue())
 ```
 
-**Parameters:**
-- `config` (string or table): Section title string, or table with `Title` and `Description`/`Desc`
+Blocking a toggle turns it off when it is currently enabled.
 
-**Returns:** ContentSection handler with element methods (see [ContentSection Methods](#contentsection-methods))
+### Slider
 
----
-
-#### `tab:Toggle(config)`
-Creates a toggle switch.
+Stores a numeric value with min, max, and optional increment.
 
 ```lua
-local toggle = tab:Toggle({
-    Name = "Enable Feature",
-    Default = false,
-    Flag = "FeatureEnabled", -- Optional: for config saving
-    Callback = function(enabled)
-        print("Toggle:", enabled)
-    end
-})
-```
-
-**Config:**
-- `Name` (string): Toggle name
-- `Default` (boolean): Initial state (default: false)
-- `Flag` (string, optional): Unique identifier for config system
-- `Callback` (function): Function called when toggled
-
-**Methods:**
-- `toggle:SetValue(value)` - Set toggle state
-- `toggle:GetValue()` - Get current state
-
----
-
-#### `tab:Slider(config)`
-Creates a slider.
-
-```lua
-local slider = tab:Slider({
+local slider = controls:Slider({
     Name = "Speed",
     Min = 0,
     Max = 100,
     Default = 50,
-    Flag = "SpeedValue",
-    Callback = function(value)
-        print("Slider value:", value)
-    end
+    Increment = 1,
+    Flag = "Speed",
+    Callback = function(value) end,
 })
+
+slider:SetValue(75)
+slider:SetMin(10)
+slider:SetMax(150)
+print(slider:GetValue())
 ```
 
-**Config:**
-- `Name` (string): Slider name
-- `Min` (number): Minimum value
-- `Max` (number): Maximum value
-- `Default` (number): Initial value
-- `Flag` (string, optional): Unique identifier for config system
-- `Callback` (function): Function called when value changes
+### Dropdown
 
-**Methods:**
-- `slider:SetValue(value)` - Set slider value
-- `slider:GetValue()` - Get current value
-
----
-
-#### `tab:Dropdown(config)`
-Creates a dropdown menu with optional search.
+Stores a single value or multiple selected values. Search can be enabled with `true`, a placeholder string, or a table.
 
 ```lua
-local dropdown = tab:Dropdown({
-    Name = "Select Option",
-    Options = {"Option 1", "Option 2", "Option 3"},
-    Default = "Option 1",
-    MultiSelect = false,
+local dropdown = controls:Dropdown({
+    Name = "Target",
+    Options = { "Closest", "Lowest HP", "Highest Threat" },
+    Default = "Closest",
     Search = true,
-    Flag = "SelectedOption",
-    Callback = function(selected)
-        print("Selected:", selected)
-    end
+    Flag = "Target",
+    Callback = function(selected) end,
+})
+
+dropdown:SetValue("Lowest HP")
+dropdown:Refresh({ "Closest", "Random" })
+print(dropdown:GetValue())
+```
+
+Multi-select:
+
+```lua
+local multi = controls:Dropdown({
+    Name = "Weapons",
+    Options = { "Sword", "Bow", "Magic" },
+    Default = { "Sword" },
+    MultiSelect = true,
 })
 ```
 
-**Config:**
-- `Name` (string): Dropdown name
-- `Options` (table): Array of option strings
-- `Default` (string or table): Initial selection
-- `MultiSelect` (boolean, optional): Allow multiple selections (default: false)
-- `Search` (boolean, string, or table, optional): Enable search filtering. `true` for default placeholder, a string for custom placeholder, or `{ Enabled = true, Placeholder = "..." }` for full control.
-- `Flag` (string, optional): Unique identifier for config system
-- `Callback` (function): Function called when selection changes
+### Keybind
 
-**Methods:**
-- `dropdown:SetValue(value)` - Set selected value(s)
-- `dropdown:GetValue()` - Get current selection
-- `dropdown:Refresh(newOptions)` - Update dropdown options
-
----
-
-#### `tab:Keybind(config)`
-Creates a keybind selector.
+Stores an `Enum.KeyCode` and runs a callback when the key is pressed.
 
 ```lua
-local keybind = tab:Keybind({
-    Name = "Fly Toggle",
+local keybind = controls:Keybind({
+    Name = "Fly",
     Default = Enum.KeyCode.F,
-    Flag = "FlyKeybind",
-    Callback = function()
-        print("Keybind pressed!")
-    end
+    Flag = "FlyKey",
+    Callback = function() end,
 })
+
+keybind:SetKey(Enum.KeyCode.G)
+print(keybind:GetKey())
 ```
 
-**Config:**
-- `Name` (string): Keybind name
-- `Default` (KeyCode): Initial key
-- `Flag` (string, optional): Unique identifier for config system
-- `Callback` (function): Function called when key is pressed
+### ColorPicker
 
-**Methods:**
-- `keybind:SetKey(keyCode)` - Set keybind
-- `keybind:GetKey()` - Get current key
-
----
-
-#### `tab:ColorPicker(config)`
-Creates a color picker.
+Stores a `Color3` value and supports config flags.
 
 ```lua
-local colorPicker = tab:ColorPicker({
-    Name = "Team Color",
-    Default = Color3.fromRGB(255, 255, 255),
-    Flag = "TeamColor",
-    Callback = function(color)
-        print("Color:", color)
-    end
+local picker = controls:ColorPicker({
+    Name = "Accent",
+    Default = Color3.fromRGB(90, 170, 255),
+    Flag = "AccentColor",
+    Callback = function(color) end,
 })
+
+picker:SetColor(Color3.fromRGB(255, 120, 80))
+print(picker:GetColor())
 ```
 
-**Config:**
-- `Name` (string): Color picker name
-- `Default` (Color3): Initial color
-- `Flag` (string, optional): Unique identifier for config system
-- `Callback` (function): Function called when color changes
+### TextBox
 
-**Methods:**
-- `colorPicker:SetColor(color)` - Set color
-- `colorPicker:GetColor()` - Get current color
-
----
-
-#### `tab:Button(config)`
-Creates a button.
+Stores text input. Supports placeholder text, `ClearOnFocus`, numeric-only mode, focus control, and config flags.
 
 ```lua
-local button = tab:Button({
-    Name = "Click Me",
-    Callback = function()
-        print("Button clicked!")
-    end
-})
-```
-
-**Config:**
-- `Name` (string): Button text
-- `Callback` (function): Function called when clicked
-
-**Methods:**
-- `button:SetText(text)` - Change button text
-
----
-
-#### `tab:TextBox(config)`
-Creates a text input box.
-
-```lua
-local textBox = tab:TextBox({
+local box = controls:TextBox({
     Name = "Player Name",
     Default = "",
     Placeholder = "Enter name...",
     ClearOnFocus = false,
     NumbersOnly = false,
     Flag = "PlayerName",
-    Callback = function(text, enterPressed)
-        print("Text:", text, "Enter pressed:", enterPressed)
-    end
-})
-```
-
-**Config:**
-- `Name` (string): TextBox label
-- `Default` (string): Initial text value
-- `Placeholder` (string): Placeholder text when empty
-- `ClearOnFocus` (boolean, optional): Clear text when focused (default: false)
-- `NumbersOnly` (boolean, optional): Only allow numeric input (default: false)
-- `Flag` (string, optional): Unique identifier for config system
-- `Callback` (function): Function called when focus is lost (receives text and enterPressed boolean)
-
-**Methods:**
-- `textBox:SetText(text)` - Set the text value
-- `textBox:GetText()` - Get current text
-- `textBox:SetPlaceholder(placeholder)` - Update placeholder text
-- `textBox:Focus()` - Focus the text box
-
----
-
-#### `tab:Paragraph(config)`
-Creates an informational text block.
-
-```lua
-local paragraph = tab:Paragraph({
-    Title = "Information",
-    Content = "This is some informational text that explains features or provides details."
-})
-```
-
-**Config:**
-- `Title` (string): Paragraph title
-- `Content` (string): Paragraph content text
-
-**Methods:**
-- `paragraph:SetTitle(title)` - Update title
-- `paragraph:SetContent(content)` - Update content
-
----
-
-### ContentSection Methods
-
-The ContentSection handler returned by `tab:CreateSection(config)` supports the same element methods as Tab:
-
-- `section:Paragraph(config)` - Creates a paragraph
-- `section:Button(config)` - Creates a button
-- `section:Toggle(config)` - Creates a toggle
-- `section:Slider(config)` - Creates a slider
-- `section:Dropdown(config)` - Creates a dropdown
-- `section:Keybind(config)` - Creates a keybind
-- `section:ColorPicker(config)` - Creates a color picker
-- `section:TextBox(config)` - Creates a text box
-- `section:CreateConfigSection()` - Creates a pre-built config management UI
-
----
-
-### Blocking Components
-
-Interactive components support a shared blocking API:
-
-```lua
-local farmToggle = tab:Toggle({
-    Name = "Auto Farm",
-    Default = true,
-    Callback = function(enabled)
-        print("Farm:", enabled)
-    end,
+    Callback = function(text, enterPressed) end,
 })
 
-farmToggle:Block()
-farmToggle:Block("Need level 10")
-farmToggle:Unblock()
-print(farmToggle:IsBlocked())
+box:SetText("ExamplePlayer")
+box:SetPlaceholder("New placeholder...")
+box:Focus()
+print(box:GetText())
 ```
 
-**Methods:**
-- `component:Block(text)` - Blocks user interaction and shows a centered overlay. Text is optional and defaults to `"Blocked"`.
-- `component:Unblock()` - Removes the overlay and restores normal user interaction.
-- `component:IsBlocked()` - Returns whether the component is currently blocked.
+### Paragraph
 
-Blocking prevents user input only. Programmatic setters such as `SetValue`, `SetText`, `SetColor`, and `SetKey` continue to work. `Toggle:Block()` is the only method that changes component value: if the toggle is on, it turns off and calls `Callback(false)`.
-
----
-
-#### `tab:CreateConfigSection()`
-Creates a pre-built configuration management UI with save, load, delete, and auto-save functionality.
+Displays read-only text.
 
 ```lua
-local configSection = tab:CreateConfigSection()
-```
-
-**Returns:** Object with `RefreshConfigs()` method
-
-This creates:
-- Config name input box
-- Config selector dropdown
-- Save, Load, Delete, and Refresh buttons
-- Auto-save toggle
-
----
-
-## Complete Executor Example
-
-See [`Exemple.lua`](Exemple.lua) in the repository root for a complete executor/loadstring example that demonstrates the current library features, including components, descriptions, config saving, auto-save/auto-load, theme APIs, notifications, and runtime block/unblock methods.
-
-Use `Exemple.lua` only in executor environments. Studio and published games should continue to use the `require(...)` setup shown above.
-
-## Features
-
-### Acrylic Blur Effect
-The library automatically creates a beautiful acrylic blur effect behind the UI using depth of field and blur effects.
-
-### Mobile Support
-If touch input is detected, a draggable mobile toggle button appears automatically in the bottom-left corner. Tap to toggle, drag to reposition.
-
-### Resizable Window
-Click and drag the resize handle in the bottom-right corner to resize the window. Size is constrained between minimum and maximum values.
-
-### Collapsible Sections
-Click section headers in the sidebar to collapse/expand tabs within that section.
-
-### Smart Color Picker
-The color picker automatically positions itself to stay on screen and closes when you click elsewhere.
-
-### Config System
-The library includes a full configuration system that allows users to:
-- **Save configs** - Save all flagged component values to a JSON file
-- **Load configs** - Restore saved settings
-- **Delete configs** - Remove unwanted configuration files
-- **Auto-save** - Automatically save every 30 seconds
-- **Multiple profiles** - Create and manage multiple configuration profiles
-
-Config files are stored in `AcrylicConfigs/<configFolder>/`, where `configFolder` is the second argument passed to `Library.new(title, configFolder)`.
-
-#### Using the Config System
-
-**Method 1: Pre-built Config UI**
-```lua
-local ConfigTab = SettingsSection:CreateTab("Config", "rbxassetid://10734898355")
-ConfigTab:CreateConfigSection() -- Creates full config management UI
-```
-
-**Method 2: Manual Control**
-```lua
--- Make sure to add Flag to components you want to save
-AimbotTab:Toggle({
-    Name = "Enable Aimbot",
-    Flag = "AimbotEnabled", -- This flag is used as the save key
-    Callback = function(enabled) end
+local paragraph = controls:Paragraph({
+    Title = "Info",
+    Content = "Status text.",
 })
 
--- Save/Load manually
-window:SaveConfig("MyProfile")
-window:LoadConfig("MyProfile")
+paragraph:SetTitle("Updated Info")
+paragraph:SetContent("Updated content.")
+```
 
--- Enable auto-save
+### Config Section
+
+Creates a built-in config manager with name input, config selector, save, load, delete, refresh, auto-save, and auto-load controls.
+
+```lua
+local settings = window:CreateSection("Settings")
+local configTab = settings:CreateTab("Config", "rbxassetid://10723356507")
+local configSection = configTab:CreateConfigSection()
+
+configSection.RefreshConfigs()
+```
+
+### Blocking API
+
+Most interactive components support:
+
+- `component:Block(text)` blocks user input and shows an overlay.
+- `component:Unblock()` restores user input.
+- `component:IsBlocked()` returns the current blocked state.
+
+Programmatic setters such as `SetValue`, `SetText`, `SetColor`, and `SetKey` continue to work while blocked.
+
+## Config System
+
+Add `Flag` to components that should be saved.
+
+```lua
+controls:Toggle({
+    Name = "Enabled",
+    Default = false,
+    Flag = "Enabled",
+})
+
+window:SaveConfig("Default")
+window:LoadConfig("Default")
 window:SetAutoSave(true)
+window:SetAutoLoad(true)
 ```
 
-## Customization
-
-### Sizes
-Window sizes and component dimensions are pre-configured for optimal appearance.
-
-### Animations
-Animation speeds are tuned for smooth, modern feel:
-- Fast: 0.1s
-- Normal: 0.15s
-- Slow: 0.2s
-- Very Slow: 0.3s
+Config files are stored under `AcrylicConfigs/<configFolder>/` in executor environments that expose file APIs. Saved configs are obfuscated by the built-in config encryption helper. Legacy plain JSON configs are still accepted and migrated after a successful load.
 
 ## Icons
 
-Any `icon` argument accepts these forms:
+Icon arguments accept:
 
-1. **Raw asset** - `rbxassetid://12345`. Works everywhere, including Studio.
-2. **Numeric asset** - `12345` or `"12345"`. Normalized to `rbxassetid://12345`.
-3. **Pack path** - `solar/home-bold`, `lucide/play`, `gravity/...`.
-4. **WindUI-style pack path** - `solar:home-bold`, `lucide:play`.
-5. **Bare name** - `play`, resolved against the current default pack. The default is `lucide`; change it with `Library.SetIconsType("solar")`.
-6. **Empty / unknown** - the `ImageLabel` is hidden, or the component fallback asset is used when configured.
+- `rbxassetid://12345`
+- `12345` or `"12345"`
+- Pack paths such as `solar/home-bold`, `lucide/play`, or `gravity/...`
+- WindUI-style pack paths such as `solar:home-bold`
+- Bare names resolved through the current default pack
+- Custom packs registered with `Library.AddIcons(...)`
 
 ```lua
-local tab = section:CreateTab("Combat", "solar:crosshair-minimalistic")
+Library.SetIconsType("lucide")
 
-tab:Button({
+local tab = mainSection:CreateTab("Combat", "solar:crosshair-minimalistic")
+
+controls:Button({
     Name = "Run",
     Icon = "lucide:play",
     Callback = function() end,
 })
 ```
 
-### Custom Icon Packs
-
-Register custom packs with `Library.AddIcons(packName, iconsData)`. Values can be numeric asset IDs, `rbxassetid://...` strings, or descriptors with sprite rect data and optional `Parts`.
+Custom packs:
 
 ```lua
 Library.AddIcons("custom", {
@@ -667,33 +329,26 @@ Library.AddIcons("custom", {
         ImageRectPosition = Vector2.new(0, 0),
         Parts = { "shield-shine" },
     },
-    ["shield-shine"] = 1000000001,
+    ["shield-shine"] = "rbxassetid://1000000001",
 })
 
-local tab = section:CreateTab("Defense", "custom:shield")
+local tab = mainSection:CreateTab("Defense", "custom:shield")
 ```
 
-Layered `Parts` render as child `ImageLabel`s inside the base icon label. Parts inherit the parent icon color, transparency, scale type, and size.
+Remote pack names are resolved through the icon resolver with HTTP and `loadstring` when the environment supports it. Use direct asset IDs or `Library.AddIcons(...)` when you need fully controlled icon data.
 
-Pack resolution uses `game:HttpGet` + `loadstring` inside `pcall`, so:
+## Exemple
 
-- **Executors**: remote pack icons render automatically when HTTP/loadstring are available.
-- **Studio / published games**: remote pack loading may be unavailable, so components fall back to bundled `rbxassetid://...` defaults unless you register custom local icons with `AddIcons`.
+See [`Exemple.lua`](Exemple.lua) in the repository root for a complete executor example. It demonstrates window creation, sections, tabs, every UI element, descriptions, config save/load, auto-save, auto-load, theme APIs, notifications, icon packs, custom icons, and runtime block/unblock methods.
 
-Common asset IDs used in examples:
-
-- `rbxassetid://10709775704` - Checkmark/Success
-- `rbxassetid://10747384394` - Warning/Error
-- `rbxassetid://10723407389` - Target/Aim
-- `rbxassetid://10734898355` - Settings/Gear
-- `rbxassetid://10734950309` - Teleport/Location
-- `rbxassetid://10723356507` - Save/Config
-- `rbxassetid://93828793199781` - Text/Input
-- `rbxassetid://112235310154264` - Menu
+`Exemple.lua` is intended for executor environments. Studio and published Roblox experiences should use the ModuleScript `require(...)` setup.
 
 ## License
-MIT License - Feel free to use and modify for your projects.
+
+MIT License.
 
 ## Credits and Author
+
 noowtf31-ui
+
 v0rtexd

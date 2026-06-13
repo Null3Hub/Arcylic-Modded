@@ -7,6 +7,7 @@
 local Create = require(script.Parent.Parent.Utils.Create)
 local BaseComponent = require(script.Parent.Parent.Core.BaseComponent)
 local Tween = require(script.Parent.Parent.Utils.Tween)
+local Services = require(script.Parent.Parent.Utils.Services)
 local Colors = require(script.Parent.Parent.Constants.Colors)
 local Sizes = require(script.Parent.Parent.Constants.Sizes)
 local Fonts = require(script.Parent.Parent.Constants.Fonts)
@@ -42,6 +43,19 @@ local function ResolveSearchConfig(searchConfig, name: string): (boolean, string
     end
 
     return false, ""
+end
+
+local function IsPointInsideGui(gui: GuiObject?, point: Vector2): boolean
+    if not gui or not gui.Parent then
+        return false
+    end
+
+    local position = gui.AbsolutePosition
+    local size = gui.AbsoluteSize
+    return point.X >= position.X
+        and point.X <= position.X + size.X
+        and point.Y >= position.Y
+        and point.Y <= position.Y + size.Y
 end
 
 export type DropdownConfig = {
@@ -224,6 +238,26 @@ function Dropdown.new(parent: Instance, config: DropdownConfig, window): Dropdow
         end)
     end
 
+    self:Connect(Services.UserInputService.InputChanged, function(input)
+        if self:_ShouldCloseForScrollInput(input) then
+            self:Close()
+        end
+    end)
+
+    if self._window and self._window.GetMinimizedSignal then
+        local ok, minimizedSignal = pcall(function()
+            return self._window:GetMinimizedSignal()
+        end)
+
+        if ok and minimizedSignal then
+            self:Connect(minimizedSignal, function(minimized: boolean)
+                if minimized and self._expanded then
+                    self:Close()
+                end
+            end)
+        end
+    end
+
     local popupParent = self:_GetPopupParent()
     self:Connect(popupParent:GetPropertyChangedSignal("AbsoluteSize"), function()
         if self._expanded then
@@ -343,6 +377,19 @@ function Dropdown:_GetContentContainer(): ScrollingFrame?
     end
 
     return nil
+end
+
+function Dropdown:_ShouldCloseForScrollInput(input: InputObject): boolean
+    if input.UserInputType ~= Enum.UserInputType.MouseWheel then
+        return false
+    end
+    if not self._expanded then
+        return false
+    end
+
+    local point = Vector2.new(input.Position.X, input.Position.Y)
+    return not IsPointInsideGui(self._optionsContainer, point)
+        and not IsPointInsideGui(self._display, point)
 end
 
 function Dropdown:_UpdateOptionsLayout(visibleCount: number, popupHeight: number?)

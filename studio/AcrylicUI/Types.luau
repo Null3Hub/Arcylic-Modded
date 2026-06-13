@@ -48,6 +48,7 @@ export type WindowConfig = {
     Theme: ThemeColors?,
     ToggleKey: Enum.KeyCode?,
     ConfigFolder: string?,
+    Parent: Instance?,
     ClampToViewport: boolean?,
 }
 
@@ -87,6 +88,7 @@ export type DropdownConfig = {
     Options: { string }?,
     Default: string | { string }?,
     MultiSelect: boolean?,
+    Search: boolean | string | { Enabled: boolean?, Placeholder: string? }?,
     Flag: string?,
     Callback: ((selected: string | { string }) -> ())?,
 }

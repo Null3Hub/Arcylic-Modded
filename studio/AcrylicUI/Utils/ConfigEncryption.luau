@@ -67,6 +67,10 @@ function ConfigEncryption.Encrypt(data: string): string
     return "{" .. tostring(encrypt_seed + 72667) .. "}?" .. concatbyte
 end
 
+function ConfigEncryption.IsEncrypted(data: string): boolean
+    return type(data) == "string" and data:match("^%{%d+%}%?") ~= nil
+end
+
 function ConfigEncryption.Decrypt(data: string): string
     local main_data = string.split(data, "?")
     local seed_str = main_data[1]:gsub("{", ""):gsub("}", "")

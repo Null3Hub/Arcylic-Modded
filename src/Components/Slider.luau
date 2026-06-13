@@ -128,7 +128,8 @@ function Slider.new(parent: Instance, config: SliderConfig, window): SliderObjec
         self._frame,
         name,
         hasDescription,
-        Sizes.Slider.DescriptionRightPadding or 80
+        Sizes.Slider.DescriptionRightPadding or 80,
+        Sizes.Slider.LabelCenterOffset or 18
     )
 
     -- Description

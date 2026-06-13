@@ -32,6 +32,10 @@ function Tween.Create(
     easingStyle: Enum.EasingStyle?,
     easingDirection: Enum.EasingDirection?
 ): Tween
+    if not instance or not instance.Parent then
+        return nil :: any
+    end
+
     -- Cancel existing tween on same instance
     if ActiveTweens[instance] then
         ActiveTweens[instance]:Cancel()
@@ -43,7 +47,13 @@ function Tween.Create(
         easingDirection
     )
 
-    local tween = Services.TweenService:Create(instance, tweenInfo, properties)
+    local ok, tween = pcall(function()
+        return Services.TweenService:Create(instance, tweenInfo, properties)
+    end)
+    if not ok or not tween then
+        ActiveTweens[instance] = nil
+        return nil :: any
+    end
     ActiveTweens[instance] = tween
 
     tween.Completed:Connect(function()
@@ -72,6 +82,9 @@ function Tween.CreateWithCallback(
     callback: () -> ()
 ): Tween
     local tween = Tween.Create(instance, properties, duration)
+    if not tween then
+        return nil :: any
+    end
     tween.Completed:Connect(callback)
     return tween
 end

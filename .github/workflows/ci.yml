@@ -7,6 +7,15 @@ on:
     branches: [main]
 
 jobs:
+  test-static:
+    name: Static Contract Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run static contract tests
+        run: node tests/static-contracts.test.js
+
   lint-format:
     name: StyLua Format Check
     runs-on: ubuntu-latest
@@ -49,5 +58,9 @@ jobs:
       - name: Install tools
         run: aftman install
 
-      - name: Build project
-        run: rojo build default.project.json --output build.rbxl
+      - name: Build projects
+        run: |
+          mkdir -p build
+          rojo build default.project.json --output build/default.rbxl
+          rojo build studio.project.json --output build/studio.rbxl
+          rojo build test.project.json --output build/test.rbxl

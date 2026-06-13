@@ -203,7 +203,8 @@ function Create.ComponentLabel(
     parent: Instance,
     text: string,
     hasDescription: boolean,
-    rightPadding: number?
+    rightPadding: number?,
+    labelCenterOffset: number?
 ): TextLabel
     return Create.Instance("TextLabel", {
         Name = "Label",
@@ -223,7 +224,7 @@ function Create.ComponentLabel(
                 0,
                 Constants.Sizes.Component.LabelLeft or 10,
                 0.5,
-                -(Constants.Sizes.Component.LabelCenterOffset or 10)
+                -(labelCenterOffset or Constants.Sizes.Component.LabelCenterOffset or 10)
             ),
         TextSize = Constants.Fonts.Size.Normal,
         Size = UDim2.new(1, -(rightPadding or 50), 0, Constants.Sizes.Component.LabelHeight or 20),
