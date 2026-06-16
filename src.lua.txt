@@ -3340,13 +3340,17 @@ local Sizes = {
         ControlTop = 15,
         ControlSize = 15,
         ControlFrameRightInset = 5,
-        ControlFrameTop = 3,
-        ControlFrameWidth = 55,
-        ControlFrameHeight = 37,
+        ControlFrameTop = 7,
+        ControlFrameButtonWidth = 31,
+        ControlFrameGap = 1,
+        ControlFrameHeight = 31,
+        ControlFrameAvatarGap = 4,
+        ControlFrameSeparatorWidth = 1,
+        ControlFrameSeparatorHeight = 20,
         MinimizeRightOffset = 35,
         MinimizeClickWidth = 21,
         CloseRightOffset = 10,
-        TopBarControlsWidth = 80,
+        TopBarControlsWidth = 120,
         ResizeOffset = 5,
         ResizeWidth = 62,
         ResizeHeight = 60,
@@ -5173,63 +5177,120 @@ function Window:_CreateWindowControls()
         Parent = self._container,
     })
 
-    local controlFrame = Create.Instance("Frame", {
-        Name = "ControlFrame",
-        BackgroundColor3 = Color3.fromRGB(163, 162, 165),
-        BackgroundTransparency = 1,
-        BorderColor3 = Color3.fromRGB(27, 42, 53),
+    local controlButtonWidth = WindowChromeSizes.ControlFrameButtonWidth or 31
+    local controlFrameGap = WindowChromeSizes.ControlFrameGap or 1
+    local controlFrameRightInset = WindowChromeSizes.ControlFrameRightInset or 5
+    local controlFrameHeight = WindowChromeSizes.ControlFrameHeight or 31
+    local controlFrameTop = WindowChromeSizes.ControlFrameTop or 7
+    local controlFrameAvatarGap = WindowChromeSizes.ControlFrameAvatarGap or 4
+    local controlFrameSeparatorWidth = WindowChromeSizes.ControlFrameSeparatorWidth or 1
+    local controlFrameSeparatorHeight = WindowChromeSizes.ControlFrameSeparatorHeight or 20
+
+    local function createControlFrame(name: string, rightOffset: number): Frame
+        local controlFrame = Create.Instance("Frame", {
+            Name = name,
+            BackgroundColor3 = Color3.fromRGB(163, 162, 165),
+            BackgroundTransparency = 1,
+            BorderColor3 = Color3.fromRGB(27, 42, 53),
+            BorderSizePixel = 0,
+            ClipsDescendants = true,
+            AnchorPoint = Vector2.new(1, 0),
+            Position = UDim2.new(1, -rightOffset, 0, controlFrameTop),
+            Size = UDim2.new(0, controlButtonWidth, 0, controlFrameHeight),
+            ZIndex = WindowLayers.TopBarControls or 6,
+            Parent = self._topBarControls,
+        })
+        Create.Instance("UICorner", {
+            CornerRadius = UDim.new(0, 5),
+            Parent = controlFrame,
+        })
+        Create.Instance("UIStroke", {
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+            BorderStrokePosition = Enum.BorderStrokePosition.Inner,
+            Color = Colors.Border,
+            LineJoinMode = Enum.LineJoinMode.Round,
+            StrokeSizingMode = Enum.StrokeSizingMode.FixedSize,
+            Thickness = 1,
+            Transparency = 0,
+            Parent = controlFrame,
+        })
+
+        return controlFrame
+    end
+
+    local closeControlFrame = createControlFrame("CloseControlFrame", controlFrameRightInset)
+    local minimizeControlFrame = createControlFrame(
+        "MinimizeControlFrame",
+        controlFrameRightInset + controlButtonWidth + controlFrameGap
+    )
+    local separatorRightOffset = controlFrameRightInset
+        + controlButtonWidth
+        + controlFrameGap
+        + controlButtonWidth
+        + controlFrameAvatarGap
+    local avatarControlFrame = createControlFrame(
+        "AvatarControlFrame",
+        separatorRightOffset + controlFrameSeparatorWidth + controlFrameAvatarGap
+    )
+
+    Create.Instance("Frame", {
+        Name = "AvatarSeparator",
+        BackgroundColor3 = Colors.Border,
+        BackgroundTransparency = 0.35,
         BorderSizePixel = 0,
-        ClipsDescendants = true,
-        AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(
-            1,
-            -(WindowChromeSizes.ControlFrameRightInset or 5),
-            0,
-            WindowChromeSizes.ControlFrameTop or 3
-        ),
-        Size = UDim2.new(
-            0,
-            WindowChromeSizes.ControlFrameWidth or 55,
-            0,
-            WindowChromeSizes.ControlFrameHeight or 37
-        ),
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -separatorRightOffset, 0, controlFrameTop + controlFrameHeight / 2),
+        Size = UDim2.new(0, controlFrameSeparatorWidth, 0, controlFrameSeparatorHeight),
         ZIndex = WindowLayers.TopBarControls or 6,
         Parent = self._topBarControls,
     })
+
+    local avatar = Create.Instance("ImageLabel", {
+        Name = "Avatar",
+        BackgroundTransparency = 1,
+        Image = "",
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, 0, 0.5, 1),
+        Size = UDim2.new(0, 23, 0, 23),
+        ZIndex = (WindowLayers.TopBarControls or 6) + 1,
+        Parent = avatarControlFrame,
+    })
     Create.Instance("UICorner", {
         CornerRadius = UDim.new(0, 5),
-        Parent = controlFrame,
+        Parent = avatar,
     })
-    Create.Instance("UIStroke", {
-        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-        BorderStrokePosition = Enum.BorderStrokePosition.Inner,
-        Color = Colors.Border,
-        LineJoinMode = Enum.LineJoinMode.Round,
-        StrokeSizingMode = Enum.StrokeSizingMode.FixedSize,
-        Thickness = 1,
-        Transparency = 0,
-        Parent = controlFrame,
-    })
+
+    local localPlayer = Services.Players.LocalPlayer
+    if localPlayer then
+        task.spawn(function()
+            local ok, thumbnail = pcall(function()
+                return Services.Players:GetUserThumbnailAsync(
+                    localPlayer.UserId,
+                    Enum.ThumbnailType.HeadShot,
+                    Enum.ThumbnailSize.Size48x48
+                )
+            end)
+            if ok and avatar.Parent then
+                avatar.Image = thumbnail
+            end
+        end)
+    end
 
     -- Minimize button
     local minimizeBtn = Create.Instance("ImageLabel", {
         Name = "Minimize",
         ImageColor3 = Colors.TextDark,
         BackgroundTransparency = 1,
-        AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(
-            1,
-            -(WindowChromeSizes.MinimizeRightOffset or 35),
-            0,
-            WindowChromeSizes.ControlTop or 15
-        ),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
         Size = UDim2.new(
             0,
             WindowChromeSizes.ControlSize or 15,
             0,
             WindowChromeSizes.ControlSize or 15
         ),
-        Parent = self._topBarControls,
+        ZIndex = (WindowLayers.TopBarControls or 6) + 1,
+        Parent = minimizeControlFrame,
     })
     Create.ApplyIcon(minimizeBtn, nil, WindowIcons.Minimize)
 
@@ -5237,58 +5298,59 @@ function Window:_CreateWindowControls()
         Name = "ClickArea",
         Text = CommonDefaults.EmptyText or "",
         BackgroundTransparency = 1,
-        Size = UDim2.new(
-            0,
-            WindowChromeSizes.MinimizeClickWidth or 21,
-            0,
-            WindowChromeSizes.ControlSize or 15
-        ),
-        Parent = minimizeBtn,
+        Size = UDim2.new(1, 0, 1, 0),
+        ZIndex = (WindowLayers.TopBarControls or 6) + 2,
+        Parent = minimizeControlFrame,
     })
 
     minimizeClick.MouseButton1Click:Connect(function()
         self:_ToggleMinimize()
     end)
 
-    minimizeBtn.MouseEnter:Connect(function()
+    minimizeClick.MouseEnter:Connect(function()
         Tween.Create(minimizeBtn, { ImageColor3 = Colors.Text }, "Fast")
     end)
 
-    minimizeBtn.MouseLeave:Connect(function()
+    minimizeClick.MouseLeave:Connect(function()
         Tween.Create(minimizeBtn, { ImageColor3 = Colors.TextDark }, "Fast")
     end)
 
     -- Close button
-    local closeBtn = Create.Instance("ImageButton", {
+    local closeBtn = Create.Instance("ImageLabel", {
         Name = "Close",
         ImageColor3 = Colors.TextDark,
         BackgroundTransparency = 1,
-        AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(
-            1,
-            -(WindowChromeSizes.CloseRightOffset or 10),
-            0,
-            WindowChromeSizes.ControlTop or 15
-        ),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
         Size = UDim2.new(
             0,
             WindowChromeSizes.ControlSize or 15,
             0,
             WindowChromeSizes.ControlSize or 15
         ),
-        Parent = self._topBarControls,
+        ZIndex = (WindowLayers.TopBarControls or 6) + 1,
+        Parent = closeControlFrame,
     })
     Create.ApplyIcon(closeBtn, nil, WindowIcons.Close)
 
-    closeBtn.MouseButton1Click:Connect(function()
+    local closeClick = Create.Instance("TextButton", {
+        Name = "ClickArea",
+        Text = CommonDefaults.EmptyText or "",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        ZIndex = (WindowLayers.TopBarControls or 6) + 2,
+        Parent = closeControlFrame,
+    })
+
+    closeClick.MouseButton1Click:Connect(function()
         self:Destroy()
     end)
 
-    closeBtn.MouseEnter:Connect(function()
+    closeClick.MouseEnter:Connect(function()
         Tween.Create(closeBtn, { ImageColor3 = Colors.CloseHover }, "Fast")
     end)
 
-    closeBtn.MouseLeave:Connect(function()
+    closeClick.MouseLeave:Connect(function()
         Tween.Create(closeBtn, { ImageColor3 = Colors.TextDark }, "Fast")
     end)
 

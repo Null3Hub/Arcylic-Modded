@@ -37,11 +37,13 @@ for (const windowPath of [
     !source.includes("function Window:Unload"),
     `${windowPath} should expose Destroy as the only window cleanup method`,
   );
-  assertIncludes(windowPath, 'Name = "ControlFrame"');
+  assertIncludes(windowPath, '"MinimizeControlFrame"');
+  assertIncludes(windowPath, '"CloseControlFrame"');
+  assertIncludes(windowPath, "WindowChromeSizes.ControlFrameGap or 1");
   assertIncludes(windowPath, "WindowChromeSizes.ControlFrameRightInset or 5");
-  assertIncludes(windowPath, "WindowChromeSizes.ControlFrameTop or 3");
-  assertIncludes(windowPath, "WindowChromeSizes.ControlFrameWidth or 55");
-  assertIncludes(windowPath, "WindowChromeSizes.ControlFrameHeight or 37");
+  assertIncludes(windowPath, "WindowChromeSizes.ControlFrameTop or 7");
+  assertIncludes(windowPath, "WindowChromeSizes.ControlFrameButtonWidth or 31");
+  assertIncludes(windowPath, "WindowChromeSizes.ControlFrameHeight or 31");
   assertIncludes(windowPath, "UDim.new(0, 5)");
   assertIncludes(windowPath, "ApplyStrokeMode = Enum.ApplyStrokeMode.Border");
   assertIncludes(windowPath, "BorderStrokePosition = Enum.BorderStrokePosition.Inner");
@@ -53,6 +55,45 @@ for (const windowPath of [
   assertIncludes(windowPath, "self._minimizedChangedEvent:Fire(self._minimized)");
   assertIncludes(windowPath, "function Window:GetMinimizedSignal(): RBXScriptSignal");
   assertIncludes(windowPath, "return self._minimizedChangedEvent.Event");
+}
+
+{
+  const studioWindowPath = "studio/AcrylicUI/Core/Window.luau";
+  assertIncludes(studioWindowPath, '"AvatarControlFrame"');
+  assertIncludes(studioWindowPath, 'Name = "Avatar"');
+  assertIncludes(studioWindowPath, 'Name = "AvatarSeparator"');
+  assertIncludes(studioWindowPath, "Services.Players.LocalPlayer");
+  assertIncludes(studioWindowPath, "GetUserThumbnailAsync");
+  assertIncludes(studioWindowPath, "Enum.ThumbnailType.HeadShot");
+  assertIncludes(studioWindowPath, "Enum.ThumbnailSize.Size48x48");
+  assertIncludes(studioWindowPath, "UICorner");
+  assertIncludes(studioWindowPath, "WindowChromeSizes.ControlFrameAvatarGap or 4");
+  assertIncludes(studioWindowPath, "WindowChromeSizes.ControlFrameSeparatorWidth or 1");
+  assertIncludes(studioWindowPath, "WindowChromeSizes.ControlFrameSeparatorHeight or 20");
+  assertIncludes("studio/AcrylicUI/Constants/Sizes.luau", "ControlFrameAvatarGap = 4");
+  assertIncludes("studio/AcrylicUI/Constants/Sizes.luau", "ControlFrameSeparatorWidth = 1");
+  assertIncludes("studio/AcrylicUI/Constants/Sizes.luau", "ControlFrameSeparatorHeight = 20");
+  assertIncludes("studio/AcrylicUI/Constants/Sizes.luau", "TopBarControlsWidth = 120");
+}
+
+{
+  const srcWindowPath = "src/Core/Window.luau";
+  assertIncludes(srcWindowPath, '"AvatarControlFrame"');
+  assertIncludes(srcWindowPath, 'Name = "Avatar"');
+  assertIncludes(srcWindowPath, 'Name = "AvatarSeparator"');
+  assertIncludes(srcWindowPath, "Services.Players.LocalPlayer");
+  assertIncludes(srcWindowPath, "GetUserThumbnailAsync");
+  assertIncludes(srcWindowPath, "Enum.ThumbnailType.HeadShot");
+  assertIncludes(srcWindowPath, "Enum.ThumbnailSize.Size48x48");
+  assertIncludes(srcWindowPath, "UDim.new(0, 5)");
+  assertIncludes(srcWindowPath, "Position = UDim2.new(0.5, 0, 0.5, 1)");
+  assertIncludes(srcWindowPath, "WindowChromeSizes.ControlFrameAvatarGap or 4");
+  assertIncludes(srcWindowPath, "WindowChromeSizes.ControlFrameSeparatorWidth or 1");
+  assertIncludes(srcWindowPath, "WindowChromeSizes.ControlFrameSeparatorHeight or 20");
+  assertIncludes("src/Constants/Sizes.luau", "ControlFrameAvatarGap = 4");
+  assertIncludes("src/Constants/Sizes.luau", "ControlFrameSeparatorWidth = 1");
+  assertIncludes("src/Constants/Sizes.luau", "ControlFrameSeparatorHeight = 20");
+  assertIncludes("src/Constants/Sizes.luau", "TopBarControlsWidth = 120");
 }
 
 for (const dropdownPath of [
@@ -207,9 +248,10 @@ for (const sizesPath of [
   "studio/AcrylicUI/Constants/Sizes.luau",
 ]) {
   assertIncludes(sizesPath, "ControlFrameRightInset = 5");
-  assertIncludes(sizesPath, "ControlFrameTop = 3");
-  assertIncludes(sizesPath, "ControlFrameWidth = 55");
-  assertIncludes(sizesPath, "ControlFrameHeight = 37");
+  assertIncludes(sizesPath, "ControlFrameTop = 7");
+  assertIncludes(sizesPath, "ControlFrameButtonWidth = 31");
+  assertIncludes(sizesPath, "ControlFrameGap = 1");
+  assertIncludes(sizesPath, "ControlFrameHeight = 31");
   assertIncludes(sizesPath, "LabelCenterOffset = 10");
   assertIncludes(sizesPath, "Slider = {");
   assertIncludes(sizesPath, "LabelCenterOffset = 18");
