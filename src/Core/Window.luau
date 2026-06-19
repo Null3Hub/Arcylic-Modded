@@ -74,6 +74,7 @@ local deleteFile = safeGet("delfile")
 
 export type WindowConfig = {
     Title: string?,
+    Logo: string?,
     Size: { Width: number, Height: number }?,
     ToggleKey: Enum.KeyCode?,
     ConfigFolder: string?,
@@ -251,6 +252,7 @@ function Window.new(config: WindowConfig?)
     local resolvedSize, minSize, maxSize = ResolveWindowSizes(config.Size, clampToViewport)
 
     self._title = config.Title or WindowDefaults.Title or "AcrylicUI"
+    self._logo = config.Logo or "rbxassetid://94586681223401"
     self._size = resolvedSize
     self._minSize = minSize
     self._maxSize = maxSize
@@ -1069,6 +1071,18 @@ end
 ]]
 function Window:SetToggleKey(keyCode: Enum.KeyCode)
     self._toggleKey = keyCode
+end
+
+--[[
+    Sets the topbar logo image.
+
+    @param assetId string? - Roblox asset ID. Defaults to the built-in logo.
+]]
+function Window:Logo(assetId: string?)
+    if self._logoIcon then
+        self._logo = assetId or "rbxassetid://94586681223401"
+        Create.ApplyIcon(self._logoIcon, self._logo)
+    end
 end
 
 --[[

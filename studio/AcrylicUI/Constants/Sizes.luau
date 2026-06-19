@@ -39,7 +39,7 @@ local Sizes = {
         MinimizeRightOffset = 35,
         MinimizeClickWidth = 21,
         CloseRightOffset = 10,
-        TopBarControlsWidth = 120,
+        TopBarControlsWidth = 80,
         ResizeOffset = 5,
         ResizeWidth = 62,
         ResizeHeight = 60,
@@ -247,6 +247,7 @@ local Sizes = {
         Small = 4,
         Medium = 5,
         Large = 6,
+        Window = 10,
         Full = 100,
     },
 

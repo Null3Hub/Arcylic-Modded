@@ -513,6 +513,7 @@ local Toggle = __require("Components.Toggle")
 local Slider = __require("Components.Slider")
 local Dropdown = __require("Components.Dropdown")
 local TextBox = __require("Components.TextBox")
+local Image = __require("Components.Image")
 
 local ContentSection = {}
 ContentSection.__index = ContentSection
@@ -647,6 +648,10 @@ end
 
 function ContentSection:TextBox(config)
     return self:_AddElement(TextBox.new(self._container, config, self._window))
+end
+
+function ContentSection:Image(config)
+    return self:_AddElement(Image.new(self._container, config))
 end
 
 function ContentSection:CreateConfigSection()
@@ -1525,6 +1530,143 @@ end
 return Dropdown
 end
 
+__modules["Components.Image"] = function()
+--[[
+    AcrylicUI - Image Component
+
+    Displays an image from an asset ID, numeric ID, or HTTP URL.
+    HTTP sources are fetched and cached locally via MediaManager.
+]]
+
+local Create = __require("Utils.Create")
+local BaseComponent = __require("Core.BaseComponent")
+local Sizes = __require("Constants.Sizes")
+local Defaults = __require("Constants.Defaults")
+local MediaManager = __require("Utils.MediaManager")
+
+local Image = {}
+Image.__index = Image
+setmetatable(Image, { __index = BaseComponent })
+
+local ComponentDefaults = Defaults.Components or {}
+local ImageDefaults = ComponentDefaults.Image or {}
+
+local function parseAspectRatio(ratio: (number | string)?): number
+    if type(ratio) == "number" then
+        return ratio
+    end
+
+    if type(ratio) == "string" then
+        local w, h = ratio:match("(%d+):(%d+)")
+        if w and h then
+            local wNum = tonumber(w)
+            local hNum = tonumber(h)
+            if wNum and hNum and hNum > 0 then
+                return wNum / hNum
+            end
+        end
+    end
+
+    return 16 / 9
+end
+
+function Image.new(parent: Instance, config)
+    config = config or {}
+
+    local source = config.Image or ""
+    local aspectRatio = config.AspectRatio or ImageDefaults.AspectRatio or "16:9"
+    local radius = config.Radius or ImageDefaults.Radius or Sizes.Corner.Medium
+    local scaleType = config.ScaleType or ImageDefaults.ScaleType or Enum.ScaleType.Fit
+
+    local self = BaseComponent.new(Image, {
+        Parent = parent,
+        Size = UDim2.new(1, 0, 0, 0),
+        Blockable = false,
+        Stroke = false,
+        Properties = {
+            AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundTransparency = 1,
+        },
+    })
+
+    self._source = source
+    self._aspectRatio = aspectRatio
+    self._radius = radius
+
+    self._wrapper = Create.Instance("Frame", {
+        Name = "ImageWrapper",
+        Size = UDim2.new(1, 0, 0, Sizes.Image.DefaultHeight),
+        BackgroundTransparency = 1,
+        ClipsDescendants = true,
+        Parent = self._frame,
+    })
+
+    self._maxConstraint = Create.Instance("UISizeConstraint", {
+        MaxSize = Vector2.new(math.huge, Sizes.Image.MaxHeight),
+        Parent = self._wrapper,
+    })
+
+    self._imageLabel = Create.Instance("ImageLabel", {
+        Name = "Image",
+        Size = UDim2.fromScale(1, 1),
+        BackgroundTransparency = 1,
+        ScaleType = scaleType,
+        Parent = self._wrapper,
+    })
+
+    Create.Corner(self._imageLabel, self._radius)
+
+    self._aspectConstraint = Create.Instance("UIAspectRatioConstraint", {
+        AspectRatio = parseAspectRatio(self._aspectRatio),
+        AspectType = Enum.AspectType.ScaleWithParentSize,
+        DominantAxis = Enum.DominantAxis.Width,
+        Parent = self._imageLabel,
+    })
+
+    if source ~= "" then
+        local resolved = MediaManager:Image(source)
+        self._imageLabel.Image = resolved
+    end
+
+    return self
+end
+
+function Image:SetImage(source: string)
+    self._source = source or ""
+    if source ~= "" then
+        local resolved = MediaManager:Image(source)
+        self._imageLabel.Image = resolved
+    else
+        self._imageLabel.Image = ""
+    end
+end
+
+function Image:GetImage(): string
+    return self._source
+end
+
+function Image:SetAspectRatio(ratio: (number | string)?)
+    self._aspectRatio = ratio
+    self._aspectConstraint.AspectRatio = parseAspectRatio(ratio)
+end
+
+function Image:SetRadius(radius: number?)
+    self._radius = radius or Sizes.Corner.Medium
+    local corner = self._imageLabel:FindFirstChildOfClass("UICorner")
+    if not corner then
+        corner = Create.Corner(self._imageLabel, self._radius)
+    else
+        corner.CornerRadius = UDim.new(0, self._radius)
+    end
+end
+
+function Image:SetScaleType(scaleType: Enum.ScaleType?)
+    self._imageLabel.ScaleType = scaleType or Enum.ScaleType.Fit
+end
+
+return Image
+end
+
 __modules["Components.Keybind"] = function()
 local Services = __require("Utils.Services")
 
@@ -2240,6 +2382,7 @@ local Toggle = __require("Components.Toggle")
 local Slider = __require("Components.Slider")
 local Dropdown = __require("Components.Dropdown")
 local TextBox = __require("Components.TextBox")
+local Image = __require("Components.Image")
 
 local Tab = {}
 Tab.__index = Tab
@@ -2421,6 +2564,10 @@ end
 
 function Tab:TextBox(config)
     return self:_AddElement(TextBox.new(self._content, config, self._window))
+end
+
+function Tab:Image(config)
+    return self:_AddElement(Image.new(self._content, config))
 end
 
 function Tab:CreateConfigSection()
@@ -3180,6 +3327,9 @@ local Defaults = {
             Title = "Paragraph",
             Content = "Description text here.",
         },
+        Image = {
+            AspectRatio = "16:9",
+        },
         ConfigUI = {
             SectionTitle = "Configuration",
             ConfigName = "Config Name",
@@ -3538,6 +3688,11 @@ local Sizes = {
     Paragraph = {
         TitleHeight = 20,
         ContentTop = 22,
+    },
+
+    Image = {
+        MaxHeight = 200,
+        DefaultHeight = 150,
     },
 
     Component = {
@@ -4797,6 +4952,7 @@ local deleteFile = safeGet("delfile")
 
 export type WindowConfig = {
     Title: string?,
+    Logo: string?,
     Size: { Width: number, Height: number }?,
     ToggleKey: Enum.KeyCode?,
     ConfigFolder: string?,
@@ -4974,6 +5130,7 @@ function Window.new(config: WindowConfig?)
     local resolvedSize, minSize, maxSize = ResolveWindowSizes(config.Size, clampToViewport)
 
     self._title = config.Title or WindowDefaults.Title or "AcrylicUI"
+    self._logo = config.Logo or "rbxassetid://94586681223401"
     self._size = resolvedSize
     self._minSize = minSize
     self._maxSize = maxSize
@@ -5795,6 +5952,18 @@ function Window:SetToggleKey(keyCode: Enum.KeyCode)
 end
 
 --[[
+    Sets the topbar logo image.
+
+    @param assetId string? - Roblox asset ID. Defaults to the built-in logo.
+]]
+function Window:Logo(assetId: string?)
+    if self._logoIcon then
+        self._logo = assetId or "rbxassetid://94586681223401"
+        Create.ApplyIcon(self._logoIcon, self._logo)
+    end
+end
+
+--[[
     Shows a notification
 
     @param config NotificationConfig - Notification configuration
@@ -6375,12 +6544,15 @@ AcrylicUI.Icons = __require("Constants.Icons")
 AcrylicUI.Layers = __require("Constants.Layers")
 
 -- Utilities (exposed for advanced usage)
+local MediaManager = __require("Utils.MediaManager")
+
 AcrylicUI.Utils = {
     Create = __require("Utils.Create"),
     Tween = __require("Utils.Tween"),
     Draggable = __require("Utils.Draggable"),
     Device = __require("Utils.Device"),
     IconResolver = IconResolver,
+    MediaManager = MediaManager,
 }
 
 --[[
@@ -6472,6 +6644,7 @@ function AcrylicUI.GetInfo()
             "ColorPicker",
             "TextBox",
             "Paragraph",
+            "Image",
             "Notification",
         },
     }
@@ -6609,6 +6782,13 @@ export type TextBoxConfig = {
 export type ParagraphConfig = {
     Title: string?,
     Content: string?,
+}
+
+export type ImageConfig = {
+    Image: string?,
+    AspectRatio: (number | string)?,
+    Radius: number?,
+    ScaleType: Enum.ScaleType?,
 }
 
 export type Blockable = {
@@ -7804,6 +7984,333 @@ function IconResolver.Resolve(icon: any, defaultPack: string?): IconDescriptor?
 end
 
 return IconResolver
+end
+
+__modules["Utils.MediaManager"] = function()
+--[[
+    AcrylicUI - Media Manager
+
+    Resolves asset sources (rbxassetid, numeric IDs, HTTP URLs) into
+    usable rbxassetid:// strings with disk-based caching.
+]]
+
+local Services = __require("Utils.Services")
+
+local MediaManager = {}
+
+local function safeGet(name: string): (...any) -> ...any?
+    local sources = {}
+
+    local ok, env = pcall(function()
+        local genv = rawget(_G, "getgenv")
+        if type(genv) == "function" then
+            return genv()
+        end
+        return nil
+    end)
+    if ok and type(env) == "table" then
+        table.insert(sources, env)
+    end
+
+    ok, env = pcall(function()
+        if type(getfenv) == "function" then
+            return getfenv()
+        end
+        return nil
+    end)
+    if ok and type(env) == "table" then
+        table.insert(sources, env)
+    end
+
+    table.insert(sources, _G)
+
+    for _, src in ipairs(sources) do
+        local fn = rawget(src, name) :: any
+        if type(fn) == "function" then
+            return fn
+        end
+    end
+
+    return nil
+end
+
+local writeFile = safeGet("writefile")
+local readFile = safeGet("readfile")
+local isFile = safeGet("isfile")
+local makeFolder = safeGet("makefolder")
+local isFolder = safeGet("isfolder")
+local getCustomAsset = safeGet("getcustomasset")
+
+local HttpService = Services.HttpService
+
+local ASSET_PREFIX = "rbxasset://"
+local RBXASSET_PREFIX = "rbxassetid://"
+local DEFAULT_CACHE_FOLDER = "AcrylicMediaCache"
+local VALID_IMAGE_EXTENSIONS = {
+    png = true,
+    jpg = true,
+    jpeg = true,
+    webp = true,
+    gif = true,
+}
+
+MediaManager._cacheFolder = DEFAULT_CACHE_FOLDER
+MediaManager._mapCache = nil
+
+local function getExecutorEnv(): { [string]: any }?
+    local genv = if type(_G) == "table" then rawget(_G, "getgenv") else nil
+    if type(genv) == "function" then
+        local ok, env = pcall(genv)
+        if ok and type(env) == "table" then
+            return env
+        end
+    end
+
+    if type(_G) == "table" then
+        return _G
+    end
+
+    return nil
+end
+
+local function fetchUrl(url: string): string?
+    local httpGet = game["HttpGet"]
+    if type(httpGet) == "function" then
+        local ok, body = pcall(httpGet, game, url, true)
+        if ok and type(body) == "string" then
+            return body
+        end
+    end
+
+    local env = getExecutorEnv()
+    if env then
+        local request = env.request or env.http_request
+        if type(request) ~= "function" and type(env.syn) == "table" then
+            request = env.syn.request
+        end
+        if type(request) ~= "function" and type(env.http) == "table" then
+            request = env.http.request
+        end
+
+        if type(request) == "function" then
+            local ok, response = pcall(request, {
+                Url = url,
+                Method = "GET",
+                Headers = { ["User-Agent"] = "Roblox/WinInet" },
+            })
+            if ok then
+                if type(response) == "table" and type(response.Body) == "string" then
+                    return response.Body
+                end
+                if type(response) == "string" then
+                    return response
+                end
+            end
+        end
+    end
+
+    local ok, body = pcall(function()
+        return HttpService:GetAsync(url, true)
+    end)
+    if ok and type(body) == "string" then
+        return body
+    end
+
+    return nil
+end
+
+local function randomFileName(ext: string): string
+    local chars = "abcdefghijklmnopqrstuvwxyz0123456789"
+    local parts = {}
+    for i = 1, 12 do
+        local idx = math.random(1, #chars)
+        parts[i] = chars:sub(idx, idx)
+    end
+    return table.concat(parts) .. "." .. ext
+end
+
+local function extractExtension(url: string): string
+    local cleanPath = url:match("^[^?#]+") or url
+    local ext = cleanPath:match("%.([^%.%/]+)$")
+    if ext then
+        ext = ext:lower()
+    end
+    return ext or "png"
+end
+
+local function isHtmlResponse(body: string): boolean
+    if #body < 16 then
+        return false
+    end
+    local peek = body:sub(1, 15):lower()
+    return peek:find("<!doctype") ~= nil or peek:find("<html") ~= nil
+end
+
+local function ensureCacheDir()
+    if not makeFolder or not isFolder then
+        return
+    end
+    if not isFolder(MediaManager._cacheFolder) then
+        makeFolder(MediaManager._cacheFolder)
+    end
+end
+
+local function getMapPath(): string
+    return MediaManager._cacheFolder .. "/_image_map.json"
+end
+
+local function loadMap(): { [string]: string }
+    if MediaManager._mapCache then
+        return MediaManager._mapCache
+    end
+
+    MediaManager._mapCache = {}
+    if isFile and readFile then
+        local mapPath = getMapPath()
+        if isFile(mapPath) then
+            local ok, data = pcall(function()
+                return readFile(mapPath)
+            end)
+            if ok and type(data) == "string" then
+                local decodeOk, decoded = pcall(HttpService.JSONDecode, HttpService, data)
+                if decodeOk and type(decoded) == "table" then
+                    MediaManager._mapCache = decoded
+                end
+            end
+        end
+    end
+
+    return MediaManager._mapCache
+end
+
+local function saveMap(map: { [string]: string })
+    MediaManager._mapCache = map
+    if not (writeFile and HttpService) then
+        return
+    end
+    local ok, encoded = pcall(HttpService.JSONEncode, HttpService, map)
+    if ok and type(encoded) == "string" then
+        pcall(writeFile, getMapPath(), encoded)
+    end
+end
+
+local function makeCacheKey(url: string): string
+    return tostring(#url) .. "_" .. url:sub(1, 40):gsub("[^%w]", "")
+end
+
+local function normalizeAssetId(value: any): string?
+    if type(value) == "number" then
+        return RBXASSET_PREFIX .. tostring(value)
+    end
+
+    if type(value) ~= "string" then
+        return nil
+    end
+
+    if value:sub(1, #RBXASSET_PREFIX) == RBXASSET_PREFIX then
+        return value
+    end
+
+    if value:sub(1, #ASSET_PREFIX) == ASSET_PREFIX then
+        return value
+    end
+
+    if value:match("^%d+$") then
+        return RBXASSET_PREFIX .. value
+    end
+
+    return nil
+end
+
+function MediaManager:SetCacheFolder(name: string)
+    self._cacheFolder = name or DEFAULT_CACHE_FOLDER
+    self._mapCache = nil
+end
+
+function MediaManager:Image(source: string): string
+    if type(source) ~= "string" or source == "" then
+        return ""
+    end
+
+    local normalized = normalizeAssetId(source)
+    if normalized then
+        return normalized
+    end
+
+    if not source:match("^https?://") then
+        return ""
+    end
+
+    if not (writeFile and isFile and getCustomAsset) then
+        return ""
+    end
+
+    ensureCacheDir()
+
+    local map = loadMap()
+    local key = makeCacheKey(source)
+
+    if map[key] then
+        local cachedPath = self._cacheFolder .. "/" .. map[key]
+        if isFile(cachedPath) then
+            local ok, assetId = pcall(getCustomAsset, cachedPath)
+            if ok and type(assetId) == "string" and assetId ~= "" then
+                return assetId
+            end
+        end
+        map[key] = nil
+    end
+
+    local ext = extractExtension(source)
+    if not VALID_IMAGE_EXTENSIONS[ext] then
+        ext = "png"
+    end
+
+    local body = fetchUrl(source)
+    if not body or #body < 128 then
+        return ""
+    end
+    if isHtmlResponse(body) then
+        return ""
+    end
+
+    local fileName = randomFileName(ext)
+    local filePath = self._cacheFolder .. "/" .. fileName
+
+    local writeOk = pcall(writeFile, filePath, body)
+    if not writeOk or not isFile(filePath) then
+        return ""
+    end
+
+    local assetOk, assetId = pcall(getCustomAsset, filePath)
+    if not assetOk or type(assetId) ~= "string" or assetId == "" then
+        return ""
+    end
+
+    map[key] = fileName
+    saveMap(map)
+
+    return assetId
+end
+
+function MediaManager:ClearCache()
+    if not (isFolder and isFile and readFile) then
+        return
+    end
+
+    self._mapCache = nil
+    local mapPath = getMapPath()
+    if isFile(mapPath) then
+        pcall(function()
+            local delfile = safeGet("delfile")
+            if delfile then
+                delfile(mapPath)
+            end
+        end)
+    end
+end
+
+return MediaManager
 end
 
 __modules["Utils.RandomString"] = function()

@@ -59,21 +59,48 @@ for (const windowPath of [
 
 {
   const studioWindowPath = "studio/AcrylicUI/Core/Window.luau";
-  assertIncludes(studioWindowPath, '"AvatarControlFrame"');
-  assertIncludes(studioWindowPath, 'Name = "Avatar"');
-  assertIncludes(studioWindowPath, 'Name = "AvatarSeparator"');
+  assertNotIncludes(studioWindowPath, '"AvatarControlFrame"');
+  assertNotIncludes(studioWindowPath, 'Name = "AvatarSeparator"');
+  assertNotIncludes(studioWindowPath, "function Window:_CreateSidebarUserBlock()");
+  assertNotIncludes(studioWindowPath, "self:_CreateSidebarUserBlock()");
+  assertNotIncludes(studioWindowPath, 'Name = "SidebarUserBlock"');
+  assertIncludes(studioWindowPath, "function Window:_ApplyTopbarIconHover");
+  assertIncludes(studioWindowPath, "Logo: string?,");
+  assertNotIncludes(studioWindowPath, 'Name = "StudioTopbarShell"');
+  assertIncludes(studioWindowPath, 'Name = "StudioTopbarLogo"');
+  assertIncludes(studioWindowPath, "self._logo = config.Logo or");
+  assertIncludes(studioWindowPath, "Create.ApplyIcon(self._logoIcon, self._logo)");
+  assertIncludes(studioWindowPath, "ScaleType = Enum.ScaleType.Fit");
+  assertIncludes(studioWindowPath, "Position = UDim2.new(0, 10, 0, 23)");
+  assertIncludes(studioWindowPath, "Size = UDim2.new(0, 26, 0, 26)");
+  assertNotIncludes(studioWindowPath, "ImageColor3 = Colors.Accent");
+  assertIncludes(studioWindowPath, 'self._titleLabel.Name = "StudioTopbarTitle"');
+  assertIncludes(studioWindowPath, "self._titleLabel.Visible = true");
+  assertIncludes(studioWindowPath, "self._titleLabel.TextSize = 14");
+  assertIncludes(studioWindowPath, "self._titleLabel.Position = UDim2.new(0, 40, 0, 10)");
+  assertIncludes(studioWindowPath, "self._titleLabel.Size = UDim2.new(1, -160, 0, WindowChromeSizes.TitleHeight or 25)");
+  assertNotIncludes(studioWindowPath, 'Create.Instance("TextLabel", {\n\t\tName = "StudioTopbarTitle"');
+  assertIncludes(studioWindowPath, '"StudioTopbarConfig"');
+  assertIncludes(studioWindowPath, '"rbxassetid://11293977610"');
+  assertIncludes(studioWindowPath, '"StudioTopbarBell"');
+  assertIncludes(studioWindowPath, '"rbxassetid://11295275950"');
+  assertIncludes(studioWindowPath, "Position = UDim2.new(1, -rightOffset, 0, 23)");
+  assertIncludes(studioWindowPath, 'Name = "StudioTopbarAvatar"');
+  assertIncludes(studioWindowPath, "Parent = self._container");
+  assertIncludes(studioWindowPath, "self:_ApplyTopbarIconHover(self._logoIcon");
+  assertIncludes(studioWindowPath, "self:_ApplyTopbarIconHover(icon, Colors.Text, click)");
+  assertIncludes(studioWindowPath, "function Window:Logo(assetId: string?)");
+  assertIncludes(studioWindowPath, "self._logo = assetId or");
+  assertIncludes(studioWindowPath, "Create.ApplyIcon(self._logoIcon, self._logo)");
+  assertIncludes(studioWindowPath, "rbxassetid://94586681223401");
+  assertIncludes(studioWindowPath, "minimizeControlFrame.Visible = false");
+  assertIncludes(studioWindowPath, "closeControlFrame.Visible = false");
   assertIncludes(studioWindowPath, "Services.Players.LocalPlayer");
   assertIncludes(studioWindowPath, "GetUserThumbnailAsync");
   assertIncludes(studioWindowPath, "Enum.ThumbnailType.HeadShot");
   assertIncludes(studioWindowPath, "Enum.ThumbnailSize.Size48x48");
-  assertIncludes(studioWindowPath, "UICorner");
-  assertIncludes(studioWindowPath, "WindowChromeSizes.ControlFrameAvatarGap or 4");
-  assertIncludes(studioWindowPath, "WindowChromeSizes.ControlFrameSeparatorWidth or 1");
-  assertIncludes(studioWindowPath, "WindowChromeSizes.ControlFrameSeparatorHeight or 20");
-  assertIncludes("studio/AcrylicUI/Constants/Sizes.luau", "ControlFrameAvatarGap = 4");
-  assertIncludes("studio/AcrylicUI/Constants/Sizes.luau", "ControlFrameSeparatorWidth = 1");
-  assertIncludes("studio/AcrylicUI/Constants/Sizes.luau", "ControlFrameSeparatorHeight = 20");
-  assertIncludes("studio/AcrylicUI/Constants/Sizes.luau", "TopBarControlsWidth = 120");
+  assertIncludes(studioWindowPath, "CornerRadius = UDim.new(1, 0)");
+  assertIncludes("studio/AcrylicUI/Constants/Sizes.luau", "TopBarControlsWidth = 80");
 }
 
 {
@@ -94,6 +121,58 @@ for (const windowPath of [
   assertIncludes("src/Constants/Sizes.luau", "ControlFrameSeparatorWidth = 1");
   assertIncludes("src/Constants/Sizes.luau", "ControlFrameSeparatorHeight = 20");
   assertIncludes("src/Constants/Sizes.luau", "TopBarControlsWidth = 120");
+}
+
+{
+  const studioWindowPath = "studio/AcrylicUI/Core/Window.luau";
+  const studioTabPath = "studio/AcrylicUI/Components/Tab.luau";
+  const studioContentSectionPath = "studio/AcrylicUI/Components/ContentSection.luau";
+
+  assertIncludes(studioWindowPath, "function Window:_CreateSabotageTab()");
+  assertIncludes(studioWindowPath, 'self:CreateSection("Sabotage")');
+  assertIncludes(studioWindowPath, 'sabotageSection:CreateTab("Sabotage"');
+  assertIncludes(studioWindowPath, "sabotageTab:CreateSabotageSection()");
+  assertIncludes(studioWindowPath, "self:_CreateSabotageTab()");
+
+  assertIncludes(studioTabPath, "function Tab:CreateSabotageSection()");
+  assertIncludes(studioTabPath, 'self:CreateSection("Sabotage")');
+  assertIncludes(studioTabPath, "return section:CreateSabotageSection()");
+
+  assertIncludes(studioContentSectionPath, "function ContentSection:CreateSabotageSection()");
+  assertNotIncludes(studioContentSectionPath, 'Name = "SabotageIntro"');
+  assertIncludes(studioContentSectionPath, 'Name = "SabotageContentRow"');
+  assertIncludes(studioContentSectionPath, "Parent = self._container");
+  assertIncludes(studioContentSectionPath, 'Name = "SabotageAvatar"');
+  assertIncludes(studioContentSectionPath, "Size = UDim2.new(0, 60, 0, 60)");
+  assertIncludes(studioContentSectionPath, 'Name = "SabotageWelcomeFrame"');
+  assertIncludes(studioContentSectionPath, 'Name = "SabotageWelcomeText"');
+  assertIncludes(studioContentSectionPath, 'Name = "SabotageDateText"');
+  assertIncludes(studioContentSectionPath, 'Name = "SabotageDateClockSeparator"');
+  assertIncludes(studioContentSectionPath, 'Name = "SabotageClockText"');
+  assertIncludes(studioContentSectionPath, "TextYAlignment = Enum.TextYAlignment.Center");
+  assertIncludes(studioContentSectionPath, "TextTruncate = Enum.TextTruncate.AtEnd");
+  assertIncludes(studioContentSectionPath, "AnchorPoint = Vector2.new(0, 0.5)");
+  assertIncludes(studioContentSectionPath, "Position = UDim2.new(0, 10, 0.5, 0)");
+  assertIncludes(studioContentSectionPath, "Position = UDim2.new(1, -60, 1, -16)");
+  assertIncludes(studioContentSectionPath, "Position = UDim2.new(1, -55, 1, -16)");
+  assertIncludes(studioContentSectionPath, "Position = UDim2.new(1, -5, 1, -16)");
+  assertIncludes(studioContentSectionPath, "Size = UDim2.new(0, 1, 0, 12)");
+  assertIncludes(studioContentSectionPath, "Size = UDim2.new(0, 50, 0, 20)");
+  assertIncludes(studioContentSectionPath, "os.date(\"%d/%m/%Y\")");
+  assertIncludes(studioContentSectionPath, "dateLabel.Text = os.date");
+  assertIncludes(studioContentSectionPath, "os.date(\"%H:%M:%S\")");
+  assertIncludes(studioContentSectionPath, "while clockLabel.Parent do");
+  assertIncludes(studioContentSectionPath, "clockLabel.Text = os.date");
+  assertIncludes(studioContentSectionPath, "task.wait(1)");
+  assertIncludes(studioContentSectionPath, "Services.Players.LocalPlayer");
+  assertIncludes(studioContentSectionPath, "GetUserThumbnailAsync");
+  assertIncludes(studioContentSectionPath, "Enum.ThumbnailType.HeadShot");
+  assertIncludes(studioContentSectionPath, "Enum.ThumbnailSize.Size48x48");
+  assertIncludes(studioContentSectionPath, "displayName = localPlayer.DisplayName");
+  assertIncludes(studioContentSectionPath, "displayName == \"\"");
+  assertIncludes(studioContentSectionPath, '"Welcome to Sabotage, " .. displayName');
+  assertIncludes(studioContentSectionPath, "task.spawn(function()");
+  assertIncludes(studioContentSectionPath, "string.sub(welcomeText, 1, i)");
 }
 
 for (const dropdownPath of [

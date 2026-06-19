@@ -74,6 +74,7 @@ local deleteFile = safeGet("delfile")
 
 export type WindowConfig = {
     Title: string?,
+    Logo: string?,
     Size: { Width: number, Height: number }?,
     ToggleKey: Enum.KeyCode?,
     ConfigFolder: string?,
@@ -251,6 +252,7 @@ function Window.new(config: WindowConfig?)
     local resolvedSize, minSize, maxSize = ResolveWindowSizes(config.Size, clampToViewport)
 
     self._title = config.Title or WindowDefaults.Title or "AcrylicUI"
+    self._logo = config.Logo or "rbxassetid://94586681223401"
     self._size = resolvedSize
     self._minSize = minSize
     self._maxSize = maxSize
@@ -277,6 +279,7 @@ function Window.new(config: WindowConfig?)
 
     self:_CreateGui()
     self:_SetupKeybinds()
+    self:_CreateSabotageTab()
 
     if Device.IsMobile() then
         self:_SetupMobileToggle()
@@ -376,28 +379,30 @@ function Window:_CreateGui()
         Parent = self._screenGui,
     })
 
-    Create.Corner(self._container, Sizes.Corner.Medium)
+    Create.Corner(self._container, Sizes.Corner.Window)
     Create.Stroke(self._container)
 
     -- Title
     self._titleLabel = Create.Instance("TextLabel", {
-        Name = "Title",
-        FontFace = Fonts.Regular,
+        Name = "StudioTopbarTitle",
+        FontFace = Fonts.Bold,
         TextColor3 = Colors.Text,
         Text = self._title,
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, WindowChromeSizes.TitleX or 10, 0, WindowChromeSizes.TitleY or 10),
+        Position = UDim2.new(0, 40, 0, 10),
         TextXAlignment = Enum.TextXAlignment.Left,
-        TextSize = Fonts.Size.Title,
-        Size = UDim2.new(
-            0,
-            WindowChromeSizes.TitleWidth or 150,
-            0,
-            WindowChromeSizes.TitleHeight or 25
-        ),
-        ZIndex = 1,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        TextSize = 14,
+        Size = UDim2.new(1, -160, 0, WindowChromeSizes.TitleHeight or 25),
+        Visible = true,
+        ZIndex = (WindowLayers.TopBarControls or 6) + 1,
         Parent = self._container,
     })
+    self._titleLabel.Name = "StudioTopbarTitle"
+    self._titleLabel.Visible = true
+    self._titleLabel.TextSize = 14
+    self._titleLabel.Position = UDim2.new(0, 40, 0, 10)
+    self._titleLabel.Size = UDim2.new(1, -160, 0, WindowChromeSizes.TitleHeight or 25)
 
     -- Topbar drag area (covers full topbar minus the controls frame).
     self._topBarDragArea = Create.Instance("Frame", {
@@ -436,6 +441,35 @@ function Window:_CreateGui()
     Notification.CreateContainer(self._screenGui)
 end
 
+function Window:_ApplyTopbarIconHover(icon: ImageLabel, hoverColor: Color3?, trigger: GuiObject?)
+    local normalColor = icon.ImageColor3
+    local normalSize = icon.Size
+    local hoverTrigger = trigger or icon
+    local hoverSize = UDim2.new(
+        normalSize.X.Scale,
+        normalSize.X.Offset + 2,
+        normalSize.Y.Scale,
+        normalSize.Y.Offset + 2
+    )
+
+    table.insert(
+        self._connections,
+        hoverTrigger.MouseEnter:Connect(function()
+            Tween.Create(
+                icon,
+                { ImageColor3 = hoverColor or Colors.Text, Size = hoverSize },
+                "Fast"
+            )
+        end)
+    )
+    table.insert(
+        self._connections,
+        hoverTrigger.MouseLeave:Connect(function()
+            Tween.Create(icon, { ImageColor3 = normalColor, Size = normalSize }, "Fast")
+        end)
+    )
+end
+
 function Window:_CreateWindowControls()
     -- Topbar controls frame (excluded from the topbar drag area).
     self._topBarControls = Create.Instance("Frame", {
@@ -454,14 +488,100 @@ function Window:_CreateWindowControls()
         Parent = self._container,
     })
 
+    self._logoIcon = Create.Instance("ImageLabel", {
+        Name = "StudioTopbarLogo",
+        BackgroundTransparency = 1,
+        ImageColor3 = Color3.fromRGB(255, 255, 255),
+        AnchorPoint = Vector2.new(0, 0.5),
+        Position = UDim2.new(0, 10, 0, 23),
+        Size = UDim2.new(0, 26, 0, 26),
+        ScaleType = Enum.ScaleType.Fit,
+        ZIndex = (WindowLayers.TopBarControls or 6) + 1,
+        Parent = self._container,
+    })
+    Create.ApplyIcon(self._logoIcon, self._logo)
+    self:_ApplyTopbarIconHover(self._logoIcon, Colors.Text)
+
+    local function createActionIcon(name: string, iconAsset, rightOffset: number): ImageLabel
+        local frame = Create.Instance("Frame", {
+            Name = name .. "Frame",
+            BackgroundColor3 = Colors.Background,
+            BackgroundTransparency = 0.45,
+            BorderSizePixel = 0,
+            AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -rightOffset, 0, 23),
+            Size = UDim2.new(0, 26, 0, 26),
+            ZIndex = (WindowLayers.TopBarControls or 6) + 1,
+            Parent = self._container,
+        })
+        Create.Corner(frame, 8)
+        Create.Stroke(frame, Colors.Border, 0.4, 1)
+
+        local icon = Create.Instance("ImageLabel", {
+            Name = name,
+            BackgroundTransparency = 1,
+            ImageColor3 = Colors.TextDark,
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            Size = UDim2.new(0, 15, 0, 15),
+            ZIndex = (WindowLayers.TopBarControls or 6) + 2,
+            Parent = frame,
+        })
+        Create.ApplyIcon(icon, iconAsset)
+
+        local click = Create.Instance("TextButton", {
+            Name = name .. "Click",
+            Text = CommonDefaults.EmptyText or "",
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 1, 0),
+            ZIndex = (WindowLayers.TopBarControls or 6) + 3,
+            Parent = frame,
+        })
+
+        self:_ApplyTopbarIconHover(icon, Colors.Text, click)
+
+        return icon
+    end
+
+    createActionIcon("StudioTopbarConfig", "rbxassetid://11293977610", 72)
+    createActionIcon("StudioTopbarBell", "rbxassetid://11295275950", 40)
+
+    local topbarAvatar = Create.Instance("ImageLabel", {
+        Name = "StudioTopbarAvatar",
+        BackgroundTransparency = 1,
+        Image = "",
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -8, 0, 22),
+        Size = UDim2.new(0, 26, 0, 26),
+        ZIndex = (WindowLayers.TopBarControls or 6) + 1,
+        Parent = self._container,
+    })
+    Create.Instance("UICorner", {
+        CornerRadius = UDim.new(1, 0),
+        Parent = topbarAvatar,
+    })
+
+    local localPlayer = Services.Players.LocalPlayer
+    if localPlayer then
+        task.spawn(function()
+            local ok, thumbnail = pcall(function()
+                return Services.Players:GetUserThumbnailAsync(
+                    localPlayer.UserId,
+                    Enum.ThumbnailType.HeadShot,
+                    Enum.ThumbnailSize.Size48x48
+                )
+            end)
+            if ok and topbarAvatar.Parent then
+                topbarAvatar.Image = thumbnail
+            end
+        end)
+    end
+
     local controlButtonWidth = WindowChromeSizes.ControlFrameButtonWidth or 31
     local controlFrameGap = WindowChromeSizes.ControlFrameGap or 1
     local controlFrameRightInset = WindowChromeSizes.ControlFrameRightInset or 5
     local controlFrameHeight = WindowChromeSizes.ControlFrameHeight or 31
     local controlFrameTop = WindowChromeSizes.ControlFrameTop or 7
-    local controlFrameAvatarGap = WindowChromeSizes.ControlFrameAvatarGap or 4
-    local controlFrameSeparatorWidth = WindowChromeSizes.ControlFrameSeparatorWidth or 1
-    local controlFrameSeparatorHeight = WindowChromeSizes.ControlFrameSeparatorHeight or 20
 
     local function createControlFrame(name: string, rightOffset: number): Frame
         local controlFrame = Create.Instance("Frame", {
@@ -500,58 +620,8 @@ function Window:_CreateWindowControls()
         "MinimizeControlFrame",
         controlFrameRightInset + controlButtonWidth + controlFrameGap
     )
-    local separatorRightOffset = controlFrameRightInset
-        + controlButtonWidth
-        + controlFrameGap
-        + controlButtonWidth
-        + controlFrameAvatarGap
-    local avatarControlFrame = createControlFrame(
-        "AvatarControlFrame",
-        separatorRightOffset + controlFrameSeparatorWidth + controlFrameAvatarGap
-    )
-
-    Create.Instance("Frame", {
-        Name = "AvatarSeparator",
-        BackgroundColor3 = Colors.Border,
-        BackgroundTransparency = 0.35,
-        BorderSizePixel = 0,
-        AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, -separatorRightOffset, 0, controlFrameTop + controlFrameHeight / 2),
-        Size = UDim2.new(0, controlFrameSeparatorWidth, 0, controlFrameSeparatorHeight),
-        ZIndex = WindowLayers.TopBarControls or 6,
-        Parent = self._topBarControls,
-    })
-
-    local avatar = Create.Instance("ImageLabel", {
-        Name = "Avatar",
-        BackgroundTransparency = 1,
-        Image = "",
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.new(0.5, 0, 0.5, 1),
-        Size = UDim2.new(0, 23, 0, 23),
-        ZIndex = (WindowLayers.TopBarControls or 6) + 1,
-        Parent = avatarControlFrame,
-    })
-    Create.Instance("UICorner", {
-        CornerRadius = UDim.new(0, 5),
-        Parent = avatar,
-    })
-
-    local localPlayer = Services.Players.LocalPlayer
-    if localPlayer then
-        task.spawn(function()
-            local ok, thumbnail = pcall(function()
-                return Services.Players:GetUserThumbnailAsync(
-                    localPlayer.UserId,
-                    Enum.ThumbnailType.HeadShot,
-                    Enum.ThumbnailSize.Size48x48
-                )
-            end)
-            if ok and avatar.Parent then
-                avatar.Image = thumbnail
-            end
-        end)
-    end
+    minimizeControlFrame.Visible = false
+    closeControlFrame.Visible = false
 
     -- Minimize button
     local minimizeBtn = Create.Instance("ImageLabel", {
@@ -1072,6 +1142,18 @@ function Window:SetToggleKey(keyCode: Enum.KeyCode)
 end
 
 --[[
+    Sets the topbar logo image.
+
+    @param assetId string? - Roblox asset ID. Defaults to the built-in logo.
+]]
+function Window:Logo(assetId: string?)
+    if self._logoIcon then
+        self._logo = assetId or "rbxassetid://94586681223401"
+        Create.ApplyIcon(self._logoIcon, self._logo)
+    end
+end
+
+--[[
     Shows a notification
 
     @param config NotificationConfig - Notification configuration
@@ -1091,6 +1173,14 @@ function Window:CreateSection(name: string)
     local section = Section.new(self, name)
     table.insert(self._sections, section)
     return section
+end
+
+function Window:_CreateSabotageTab()
+    local sabotageSection = self:CreateSection("Sabotage")
+    local sabotageTab = sabotageSection:CreateTab("Sabotage", nil)
+    sabotageTab:CreateSabotageSection()
+    self._sabotageTab = sabotageTab
+    return sabotageTab
 end
 
 --[[
